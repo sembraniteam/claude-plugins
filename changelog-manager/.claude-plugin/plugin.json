@@ -1,0 +1,15 @@
+{
+  "name": "changelog-manager",
+  "version": "0.1.0",
+  "description": "Automatically generate and update CHANGELOG and RELEASE_NOTES files from git commit history with bilingual, platform-specific support.",
+  "author": {
+    "name": "Ahmad Rifai",
+    "email": "ahmad.rifai@delameta.com"
+  },
+  "keywords": ["changelog", "release-notes", "git", "semver", "conventional-commits"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": ""
+  }
+}
