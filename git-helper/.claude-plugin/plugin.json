@@ -1,0 +1,11 @@
+{
+  "name": "git-helper",
+  "version": "0.1.0",
+  "description": "Generate conventional commit messages and branch names from git context and user descriptions.",
+  "author": {
+    "name": "Ahmad Rifai",
+    "email": "ahmad.rifai@delameta.com"
+  },
+  "keywords": ["git", "conventional-commits", "branch-naming", "commit-message"],
+  "license": "MIT"
+}
