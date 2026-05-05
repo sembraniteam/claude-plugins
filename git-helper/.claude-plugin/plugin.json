@@ -6,6 +6,11 @@
     "name": "Ahmad Rifai",
     "email": "ahmad.rifai@delameta.com"
   },
-  "keywords": ["git", "conventional-commits", "branch-naming", "commit-message"],
+  "keywords": [
+    "git",
+    "conventional-commits",
+    "branch-naming",
+    "commit-message"
+  ],
   "license": "MIT"
 }

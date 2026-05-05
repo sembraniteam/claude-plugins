@@ -6,10 +6,12 @@
     "name": "Ahmad Rifai",
     "email": "ahmad.rifai@delameta.com"
   },
-  "keywords": ["changelog", "release-notes", "git", "semver", "conventional-commits"],
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": ""
-  }
+  "keywords": [
+    "changelog",
+    "release-notes",
+    "git",
+    "semver",
+    "conventional-commits"
+  ],
+  "license": "MIT"
 }
