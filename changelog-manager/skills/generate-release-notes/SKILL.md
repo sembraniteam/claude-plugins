@@ -1,7 +1,8 @@
 ---
 name: generate-release-notes
 description: This skill should be used when the user asks to generate release notes, create release notes, prepare an App Store or Play Store release, write a web announcement, produce bilingual release notes, or update store listing copy. Relevant phrases include "generate release notes", "create release notes", "prepare App Store release", "prepare Play Store release", "bilingual release notes", "translate release notes", or references to RELEASE_NOTES, RELEASE_NOTES_APPSTORE, or RELEASE_NOTES_PLAYSTORE files.
-version: 0.1.0
+version: 0.2.0
+license: MIT
 ---
 
 # Generate Release Notes
@@ -16,11 +17,11 @@ Generate platform-specific, bilingual release notes from the latest entry in `CH
 
 ## Platform Reference
 
-| Platform | Output File | Char Limit | Tone |
-|----------|------------|------------|------|
-| `playstore` | `RELEASE_NOTES_PLAYSTORE` | 500 per language | Concise, bullet-first |
-| `appstore` | `RELEASE_NOTES_APPSTORE` | 4,000 per language | Friendly, feature-rich |
-| `web` | `RELEASE_NOTES` | No limit | Detailed, full context |
+| Platform    | Output File               | Char Limit         | Tone                   |
+|-------------|---------------------------|--------------------|------------------------|
+| `playstore` | `RELEASE_NOTES_PLAYSTORE` | 500 per language   | Concise, bullet-first  |
+| `appstore`  | `RELEASE_NOTES_APPSTORE`  | 4,000 per language | Friendly, feature-rich |
+| `web`       | `RELEASE_NOTES`           | No limit           | Detailed, full context |
 
 ## Workflow
 
@@ -49,8 +50,8 @@ For each platform in settings, build and run one command with all language block
 ```bash
 python3 $CLAUDE_PLUGIN_ROOT/scripts/generate-release-notes.py \
   --platform <platform> \
-  --lang <code1> --intro "<intro1>" --items "<items1>" \
-  --lang <code2> --intro "<intro2>" --items "<items2>"
+  --lang <code1> --intro "<intro1>" --items "<items1>" [--outro "<outro1>"] \
+  --lang <code2> --intro "<intro2>" --items "<items2>" [--outro "<outro2>"]
 ```
 
 #### Writing the `--intro`
@@ -63,23 +64,34 @@ Convert CHANGELOG entries to user-friendly, non-technical language. Format as `"
 
 **Platform-specific item count:**
 
-| Platform | Recommended Items |
-|----------|-----------------|
+| Platform    | Recommended Items                        |
+|-------------|------------------------------------------|
 | `playstore` | 3–5 (must fit 500 chars including intro) |
-| `appstore` | 5–10 (can expand on key features) |
-| `web` | All significant changes, full detail |
+| `appstore`  | 5–10 (can expand on key features)        |
+| `web`       | All significant changes, full detail     |
 
 For Play Store, prioritize: Breaking Changes > Added > Fixed > Changed > Reverted.
+
+#### Writing the `--outro` (optional)
+
+A closing line appended after the items, separated by a blank line. Use it for calls to action, thank-you notes, or support links. Omit entirely when not needed.
+
+- Keep it to 1 sentence
+- Translate per language
+- Counts toward the platform character limit — omit for Play Store if space is tight
+
+Example: `"Thank you for updating — we hope you enjoy the new features!"`
 
 For tone guidelines, language examples, and localization tips per language, see **`references/platform-guide.md`**.
 
 ### Step 4: Handle Errors
 
 **Character limit exceeded** (Play Store / App Store):
-1. Shorten the intro (reduce to 1 sentence, aim for ~110–120 chars)
-2. Remove lowest-priority items (Reverted → Changed → Fixed)
-3. Shorten remaining item text
-4. Re-run the script
+1. Remove the outro if present
+2. Shorten the intro (reduce to 1 sentence, aim for ~110–120 chars)
+3. Remove lowest-priority items (Reverted → Changed → Fixed)
+4. Shorten remaining item text
+5. Re-run the script
 
 **Intro too short** (under 100 chars):
 - Expand the intro to be more descriptive and welcoming

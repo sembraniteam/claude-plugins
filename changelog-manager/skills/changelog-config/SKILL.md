@@ -1,7 +1,8 @@
 ---
 name: changelog-config
 description: This skill should be used when the user asks to "configure changelog", "set changelog languages", "changelog settings", "setup changelog manager", "add a language to release notes", "change release notes language", "update changelog config", or "set platforms for release notes".
-version: 0.1.0
+version: 0.2.0
+license: MIT
 ---
 
 # Changelog Config
@@ -34,20 +35,20 @@ platforms:
 
 ### Field Reference
 
-| Field | Required | Description |
-|-------|----------|-------------|
-| `languages` | Yes | Ordered list of language blocks |
-| `languages[].code` | Yes | ISO 639-1 code (e.g. `en`, `id`, `fr`, `ja`, `ko`) |
-| `languages[].name` | Yes | Human-readable name shown in output headings |
-| `platforms` | Yes | List of target platforms |
+| Field              | Required | Description                                        |
+|--------------------|----------|----------------------------------------------------|
+| `languages`        | Yes      | Ordered list of language blocks                    |
+| `languages[].code` | Yes      | ISO 639-1 code (e.g. `en`, `id`, `fr`, `ja`, `ko`) |
+| `languages[].name` | Yes      | Human-readable name shown in output headings       |
+| `platforms`        | Yes      | List of target platforms                           |
 
 ### Valid Platform Values
 
-| Value | Output File | Char Limit |
-|-------|------------|------------|
-| `playstore` | `RELEASE_NOTES_PLAYSTORE` | 500 / lang |
-| `appstore` | `RELEASE_NOTES_APPSTORE` | 4,000 / lang |
-| `web` | `RELEASE_NOTES` | No limit |
+| Value       | Output File               | Char Limit   |
+|-------------|---------------------------|--------------|
+| `playstore` | `RELEASE_NOTES_PLAYSTORE` | 500 / lang   |
+| `appstore`  | `RELEASE_NOTES_APPSTORE`  | 4,000 / lang |
+| `web`       | `RELEASE_NOTES`           | No limit     |
 
 ## Workflow
 
@@ -97,17 +98,17 @@ Show the final settings and remind the user:
 
 Use the following as a reference when the user specifies a language by name rather than code:
 
-| Code | Language |
-|------|----------|
-| `en` | English |
-| `id` | Indonesian |
-| `fr` | French |
-| `de` | German |
-| `ja` | Japanese |
-| `ko` | Korean |
+| Code | Language             |
+|------|----------------------|
+| `en` | English              |
+| `id` | Indonesian           |
+| `fr` | French               |
+| `de` | German               |
+| `ja` | Japanese             |
+| `ko` | Korean               |
 | `zh` | Chinese (Simplified) |
-| `es` | Spanish |
-| `pt` | Portuguese |
-| `ar` | Arabic |
-| `hi` | Hindi |
-| `tr` | Turkish |
+| `es` | Spanish              |
+| `pt` | Portuguese           |
+| `ar` | Arabic               |
+| `hi` | Hindi                |
+| `tr` | Turkish              |

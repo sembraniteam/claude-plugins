@@ -2,11 +2,11 @@
 
 ## Platform Rules Summary
 
-| Platform | File | Char Limit | Items | Tone |
-|----------|------|------------|-------|------|
-| Play Store | `RELEASE_NOTES_PLAYSTORE` | 500 / lang | 3–5 | Short, clear |
-| App Store | `RELEASE_NOTES_APPSTORE` | 4,000 / lang | 5–10 | Warm, detailed |
-| Web | `RELEASE_NOTES` | None | All | Full, informative |
+| Platform   | File                      | Char Limit   | Items | Tone              |
+|------------|---------------------------|--------------|-------|-------------------|
+| Play Store | `RELEASE_NOTES_PLAYSTORE` | 500 / lang   | 3–5   | Short, clear      |
+| App Store  | `RELEASE_NOTES_APPSTORE`  | 4,000 / lang | 5–10  | Warm, detailed    |
+| Web        | `RELEASE_NOTES`           | None         | All   | Full, informative |
 
 ---
 

@@ -62,24 +62,24 @@ and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 Given version `MAJOR.MINOR.PATCH`:
 
-| Commit Type | Version Bump |
-|-------------|-------------|
+| Commit Type                                | Version Bump               |
+|--------------------------------------------|----------------------------|
 | Breaking change (`!` or `BREAKING CHANGE`) | MAJOR +1, MINOR=0, PATCH=0 |
-| `feat` | MINOR +1, PATCH=0 |
-| `fix`, `perf`, `refactor`, `revert` | PATCH +1 |
-| `bump`, `test`, `ci`, `chore`, `docs` | No bump (excluded) |
+| `feat`                                     | MINOR +1, PATCH=0          |
+| `fix`, `perf`, `refactor`, `revert`        | PATCH +1                   |
+| `bump`, `test`, `ci`, `chore`, `docs`      | No bump (excluded)         |
 
 ## Conventional Commits Mapping
 
-| Conventional Commit Prefix | CHANGELOG Category |
-|---------------------------|-------------------|
-| `feat:` | Added |
-| `fix:` | Fixed |
-| `perf:` | Changed |
-| `refactor:` | Changed |
-| `revert:` | Reverted |
-| `feat!:` or `BREAKING CHANGE` | Breaking Changes |
-| `bump:`, `test:`, `ci:`, `chore:`, `docs:` | (ignored) |
+| Conventional Commit Prefix                 | CHANGELOG Category |
+|--------------------------------------------|--------------------|
+| `feat:`                                    | Added              |
+| `fix:`                                     | Fixed              |
+| `perf:`                                    | Changed            |
+| `refactor:`                                | Changed            |
+| `revert:`                                  | Reverted           |
+| `feat!:` or `BREAKING CHANGE`              | Breaking Changes   |
+| `bump:`, `test:`, `ci:`, `chore:`, `docs:` | (ignored)          |
 
 ## Version Linking (Optional Enhancement)
 

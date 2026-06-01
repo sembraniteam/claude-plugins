@@ -21,9 +21,10 @@ PLATFORM_OUTPUT = {
 
 def latest_release_block(text: str):
     parts = re.split(r"\n## ", text)
-    if len(parts) < 2:
-        raise RuntimeError("No release section found in CHANGELOG.md")
-    return "## " + parts[1]
+    for part in parts[1:]:
+        if re.match(r"\[v?\d+\.\d+\.\d+\]", part):
+            return "## " + part
+    raise RuntimeError("No release section found in CHANGELOG.md")
 
 
 def extract_changelog_by_category(block: str):
@@ -134,7 +135,7 @@ def validate_against_changelog(items, categories):
 MIN_INTRO_CHARS = 100
 
 
-def build_section(intro, items, max_chars):
+def build_section(intro, items, max_chars, outro=""):
     if not items:
         raise RuntimeError("Each language must contain at least one valid change.")
 
@@ -151,12 +152,15 @@ def build_section(intro, items, max_chars):
     for item in items:
         text += f"- {item}\n"
 
+    if outro:
+        text += f"\n{outro.strip()}"
+
     text = text.strip()
 
     if max_chars is not None and len(text) > max_chars:
         raise RuntimeError(
             f"Section exceeds platform limit of {max_chars} characters "
-            f"(got {len(text)}). Shorten your intro or reduce the number of items."
+            f"(got {len(text)}). Shorten your intro, remove the outro, or reduce items."
         )
 
     return text
@@ -182,7 +186,7 @@ def parse_args(argv):
             continue
 
         if arg == "--lang":
-            current = {"code": argv[i + 1], "intro": "", "items": ""}
+            current = {"code": argv[i + 1], "intro": "", "items": "", "outro": ""}
             langs.append(current)
             i += 2
             continue
@@ -198,6 +202,13 @@ def parse_args(argv):
             if not current:
                 raise RuntimeError("--items must come after --lang")
             current["items"] = argv[i + 1]
+            i += 2
+            continue
+
+        if arg == "--outro":
+            if not current:
+                raise RuntimeError("--outro must come after --lang")
+            current["outro"] = argv[i + 1]
             i += 2
             continue
 
@@ -245,8 +256,9 @@ def main():
             raise RuntimeError(f"{code} must contain at least one valid change")
 
         items = rank_items(items, categories)
+        outro = lang_data.get("outro", "")
 
-        section = build_section(intro, items, max_chars)
+        section = build_section(intro, items, max_chars, outro)
 
         content += f"## {code.upper()}\n{section}\n\n"
 

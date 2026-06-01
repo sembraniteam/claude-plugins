@@ -60,7 +60,7 @@ while IFS= read -r COMMIT; do
         continue
     fi
 
-    if [[ "$COMMIT" =~ ^[a-zA-Z]+! ]] || [[ "$COMMIT" == *"BREAKING CHANGE"* ]]; then
+    if [[ "$COMMIT" =~ ^[a-zA-Z]+(\([^\)]+\))?! ]] || [[ "$COMMIT" == *"BREAKING CHANGE"* ]]; then
         BREAKING=true
         BUMP_MAJOR=1
         CATEGORY="breaking"

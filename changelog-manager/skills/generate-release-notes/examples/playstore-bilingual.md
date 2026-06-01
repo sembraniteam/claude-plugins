@@ -23,11 +23,13 @@ python3 $CLAUDE_PLUGIN_ROOT/scripts/generate-release-notes.py \
     --items "- You can now switch to dark mode from Settings
 - Notifications arrive faster and more reliably
 - Fixed a crash when opening the app without internet" \
+    --outro "Update now and let us know what you think!" \
   --lang id \
     --intro "Pembaruan ini hadir dengan fitur-fitur yang kalian minta dan perbaikan penting untuk pengalaman yang lebih lancar setiap harinya." \
     --items "- Kini bisa beralih ke mode gelap dari Pengaturan
 - Notifikasi datang lebih cepat dan andal
-- Perbaikan crash saat membuka aplikasi tanpa internet"
+- Perbaikan crash saat membuka aplikasi tanpa internet" \
+    --outro "Perbarui sekarang dan beri tahu kami pendapat Anda!"
 ```
 
 ## Output: RELEASE_NOTES_PLAYSTORE
@@ -42,18 +44,23 @@ We've packed this update with features you've been asking for, plus important fi
 - Notifications arrive faster and more reliably
 - Fixed a crash when opening the app without internet
 
+Update now and let us know what you think!
+
 ## ID
 Pembaruan ini hadir dengan fitur-fitur yang kalian minta dan perbaikan penting untuk pengalaman yang lebih lancar setiap harinya.
 
 - Kini bisa beralih ke mode gelap dari Pengaturan
 - Notifikasi datang lebih cepat dan andal
 - Perbaikan crash saat membuka aplikasi tanpa internet
+
+Perbarui sekarang dan beri tahu kami pendapat Anda!
 ```
 
 ## Notes
 
-- EN section: ~340 chars (well within 500 limit)
-- ID section: ~298 chars (well within 500 limit)
-- Intro EN: 163 chars (above 100-char minimum)
+- EN section: ~384 chars (well within 500 limit)
+- ID section: ~332 chars (well within 500 limit)
+- Intro EN: 144 chars (above 100-char minimum)
 - Intro ID: 131 chars (above 100-char minimum)
+- Outro is optional — remove it first if the section approaches the 500-char limit
 - Items prioritized: Added first, then Fixed (no Breaking Changes or Reverted in this release)

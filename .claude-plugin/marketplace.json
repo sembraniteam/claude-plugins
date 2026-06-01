@@ -9,7 +9,7 @@
         {
             "name": "changelog-manager",
             "description": "Changelog manager plugin for Claude Code by Sembrani Team",
-            "version": "0.1.0",
+            "version": "0.2.0",
             "source": "./changelog-manager",
             "author": {
                 "name": "Ahmad Rifa'i",

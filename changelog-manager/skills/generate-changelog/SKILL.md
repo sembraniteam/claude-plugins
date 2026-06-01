@@ -1,7 +1,8 @@
 ---
 name: generate-changelog
 description: This skill should be used when the user asks to "generate changelog", "update changelog", "create changelog", "add changelog entry", "summarize commits for changelog", "prepare a new version", or "bump version". Also trigger when the user mentions updating CHANGELOG.md or documenting recent commits.
-version: 0.1.0
+version: 0.2.0
+license: MIT
 ---
 
 # Generate Changelog
@@ -27,22 +28,22 @@ If the script prints `No changes since last release.` (plain text, not JSON), in
 
 The JSON output contains:
 
-| Field | Description |
-|-------|-------------|
-| `last_tag` | Last git tag, or `v0.0.0` if none |
-| `next_version` | Computed next semver tag |
-| `date` | Today's date (YYYY-MM-DD) |
-| `commits` | Array of `{ category, message, pr, breaking }` objects |
+| Field          | Description                                            |
+|----------------|--------------------------------------------------------|
+| `last_tag`     | Last git tag, or `v0.0.0` if none                      |
+| `next_version` | Computed next semver tag                               |
+| `date`         | Today's date (YYYY-MM-DD)                              |
+| `commits`      | Array of `{ category, message, pr, breaking }` objects |
 
 ### Step 2: Map Commits to CHANGELOG Sections
 
-| Commit Category | CHANGELOG Section |
-|----------------|------------------|
-| `breaking` | `### Breaking Changes` |
-| `added` | `### Added` |
-| `changed` | `### Changed` |
-| `fixed` | `### Fixed` |
-| `reverted` | `### Reverted` |
+| Commit Category | CHANGELOG Section      |
+|-----------------|------------------------|
+| `breaking`      | `### Breaking Changes` |
+| `added`         | `### Added`            |
+| `changed`       | `### Changed`          |
+| `fixed`         | `### Fixed`            |
+| `reverted`      | `### Reverted`         |
 
 Omit empty sections entirely. The script does not currently produce `Deprecated`, `Removed`, or `Security` categories — if those appear in a future script version, map them to `### Deprecated`, `### Removed`, and `### Security` respectively.
 
@@ -97,6 +98,36 @@ Summarize what was done:
 - Previous version → next version (e.g., `v1.1.0 → v1.2.0`)
 - Count of entries per category
 - Whether CHANGELOG.md was created or updated
+
+### Step 6: Offer to Generate Release Notes
+
+After reporting, ask:
+
+> Would you like to generate release notes for this version?
+> - **Yes** — continue to generate release notes
+> - **No** — done
+
+If the user says **Yes**, ask two follow-up questions **in order**:
+
+**Question 1 — Platform:**
+
+> Which platform(s) do you want to generate release notes for?
+> A. App Store
+> B. Play Store
+> C. Web
+
+Accept single or multiple answers (e.g., "A", "A and B", "all"). Map answers to platform identifiers:
+- A → `appstore`
+- B → `playstore`
+- C → `web`
+
+**Question 2 — Languages:**
+
+> Which languages should the release notes be written in? (Type ISO 639-1 codes separated by commas. Example: `en, id`)
+
+Wait for the user's free-text answer. Accept a comma-separated list of ISO 639-1 language codes (e.g., `en`, `id`, `en, id, ja`). Do not suggest or assume a default — the user must type this explicitly.
+
+**Then invoke `changelog-manager:generate-release-notes`**, passing the platform(s) and language codes from the user's answers as conversation context. These values override whatever is in `.claude/changelog-manager.local.md` for this run.
 
 ## Rules
 
