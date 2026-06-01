@@ -1,7 +1,7 @@
 ---
 name: generate-release-notes
 description: This skill should be used when the user asks to generate release notes, create release notes, prepare an App Store or Play Store release, write a web announcement, produce bilingual release notes, or update store listing copy. Relevant phrases include "generate release notes", "create release notes", "prepare App Store release", "prepare Play Store release", "bilingual release notes", "translate release notes", or references to RELEASE_NOTES, RELEASE_NOTES_APPSTORE, or RELEASE_NOTES_PLAYSTORE files.
-version: 0.2.0
+version: 0.3.0
 license: MIT
 ---
 
@@ -11,9 +11,9 @@ Generate platform-specific, bilingual release notes from the latest entry in `CH
 
 ## Prerequisites
 
-- `CHANGELOG.md` must exist with at least one version entry — run the `generate-changelog` skill first if needed
+- `CHANGELOG.md` must exist with at least one version entry — invoke `generate-changelog` first if needed
 - Python 3 (standard library only, no pip install)
-- Settings at `.claude/changelog-manager.local.md` — run `/changelog-manager:changelog-config` if missing
+- Settings at `.claude/changelog-manager.local.md` — invoke `changelog-config` if missing
 
 ## Platform Reference
 

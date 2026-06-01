@@ -157,16 +157,16 @@ Migrate to /api/v2/auth/login which returns a JWT instead of a session cookie.
 
 ## Ambiguous Cases
 
-| Situation | Recommended type | Rationale |
-|-----------|-----------------|-----------|
-| Fix a bug AND improve performance | `fix` | Bug fix is higher user impact |
-| Add a test AND fix the bug it covers | Split into two commits | Keeps history clean |
-| Update README and fix a typo in code | Split into two commits | `docs` + `fix` |
-| Add logging to debug a production issue | `chore` | Not user-visible feature |
-| Add logging as a user-visible audit trail | `feat` | User-facing capability |
-| Move files to a new directory | `refactor` | No behavior change |
-| Remove dead code | `refactor` | No behavior change |
-| Update a dependency to fix a security vuln | `fix` or `bump` | `fix` if it's a security patch, `bump` otherwise |
+| Situation                                  | Recommended type       | Rationale                                        |
+|--------------------------------------------|------------------------|--------------------------------------------------|
+| Fix a bug AND improve performance          | `fix`                  | Bug fix is higher user impact                    |
+| Add a test AND fix the bug it covers       | Split into two commits | Keeps history clean                              |
+| Update README and fix a typo in code       | Split into two commits | `docs` + `fix`                                   |
+| Add logging to debug a production issue    | `chore`                | Not user-visible feature                         |
+| Add logging as a user-visible audit trail  | `feat`                 | User-facing capability                           |
+| Move files to a new directory              | `refactor`             | No behavior change                               |
+| Remove dead code                           | `refactor`             | No behavior change                               |
+| Update a dependency to fix a security vuln | `fix` or `bump`        | `fix` if it's a security patch, `bump` otherwise |
 
 ---
 

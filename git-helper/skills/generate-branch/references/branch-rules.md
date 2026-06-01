@@ -2,14 +2,14 @@
 
 ## Prefix Reference
 
-| Prefix | Alias | Use case | Example |
-|--------|-------|----------|---------|
-| `feature/` | `feat/` | New feature development | `feature/add-login-page` |
-| `bugfix/` | `fix/` | Non-urgent bug fix | `bugfix/fix-header-bug` |
-| `hotfix/` | — | Urgent production fix | `hotfix/security-patch` |
-| `release/` | — | Release preparation | `release/v1.2.0` |
-| `chore/` | — | Non-code tasks, docs, tooling | `chore/update-dependencies` |
-| `bump/` | — | Dependency version update | `bump/lodash-4.17.21` |
+| Prefix     | Alias   | Use case                      | Example                     |
+|------------|---------|-------------------------------|-----------------------------|
+| `feature/` | `feat/` | New feature development       | `feature/add-login-page`    |
+| `bugfix/`  | `fix/`  | Non-urgent bug fix            | `bugfix/fix-header-bug`     |
+| `hotfix/`  | —       | Urgent production fix         | `hotfix/security-patch`     |
+| `release/` | —       | Release preparation           | `release/v1.2.0`            |
+| `chore/`   | —       | Non-code tasks, docs, tooling | `chore/update-dependencies` |
+| `bump/`    | —       | Dependency version update     | `bump/lodash-4.17.21`       |
 
 ### Prefix Selection Guide
 
@@ -31,21 +31,21 @@
 
 ### Allowed Characters
 
-| Characters | Rule |
-|------------|------|
-| `a-z` | Always allowed |
-| `0-9` | Always allowed |
-| `-` | Word separator |
-| `.` | Only in version numbers (`release/v1.2.0`) |
+| Characters | Rule                                       |
+|------------|--------------------------------------------|
+| `a-z`      | Always allowed                             |
+| `0-9`      | Always allowed                             |
+| `-`        | Word separator                             |
+| `.`        | Only in version numbers (`release/v1.2.0`) |
 
 ### Forbidden Characters
 
-| Characters | Reason |
-|------------|--------|
-| `A-Z` | Case sensitivity issues across platforms |
-| `_` | Confusing with snake_case, some CI tools treat differently |
-| `@`, `#`, `!`, spaces | Git does not allow in branch names |
-| `/` at start or end | Reserved as path separator |
+| Characters            | Reason                                                     |
+|-----------------------|------------------------------------------------------------|
+| `A-Z`                 | Case sensitivity issues across platforms                   |
+| `_`                   | Confusing with snake_case, some CI tools treat differently |
+| `@`, `#`, `!`, spaces | Git does not allow in branch names                         |
+| `/` at start or end   | Reserved as path separator                                 |
 
 ### Structural Rules
 
@@ -121,13 +121,13 @@ Given a work description, construct the slug:
 
 **Examples:**
 
-| User description | Slug |
-|-----------------|------|
-| "Add OAuth2 login support" | `add-oauth2-login` |
-| "Fix crash when app opens offline" | `fix-offline-crash` |
-| "Update lodash to 4.17.21" | `lodash-4.17.21` (for `bump/`) |
-| "Prepare release 2.0.0" | `v2.0.0` (for `release/`) |
-| "Refactor authentication module" | `refactor-auth-module` |
+| User description                   | Slug                           |
+|------------------------------------|--------------------------------|
+| "Add OAuth2 login support"         | `add-oauth2-login`             |
+| "Fix crash when app opens offline" | `fix-offline-crash`            |
+| "Update lodash to 4.17.21"         | `lodash-4.17.21` (for `bump/`) |
+| "Prepare release 2.0.0"            | `v2.0.0` (for `release/`)      |
+| "Refactor authentication module"   | `refactor-auth-module`         |
 
 ---
 
@@ -159,11 +159,11 @@ Consistent prefix usage ensures CI rules work correctly. Always use the primary 
 
 ## Common Mistakes
 
-| Mistake | Example | Fix |
-|---------|---------|-----|
-| Uppercase letters | `Feature/Add-Login` | `feature/add-login` |
-| Underscore | `feature/add_login` | `feature/add-login` |
-| Ticket with `#` | `feature/#123-add-login` | `feature/123-add-login` |
-| Too long slug | `feature/add-a-new-login-page-with-oauth2-and-sso` | `feature/add-oauth2-login` |
-| No prefix | `add-login` | `feature/add-login` |
-| Double hyphens | `feature/add--login` | `feature/add-login` |
+| Mistake           | Example                                            | Fix                        |
+|-------------------|----------------------------------------------------|----------------------------|
+| Uppercase letters | `Feature/Add-Login`                                | `feature/add-login`        |
+| Underscore        | `feature/add_login`                                | `feature/add-login`        |
+| Ticket with `#`   | `feature/#123-add-login`                           | `feature/123-add-login`    |
+| Too long slug     | `feature/add-a-new-login-page-with-oauth2-and-sso` | `feature/add-oauth2-login` |
+| No prefix         | `add-login`                                        | `feature/add-login`        |
+| Double hyphens    | `feature/add--login`                               | `feature/add-login`        |

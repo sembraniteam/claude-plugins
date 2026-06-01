@@ -1,7 +1,7 @@
 ---
 name: changelog-config
 description: This skill should be used when the user asks to "configure changelog", "set changelog languages", "changelog settings", "setup changelog manager", "add a language to release notes", "change release notes language", "update changelog config", or "set platforms for release notes".
-version: 0.2.0
+version: 0.3.0
 license: MIT
 ---
 
@@ -15,7 +15,7 @@ Create or update the changelog manager settings file at `.claude/changelog-manag
 <project-root>/.claude/changelog-manager.local.md
 ```
 
-This file is gitignored by the plugin's `.gitignore` (`.claude/*.local.md` pattern). Do not commit it.
+This file is **gitignored** by the plugin's `.gitignore` (`.claude/*.local.md` pattern). Do not commit it.
 
 ## Settings Format
 
@@ -91,7 +91,7 @@ Confirm:
 ### Step 5: Report to User
 
 Show the final settings and remind the user:
-- The file is gitignored and should not be committed
+- The file is **gitignored** and should not be committed
 - Run `generate-changelog` before `generate-release-notes` to ensure CHANGELOG.md is current
 
 ## Common Language Codes

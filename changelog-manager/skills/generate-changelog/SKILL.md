@@ -1,7 +1,7 @@
 ---
 name: generate-changelog
 description: This skill should be used when the user asks to "generate changelog", "update changelog", "create changelog", "add changelog entry", "summarize commits for changelog", "prepare a new version", or "bump version". Also trigger when the user mentions updating CHANGELOG.md or documenting recent commits.
-version: 0.2.0
+version: 0.3.0
 license: MIT
 ---
 
@@ -16,7 +16,44 @@ Generate or update `CHANGELOG.md` by analyzing git commit history and formatting
 
 ## Workflow
 
-### Step 1: Analyze Commits
+### Step 1: Check Settings File
+
+Before doing anything else, check whether `.claude/changelog-manager.local.md` exists:
+
+```bash
+[ -f ".claude/changelog-manager.local.md" ] && echo "exists" || echo "missing"
+```
+
+**If the file is missing**, invoke the `changelog-config` skill now to create it. That skill will collect the user's preferred languages and platforms and write the file. Wait for it to complete before continuing.
+
+**If the file exists**, read it to load the current `languages` and `platforms` values — these will be used as defaults in the pre-flight questions below.
+
+After the settings file is confirmed to exist, proceed to Step 2.
+
+### Step 2: Pre-flight Checklist
+
+Before running any scripts or reading git history, create a todo list and ask the user these questions **all at once**:
+
+1. **Release notes** — Do you want release notes generated after the changelog is created?
+2. **Platform** *(only if answer to #1 is Yes)* — Which platform(s)? Show the current value from `.claude/changelog-manager.local.md` as the default suggestion.
+   - A. App Store
+   - B. Play Store
+   - C. Web
+   - Accept single or multiple answers (e.g., "A", "A and B", "all").
+3. **Languages** *(only if answer to #1 is Yes)* — Which languages should the release notes be written in? Show the current value from `.claude/changelog-manager.local.md` as the default suggestion. (ISO 639-1 codes separated by commas, e.g. `en, id`)
+4. **Git tag** — Do you want to create a new git tag based on the computed version number?
+
+Wait for the user's answers before continuing. After receiving them, display a summary:
+
+> **Your selections:**
+> - Release notes: Yes / No
+> - Platform(s): App Store / Play Store / Web *(omit if release notes = No)*
+> - Languages: `en, id` *(omit if release notes = No)*
+> - Git tag: Yes / No
+
+Then proceed to Step 3.
+
+### Step 3: Analyze Commits
 
 Always run the commit analysis script first — it outputs structured JSON:
 
@@ -35,7 +72,7 @@ The JSON output contains:
 | `date`         | Today's date (YYYY-MM-DD)                              |
 | `commits`      | Array of `{ category, message, pr, breaking }` objects |
 
-### Step 2: Map Commits to CHANGELOG Sections
+### Step 4: Map Commits to CHANGELOG Sections
 
 | Commit Category | CHANGELOG Section      |
 |-----------------|------------------------|
@@ -53,7 +90,7 @@ Format each entry as:
 
 Omit empty sections entirely.
 
-### Step 3: Build the Version Block
+### Step 5: Build the Version Block
 
 ```markdown
 ## [v1.2.0] - 2025-01-15
@@ -68,7 +105,7 @@ Omit empty sections entirely.
 - Login crash on empty password field (#38)
 ```
 
-### Step 4: Write CHANGELOG.md
+### Step 6: Write CHANGELOG.md
 
 **If CHANGELOG.md does not exist**, create it from scratch:
 
@@ -92,42 +129,35 @@ and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 **If CHANGELOG.md already exists**, prepend the new version block after the `## [Unreleased]` section (or immediately after the header if no Unreleased section exists). Never overwrite or remove existing entries.
 
-### Step 5: Report to User
+### Step 7: Report to User
 
 Summarize what was done:
 - Previous version → next version (e.g., `v1.1.0 → v1.2.0`)
 - Count of entries per category
 - Whether CHANGELOG.md was created or updated
 
-### Step 6: Offer to Generate Release Notes
+### Step 8: Create Git Tag (if confirmed in Step 2)
 
-After reporting, ask:
+If the user answered **Yes** to git tag in Step 2, run:
 
-> Would you like to generate release notes for this version?
-> - **Yes** — continue to generate release notes
-> - **No** — done
+```bash
+git tag <next_version>
+```
 
-If the user says **Yes**, ask two follow-up questions **in order**:
+Use the `next_version` value from the script output in Step 3 (e.g., `v1.2.0`). Show the command and its output. Do not push the tag — only create it locally.
 
-**Question 1 — Platform:**
+### Step 9: Generate Release Notes (if confirmed in Step 2)
 
-> Which platform(s) do you want to generate release notes for?
-> A. App Store
-> B. Play Store
-> C. Web
+If the user answered **Yes** to release notes in Step 2, invoke `generate-release-notes` now.
 
-Accept single or multiple answers (e.g., "A", "A and B", "all"). Map answers to platform identifiers:
+Map the platform answers collected in Step 2:
 - A → `appstore`
 - B → `playstore`
 - C → `web`
 
-**Question 2 — Languages:**
+Pass the platform(s) and language codes as conversation context. These values override whatever is in `.claude/changelog-manager.local.md` for this run. Do not ask for platform or language again — use the answers from Step 2.
 
-> Which languages should the release notes be written in? (Type ISO 639-1 codes separated by commas. Example: `en, id`)
-
-Wait for the user's free-text answer. Accept a comma-separated list of ISO 639-1 language codes (e.g., `en`, `id`, `en, id, ja`). Do not suggest or assume a default — the user must type this explicitly.
-
-**Then invoke `changelog-manager:generate-release-notes`**, passing the platform(s) and language codes from the user's answers as conversation context. These values override whatever is in `.claude/changelog-manager.local.md` for this run.
+If the user answered **No** to both git tag and release notes in Step 2, stop after Step 7.
 
 ## Rules
 

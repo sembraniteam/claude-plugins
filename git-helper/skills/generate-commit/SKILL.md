@@ -3,15 +3,36 @@ name: generate-commit
 description: This skill should be used when the user invokes /git-helper:generate-commit, or asks to "generate a commit message", "write a commit for me", "what should my commit message be", "help me commit my changes", or "suggest a commit message". Analyzes staged changes, unstaged diffs, git status, and recent log history using conventional commit format to produce a properly formatted subject, body, and optional footer.
 argument-hint: "[file1 file2 ...]"
 allowed-tools: ["Bash"]
-version: 0.2.0
+version: 0.3.0
 license: MIT
 ---
 
 # Generate Commit Message
 
-Generate a conventional commit message by analyzing the current git context. Display the result for the user to copy and run manually — never execute the commit automatically.
+Generate a conventional commit message by analyzing the current git context. Begin by gathering user intent via a pre-flight checklist, then run the analysis, display results, and execute confirmed actions.
 
-## Step 1: Read Settings
+## Step 1: Pre-flight Checklist
+
+Before running any git commands or scripts, create a todo list and ask the user these four questions **all at once**:
+
+1. **New branch** — Do you want to create a new branch for this commit?
+2. **Stage files** — Do you want to run `git add <files>`? If yes, which files? (or `--all` for everything)
+3. **Checkout branch** — Do you want to run `git checkout -b <branch-name>` after the branch name is generated?
+4. **Execute commit** — Do you want to run `git commit -m "<message>"` automatically?
+
+Wait for the user to answer all four questions before proceeding.
+
+After receiving answers, display a clear summary before continuing:
+
+> **Your selections:**
+> - New branch: Yes / No
+> - Stage files: Yes (`git add <files>`) / No
+> - Checkout branch: Yes / No
+> - Execute commit: Yes / No
+
+Then proceed to Step 2.
+
+## Step 2: Read Settings
 
 Check if `.claude/git-helper.local.md` exists. If it does, parse the YAML frontmatter to get `default_scope`:
 
@@ -23,9 +44,9 @@ if [ -f "$SETTINGS" ]; then
 fi
 ```
 
-Use `default_scope` as a fallback when scope cannot be inferred from the diff (Step 5).
+Use `default_scope` as a fallback when scope cannot be inferred from the diff (Step 6).
 
-## Step 2: Collect Git Context
+## Step 3: Collect Git Context
 
 Run the context script, passing any user-supplied file paths as arguments:
 
@@ -53,7 +74,7 @@ The script outputs labeled sections (headers use `===` delimiters):
 
 If both diffs are empty and status shows no changes, inform the user there is nothing to commit and stop.
 
-## Step 3: Determine Commit Type
+## Step 4: Determine Commit Type
 
 Analyze the staged diff first (primary signal), then unstaged diff and status as supporting context. Select exactly one type from the table below:
 
@@ -75,7 +96,7 @@ Analyze the staged diff first (primary signal), then unstaged diff and status as
 - If changes span multiple types, pick the dominant type (the one with the most lines changed or highest user impact)
 - `feat` and `fix` take priority over `refactor` when in doubt
 
-## Step 4: Detect Breaking Changes
+## Step 5: Detect Breaking Changes
 
 Mark as a breaking change if any of the following are true:
 - A public API, function signature, or interface is removed or incompatibly changed
@@ -83,13 +104,13 @@ Mark as a breaking change if any of the following are true:
 - Database schema changes that require migration
 - The diff contains a comment or message with `BREAKING CHANGE`
 
-## Step 5: Determine Scope
+## Step 6: Determine Scope
 
 Infer scope from the changed file paths (e.g., `auth` from `src/auth/login.ts`, `api` from `routes/api/`, `ui` from `components/`). If scope cannot be inferred and `default_scope` is set in `.claude/git-helper.local.md`, use that as the fallback. Omit scope entirely if changes are too broad or cross-cutting.
 
 Scope must be lowercase, no spaces, no special characters.
 
-## Step 6: Write the Subject Line
+## Step 7: Write the Subject Line
 
 Format: `<type>[(<scope>)][!]: <description>`
 
@@ -108,7 +129,7 @@ refactor: extract validation logic into separate module
 feat!: remove deprecated v1 endpoints
 ```
 
-## Step 7: Add Body (if needed)
+## Step 8: Add Body (if needed)
 
 Include a commit body when:
 - The change is non-obvious and requires context
@@ -116,7 +137,7 @@ Include a commit body when:
 
 Separate body from subject with a blank line. Wrap at 72 characters.
 
-## Step 8: Add Breaking Change Footer (if applicable)
+## Step 9: Add Breaking Change Footer (if applicable)
 
 If a breaking change was detected, append:
 
@@ -124,7 +145,7 @@ If a breaking change was detected, append:
 BREAKING CHANGE: <description of what broke and how to migrate>
 ```
 
-## Step 9: Display the Final Message
+## Step 10: Display the Final Message
 
 Present the complete commit message in a code block:
 
@@ -164,15 +185,46 @@ EOF
 - **Merge commit**: Use `chore: merge <branch>` unless the merge introduces a feature or fix.
 - **Revert**: Use `revert: revert "<original subject>"` and reference the reverted commit hash in the body.
 
-## Step 10: Offer to Generate a Branch
+## Step 11: Execute Confirmed Actions
 
-After displaying the commit message, ask:
+Execute the confirmed actions from Step 1 in order. For each action, run it, show the output, then mark it done.
 
-> Do you want to generate a new branch name for this commit?
-> - **Yes** — generate a branch name based on this commit
-> - **No** — done
+### 1. Stage files (if confirmed in Step 1)
 
-If the user says **Yes**, invoke the `git-helper:generate-branch` plugin. Pass the commit subject line as the work description context so the branch name stays consistent with the commit intent. Do not ask for a work description again — use what is already known.
+Run the staged command the user specified:
+
+```bash
+git add <files>
+# or
+git add --all
+```
+
+### 2. Generate branch name (if new branch was confirmed in Step 1)
+
+Invoke the `generate-branch` skill now. Pass the commit subject line as the work description context so the branch name stays consistent with the commit intent. Do not ask for a work description again — use what is already known.
+
+### 3. Checkout new branch (if confirmed in Step 1)
+
+Once the branch name is available from the previous sub-step, run:
+
+```bash
+git checkout -b <generated-branch-name>
+```
+
+### 4. Execute commit (if confirmed in Step 1)
+
+Run the commit command using the message generated in Step 10:
+
+```bash
+git commit -m "<subject>"
+# or heredoc form for multi-line messages
+git commit -m "$(cat <<'EOF'
+<full message>
+EOF
+)"
+```
+
+If no actions were confirmed in Step 1, inform the user the commit message is ready to use manually and stop.
 
 ## Additional Resources
 
