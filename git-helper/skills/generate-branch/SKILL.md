@@ -3,7 +3,7 @@ name: generate-branch
 description: 'This skill should be used when the user invokes /git-helper:generate-branch, or asks to "create a branch", "name my branch", "what should I name this branch", "generate a branch name for this ticket", "help me create a branch for #42", or describes work they are about to start and needs a branch name. Applies team naming conventions with prefix rules (feature/, bugfix/, hotfix/, release/, chore/, bump/) and optional ticket number support.'
 argument-hint: "[#ticket]"
 allowed-tools: ["Bash"]
-version: 0.1.0
+version: 0.2.0
 ---
 
 # Generate Branch Name
@@ -28,23 +28,31 @@ Use `default_branch_prefix` as the fallback prefix when the work description doe
 
 Collect the following from the invocation and conversation context:
 
-1. **Work description** — what the user says they will work on
+1. **Work description** — what the user says they will work on (optional)
 2. **Ticket number** — from the argument, in `#123` format (optional)
 
-If the work description is unclear, ask one brief question before proceeding.
+**If neither a work description nor a ticket number is provided**, analyze the current git changes to infer the branch purpose:
+
+```bash
+bash "$CLAUDE_PLUGIN_ROOT/scripts/collect-context.sh"
+```
+
+Use the staged diff as the primary signal, unstaged diff as secondary. Derive a 2–5 word description that captures the intent of the changes. Do not ask the user for a description — infer it from the diff.
+
+If the work description is provided but unclear, ask one brief question before proceeding.
 
 ## Step 3: Select Branch Prefix
 
 Choose the prefix that best matches the nature of the work. If ambiguous and `default_branch_prefix` is set in settings, use it as the fallback:
 
-| Prefix | Aliases | When to use |
-|--------|---------|-------------|
-| `feature/` | `feat/` | New feature development |
-| `bugfix/` | `fix/` | Bug fixes (non-urgent) |
-| `hotfix/` | — | Urgent production fixes |
-| `release/` | — | Release preparation branches |
-| `chore/` | — | Non-code tasks: dependency updates, docs, tooling |
-| `bump/` | — | Version/dependency increment |
+| Prefix     | Aliases | When to use                                       |
+|------------|---------|---------------------------------------------------|
+| `feature/` | `feat/` | New feature development                           |
+| `bugfix/`  | `fix/`  | Bug fixes (non-urgent)                            |
+| `hotfix/`  | —       | Urgent production fixes                           |
+| `release/` | —       | Release preparation branches                      |
+| `chore/`   | —       | Non-code tasks: dependency updates, docs, tooling |
+| `bump/`    | —       | Version/dependency increment                      |
 
 **Selection rules:**
 - Use `hotfix/` only for critical, time-sensitive production fixes
@@ -71,15 +79,15 @@ Transform the work description into a slug:
 
 Validate the generated name against all constraints:
 
-| Rule | Valid | Invalid |
-|------|-------|---------|
-| Lowercase only | `feature/add-login` | `feature/Add-Login` |
-| Hyphens to separate words | `fix/header-bug` | `fix/header_bug` |
-| No special characters | `feat/oauth2-login` | `feat/oauth2@login` |
-| No consecutive hyphens | `feature/new-login` | `feature/new--login` |
-| No leading/trailing hyphens in slug | `fix/header-bug` | `fix/-header-bug-` |
-| Dots only for version numbers | `release/v1.2.0` | `feature/new.login` |
-| No spaces | `feature/add-login` | `feature/add login` |
+| Rule                                | Valid               | Invalid              |
+|-------------------------------------|---------------------|----------------------|
+| Lowercase only                      | `feature/add-login` | `feature/Add-Login`  |
+| Hyphens to separate words           | `fix/header-bug`    | `fix/header_bug`     |
+| No special characters               | `feat/oauth2-login` | `feat/oauth2@login`  |
+| No consecutive hyphens              | `feature/new-login` | `feature/new--login` |
+| No leading/trailing hyphens in slug | `fix/header-bug`    | `fix/-header-bug-`   |
+| Dots only for version numbers       | `release/v1.2.0`    | `feature/new.login`  |
+| No spaces                           | `feature/add-login` | `feature/add login`  |
 
 ## Step 6: Display the Result
 
@@ -102,15 +110,15 @@ Alternative: hotfix/123-fix-login-crash  ← use this if the fix is urgent
 
 ## Examples
 
-| User description | Ticket | Generated branch |
-|-----------------|--------|-----------------|
-| "Add dark mode toggle to settings" | `#42` | `feature/42-add-dark-mode-toggle` |
-| "Fix crash when opening app offline" | `#38` | `bugfix/38-fix-offline-crash` |
-| "Urgent: security patch for auth bypass" | — | `hotfix/security-patch-auth-bypass` |
-| "Prepare v2.0.0 release" | — | `release/v2.0.0` |
-| "Update dependencies" | — | `chore/update-dependencies` |
-| "Bump lodash to 4.17.21" | `#15` | `bump/15-lodash-4.17.21` |
-| "Refactor auth module" (auth scope) | — | `chore/auth/refactor-module` |
+| User description                         | Ticket | Generated branch                    |
+|------------------------------------------|--------|-------------------------------------|
+| "Add dark mode toggle to settings"       | `#42`  | `feature/42-add-dark-mode-toggle`   |
+| "Fix crash when opening app offline"     | `#38`  | `bugfix/38-fix-offline-crash`       |
+| "Urgent: security patch for auth bypass" | —      | `hotfix/security-patch-auth-bypass` |
+| "Prepare v2.0.0 release"                 | —      | `release/v2.0.0`                    |
+| "Update dependencies"                    | —      | `chore/update-dependencies`         |
+| "Bump lodash to 4.17.21"                 | `#15`  | `bump/15-lodash-4.17.21`            |
+| "Refactor auth module" (auth scope)      | —      | `chore/auth/refactor-module`        |
 
 ## Additional Resources
 

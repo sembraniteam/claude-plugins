@@ -3,7 +3,7 @@ name: generate-commit
 description: This skill should be used when the user invokes /git-helper:generate-commit, or asks to "generate a commit message", "write a commit for me", "what should my commit message be", "help me commit my changes", or "suggest a commit message". Analyzes staged changes, unstaged diffs, git status, and recent log history using conventional commit format to produce a properly formatted subject, body, and optional footer.
 argument-hint: "[file1 file2 ...]"
 allowed-tools: ["Bash"]
-version: 0.1.0
+version: 0.2.0
 ---
 
 # Generate Commit Message
@@ -56,18 +56,18 @@ If both diffs are empty and status shows no changes, inform the user there is no
 
 Analyze the staged diff first (primary signal), then unstaged diff and status as supporting context. Select exactly one type from the table below:
 
-| Type | When to use |
-|------|-------------|
-| `feat` | New feature visible to the user (not a build-script feature) |
-| `fix` | Bug fix visible to the user (not a build-script fix) |
-| `docs` | Documentation changes only (e.g., README.md) |
-| `refactor` | Production code restructured without behavior change |
-| `test` | Tests added or refactored; no production code changed |
-| `chore` | Non-production tasks (grunt tasks, tooling, etc.) |
-| `ci` | CI configuration files or scripts changed |
-| `perf` | Performance improvement |
-| `revert` | Reverting a previous commit |
-| `bump` | Dependency version update |
+| Type       | When to use                                                  |
+|------------|--------------------------------------------------------------|
+| `feat`     | New feature visible to the user (not a build-script feature) |
+| `fix`      | Bug fix visible to the user (not a build-script fix)         |
+| `docs`     | Documentation changes only (e.g., README.md)                 |
+| `refactor` | Production code restructured without behavior change         |
+| `test`     | Tests added or refactored; no production code changed        |
+| `chore`    | Non-production tasks (grunt tasks, tooling, etc.)            |
+| `ci`       | CI configuration files or scripts changed                    |
+| `perf`     | Performance improvement                                      |
+| `revert`   | Reverting a previous commit                                  |
+| `bump`     | Dependency version update                                    |
 
 **Tie-breaking rules:**
 - If staged diff is empty but unstaged diff is not, base the type on the unstaged diff and note that the user should stage changes first
@@ -162,6 +162,16 @@ EOF
 - **Only whitespace/formatting changes**: Use `refactor` (formatting changes with no logic change).
 - **Merge commit**: Use `chore: merge <branch>` unless the merge introduces a feature or fix.
 - **Revert**: Use `revert: revert "<original subject>"` and reference the reverted commit hash in the body.
+
+## Step 10: Offer to Generate a Branch
+
+After displaying the commit message, ask:
+
+> Do you want to generate a new branch name for this commit?
+> - **Yes** — generate a branch name based on this commit
+> - **No** — done
+
+If the user says **Yes**, invoke the `git-helper:generate-branch` plugin. Pass the commit subject line as the work description context so the branch name stays consistent with the commit intent. Do not ask for a work description again — use what is already known.
 
 ## Additional Resources
 

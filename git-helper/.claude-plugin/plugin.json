@@ -1,10 +1,10 @@
 {
   "name": "git-helper",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Generate conventional commit messages and branch names from git context and user descriptions.",
   "author": {
-    "name": "Ahmad Rifai",
-    "email": "ahmad.rifai@delameta.com"
+    "name": "Ahmad Rifa'i",
+    "email": "develop.rifai@gmail.com"
   },
   "keywords": [
     "git",

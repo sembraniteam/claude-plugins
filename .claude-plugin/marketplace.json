@@ -2,28 +2,28 @@
     "name": "sembraniteam-claude-plugins",
     "description": "Sembrani Team Claude Code Plugins",
     "owner": {
-        "name": "Ahmad Rifai",
-        "email": "ahmad.rifai@delameta.com"
+        "name": "Ahmad Rifa'i",
+        "email": "develop.rifai@gmail.com"
     },
     "plugins": [
         {
             "name": "changelog-manager",
-            "description": "Changelog manager plugin for Claude Code by Sembraniteam",
+            "description": "Changelog manager plugin for Claude Code by Sembrani Team",
             "version": "0.1.0",
             "source": "./changelog-manager",
             "author": {
-                "name": "Ahmad Rifai",
-                "email": "ahmad.rifai@delameta.com"
+                "name": "Ahmad Rifa'i",
+                "email": "develop.rifai@gmail.com"
             }
         },
         {
             "name": "git-helper",
-            "description": "Git helper plugin for Claude Code by Sembraniteam",
-            "version": "0.1.0",
+            "description": "Git helper plugin for Claude Code by Sembrani Team",
+            "version": "0.2.0",
             "source": "./git-helper",
             "author": {
-                "name": "Ahmad Rifai",
-                "email": "ahmad.rifai@delameta.com"
+                "name": "Ahmad Rifa'i",
+                "email": "develop.rifai@gmail.com"
             }
         }
     ]
