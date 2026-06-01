@@ -4,6 +4,7 @@ description: 'This skill should be used when the user invokes /git-helper:genera
 argument-hint: "[#ticket]"
 allowed-tools: ["Bash"]
 version: 0.2.0
+license: MIT
 ---
 
 # Generate Branch Name
