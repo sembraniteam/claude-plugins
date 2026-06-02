@@ -1,6 +1,6 @@
 # sembraniteam-claude-plugins
 
-A collection of [Claude Code](https://claude.ai/code) plugins for automating git workflows and release documentation.
+A collection of [Claude Code](https://claude.ai/code) plugins for automating git workflows, release documentation, and debugging.
 
 ## Plugins
 
@@ -19,6 +19,22 @@ Generates and maintains `CHANGELOG.md` and platform-specific release notes from 
 
 ---
 
+### [debugging-workflow](./debugging-workflow)
+
+Systematic debugging plugin with a structured 8-step process: pre-flight checklist, context gathering, git diff analysis, test discovery, root cause analysis, targeted fix, multi-language verification, and test execution.
+
+| Component                           | Description                                                |
+|-------------------------------------|------------------------------------------------------------|
+| `/debugging-workflow:debug [error]` | Run the full debugging workflow from error to verified fix |
+| `analyze-code` skill                | Auto-detect language and run appropriate analysis tools    |
+| `code-analyzer` agent               | Autonomous full-project static analysis reporter           |
+
+**Supported languages:** Dart/Flutter, Rust, TypeScript, JavaScript, Python, Go, Java, Kotlin, Swift, Ruby, C/C++
+
+**Prerequisites:** Git, plus the analyze tool for your language (`dart`, `cargo`, `npx`, `ruff`, `go`, etc.)
+
+---
+
 ### [git-helper](./git-helper)
 
 Generates conventional commit messages and branch names from git context and user descriptions.
@@ -34,7 +50,7 @@ Generates conventional commit messages and branch names from git context and use
 
 ## Installation
 
-Install both plugins at once using the marketplace:
+Install all plugins at once using the marketplace:
 
 ```bash
 cc plugin install https://github.com/sembraniteam/claude-plugins
@@ -45,6 +61,7 @@ Or install a single plugin by pointing to its directory:
 ```bash
 cc plugin install https://github.com/sembraniteam/claude-plugins/changelog-manager
 cc plugin install https://github.com/sembraniteam/claude-plugins/git-helper
+cc plugin install https://github.com/sembraniteam/claude-plugins/debugging-workflow
 ```
 
 ---
@@ -75,6 +92,22 @@ Reads your git history since the last tag, writes a new version block to `CHANGE
 
 Creates `.claude/changelog-manager.local.md` with your preferred languages and platforms.
 
+### Debugging workflow
+
+```
+/debugging-workflow:debug <error message or stack trace>
+```
+
+Runs a structured 8-step debugging session: parses the error, reads relevant files, checks `git diff`, finds related tests, concludes the root cause, applies a fix, verifies with the appropriate language tool, and runs tests.
+
+### First-time setup for debugging-workflow
+
+```
+/debugging-workflow:debug
+```
+
+On first run, if no `.claude/debugging-workflow.local.md` exists, Claude will offer to create one and walk you through setting `lint_config_path`, `skip_verification`, and an optional `analyze_command`.
+
 ---
 
 ## Repository Structure
@@ -95,6 +128,18 @@ Creates `.claude/changelog-manager.local.md` with your preferred languages and p
 │       ├── changelog-config/
 │       ├── generate-changelog/
 │       └── generate-release-notes/
+├── debugging-workflow/
+│   ├── .claude-plugin/
+│   │   └── plugin.json
+│   ├── agents/
+│   │   └── code-analyzer.md
+│   └── skills/
+│       ├── analyze-code/
+│       │   ├── SKILL.md
+│       │   └── examples/
+│       └── debug/
+│           ├── SKILL.md
+│           └── references/
 └── git-helper/
     ├── .claude-plugin/
     │   └── plugin.json

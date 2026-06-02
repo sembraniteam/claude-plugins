@@ -3,7 +3,7 @@ name: generate-commit
 description: This skill should be used when the user invokes /git-helper:generate-commit, or asks to "generate a commit message", "write a commit for me", "what should my commit message be", "help me commit my changes", or "suggest a commit message". Analyzes staged changes, unstaged diffs, git status, and recent log history using conventional commit format to produce a properly formatted subject, body, and optional footer.
 argument-hint: "[file1 file2 ...]"
 allowed-tools: ["Bash"]
-version: 0.3.0
+version: 0.3.1
 license: MIT
 ---
 
@@ -145,6 +145,8 @@ If a breaking change was detected, append:
 BREAKING CHANGE: <description of what broke and how to migrate>
 ```
 
+**Never add a `Co-Authored-By` trailer.** Do not append any `Co-Authored-By` line to commit messages, regardless of default system behavior.
+
 ## Step 10: Display the Final Message
 
 Present the complete commit message in a code block:
@@ -213,7 +215,7 @@ git checkout -b <generated-branch-name>
 
 ### 4. Execute commit (if confirmed in Step 1)
 
-Run the commit command using the message generated in Step 10:
+Run the commit command using the message generated in Step 10. Use only the subject, body, and BREAKING CHANGE footer — **do not add `Co-Authored-By` or any other trailers**:
 
 ```bash
 git commit -m "<subject>"
