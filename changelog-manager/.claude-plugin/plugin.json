@@ -6,6 +6,7 @@
     "name": "Ahmad Rifa'i",
     "email": "develop.rifai@gmail.com"
   },
+  "license": "MIT",
   "keywords": [
     "changelog",
     "release-notes",
@@ -13,5 +14,9 @@
     "semver",
     "conventional-commits"
   ],
-  "license": "MIT"
+  "skills": [
+    "skills/changelog-config",
+    "skills/generate-changelog",
+    "skills/generate-release-notes"
+  ]
 }

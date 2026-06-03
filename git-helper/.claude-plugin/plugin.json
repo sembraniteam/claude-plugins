@@ -6,11 +6,15 @@
     "name": "Ahmad Rifa'i",
     "email": "develop.rifai@gmail.com"
   },
+  "license": "MIT",
   "keywords": [
     "git",
     "conventional-commits",
     "branch-naming",
     "commit-message"
   ],
-  "license": "MIT"
+  "skills": [
+    "skills/generate-branch",
+    "skills/generate-commit"
+  ]
 }
