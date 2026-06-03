@@ -1,9 +1,8 @@
 ---
 name: debug
-description: This skill should be used when the user invokes /debugging-workflow:debug, reports an error or bug, pastes a stack trace, says "I have a bug", "this is not working", "fix this error", "debug this", or shares any error message or unexpected behavior. Runs a systematic debugging workflow with pre-flight checklist, context gathering, git diff analysis, test discovery, root cause analysis, targeted fix, and multi-language code verification.
+description: This skill should be used when the user invokes /debugging-workflow:debug, reports an error or bug, pastes a stack trace, says "I have a bug", "this is not working", "fix this error", "debug this", or shares any runtime error, crash report, or unexpected behavior (as opposed to a static analysis request, which should use analyze-code). Runs a systematic debugging workflow with pre-flight checklist, context gathering, git diff analysis, test discovery, root cause analysis, targeted fix, and multi-language code verification.
 argument-hint: "[error message, stack trace, or bug description — leave blank to inspect current state]"
 allowed-tools: ["Read", "Bash", "Grep", "Glob"]
-version: 0.1.0
 license: MIT
 ---
 
@@ -13,7 +12,7 @@ A systematic debugging process that moves from symptom to root cause to verified
 
 ## Pre-Flight Checklist
 
-Upon invocation, immediately create a todo list using TaskCreate with these steps:
+Upon invocation, immediately create a todo list using TaskCreate with these steps. If TaskCreate is unavailable, track steps as a numbered checklist instead.
 
 1. **Read & parse error** — understand the error message/stack trace
 2. **Gather context** — read relevant source files
@@ -36,8 +35,8 @@ If the user provided an error message or stack trace:
 - Identify which file/function/line is the direct origin
 
 If no error was provided:
-- Ask the user: "What error or unexpected behavior are you seeing?"
-- Alternatively, ask which file or feature is misbehaving
+- Ask: "What error or unexpected behavior are you seeing? If you have a stack trace or error message, paste it here."
+- If the response is vague (e.g., "it doesn't work"), follow up with: "Which file or feature is misbehaving?"
 
 ---
 
@@ -77,9 +76,12 @@ Look for:
 Search for test files associated with the failing code:
 
 ```bash
-# Common test file patterns
+# Common test file patterns (all languages)
 find . -name "*_test.*" -o -name "*.test.*" -o -name "*.spec.*" | grep -v node_modules
-find . -path "*/test*" -name "*.dart" -o -path "*/tests*" -name "*.py"
+
+# Test files inside test/ or tests/ directories (Dart, Python)
+find . \( -path "*/test*" -o -path "*/tests*" \) \
+  \( -name "*.dart" -o -name "*.py" \) | grep -v node_modules
 ```
 
 - For Dart: look for `test/` directory or `*_test.dart` files
@@ -118,7 +120,7 @@ Apply a targeted fix following language-specific best practices:
 - Write no comments unless the fix is non-obvious (hidden constraint, workaround)
 
 **Language-specific patterns:**
-- See `references/analyze-tools.md` for language-specific idioms and best practices
+- See `../../references/analyze-tools.md` for language-specific idioms and best practices
 - Match the existing naming conventions, type system usage, and architecture patterns
 - For async code: handle futures/promises correctly; avoid fire-and-forget
 - For null safety (Dart/Kotlin/TS): use proper null checks, not `!` unless provably safe
@@ -129,30 +131,33 @@ After applying the fix, briefly summarize what changed and why.
 
 ## Step 7 — Verify Changes
 
-Before running tools, check for `.claude/debugging-workflow.local.md`. If it exists, read the YAML frontmatter:
-- `lint_config_path` — pass to the tool as a config flag (see `analyze-code` skill for per-language flags)
+Before running tools, check for `.claude/debugging-workflow.local.md`. If it exists, parse the YAML frontmatter:
+- `lint_config_path` — pass to the tool as a config flag (see `../../references/analyze-tools.md` for per-language flags)
 - `skip_verification: true` — skip this step entirely and note it in the summary
 
-Run the appropriate analysis tool for the project language. Language detection rules:
+If no settings file exists, proceed with project defaults. To configure custom lint paths, ask me to "set up debugging-workflow settings".
 
-| Detected file/config          | Tool(s) to run                              |
-|-------------------------------|---------------------------------------------|
-| `pubspec.yaml` / `.dart`      | `dart analyze` or `flutter analyze`         |
-| `Cargo.toml` / `.rs`          | `cargo check` then `cargo clippy`           |
-| `package.json` / `.ts`/`.tsx` | `tsc --noEmit` then `npx eslint <file>`     |
-| `package.json` / `.js`/`.jsx` | `npx eslint <file>`                         |
-| `requirements.txt` / `.py`    | `python -m pylint <file>` or `ruff check .` |
-| `go.mod` / `.go`              | `go vet ./...`                              |
-| `pom.xml` or `build.gradle`   | `mvn compile -q` or `./gradlew compileJava` |
-| `.swift`                      | `swiftlint lint --path <file>`              |
-| `.rb`                         | `rubocop <file>`                            |
-| `.kt`                         | `ktlint <file>`                             |
+Detect the project language using the same priority table as `analyze-code` (first match wins):
+
+| Detected file/config                            | Tool(s) to run                           |
+|-------------------------------------------------|------------------------------------------|
+| `pubspec.yaml` / `.dart`                        | `dart analyze` or `flutter analyze`      |
+| `Cargo.toml` / `.rs`                            | `cargo check` then `cargo clippy`        |
+| `package.json` / `.ts` / `.tsx`                 | `tsc --noEmit` then `npx eslint <file>`  |
+| `package.json` / `.js` / `.jsx`                 | `npx eslint <file>`                      |
+| `requirements.txt` / `.py`                      | `ruff check .` (or `python -m pylint .`) |
+| `go.mod` / `.go`                                | `go vet ./...`                           |
+| `pom.xml` / `build.gradle` / `build.gradle.kts` | `mvn compile -q` or `./gradlew check`    |
+| `Package.swift` / `.xcodeproj` / `.swift`       | `swiftlint lint --path <file>`           |
+| `Gemfile` / `.rb`                               | `rubocop <file>`                         |
+| `CMakeLists.txt` / `Makefile`                   | `cmake --build build/` or `make`         |
 
 Run from the project root. If the tool reports errors:
 - Fix each reported error before proceeding
-- Re-run the tool until it reports zero errors or warnings
+- Re-run the tool once more if errors persist
+- If errors remain after two fix-and-rerun cycles, stop and report the remaining errors to the user with a diagnosis of why they cannot be auto-resolved
 
-For detailed tool options and flags, see `references/analyze-tools.md`.
+Note: this step runs only the primary analysis tool. For a full formatting check, use the `analyze-code` skill.
 
 ---
 
@@ -182,8 +187,10 @@ go test ./... -run TestFunctionName
 If all tests pass: report the fix as complete with a summary.
 
 If any test fails:
-- Treat it as a new debugging cycle starting at Step 1
-- The fix may have introduced a regression — re-read the test to understand expected behavior
+- The fix may have introduced a regression — re-read the failing test to understand expected behavior
+- Perform one additional root cause analysis (Steps 2–5 only) on the failing test
+- Apply a targeted fix and re-run the failing test
+- If the test still fails after this second pass, stop and report both the original fix and the newly failing test to the user, and ask for guidance
 
 ---
 
@@ -191,9 +198,9 @@ If any test fails:
 
 ### Reference Files
 
-- **`references/analyze-tools.md`** — Full language → tool mapping, flags, and common error patterns
+- **`../../references/analyze-tools.md`** — Full language → tool mapping, flags, and common error patterns
 - **`references/debugging-patterns.md`** — Common root cause patterns by error category (null pointer, type mismatch, async race, import cycle, etc.)
 
 ### Code Analyzer Agent
 
-For large-scale or multi-file analysis, trigger the `code-analyzer` agent which runs the full analysis pipeline autonomously and returns a structured report.
+For large-scale analysis — more than 5 files affected, or when the error spans multiple packages — trigger the `code-analyzer` agent using the `Agent` tool with `subagent_type: "debugging-workflow:code-analyzer"`. It runs the full analysis pipeline autonomously and returns a structured report.

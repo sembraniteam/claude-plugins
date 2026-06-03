@@ -1,11 +1,12 @@
 {
   "name": "debugging-workflow",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Systematic debugging workflow — pre-flight checklist, context gathering, root cause analysis, fix, and multi-language code verification",
   "author": {
     "name": "Ahmad Rifa'i",
     "email": "develop.rifai@gmail.com"
   },
   "license": "MIT",
-  "keywords": ["debugging", "bug-fix", "analysis"]
+  "keywords": ["debugging", "bug-fix", "analysis"],
+  "skills": ["skills/analyze-code", "skills/debug"]
 }

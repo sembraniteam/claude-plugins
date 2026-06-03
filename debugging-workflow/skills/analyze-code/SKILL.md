@@ -1,7 +1,6 @@
 ---
 name: analyze-code
 description: This skill should be used when verifying code changes after a bug fix, running static analysis, checking code quality before committing, or when the user asks to "analyze code", "check for errors", "run lint", "verify my changes", "run dart analyze", "run cargo check", "run eslint", "check types", or mentions any language-specific analysis tool. Detects the project's primary language automatically and runs the appropriate set of analysis tools.
-version: 0.1.0
 license: MIT
 allowed-tools: ["Read", "Bash", "Grep", "Glob"]
 ---
@@ -12,113 +11,40 @@ Automatically detect the project language and run the appropriate static analysi
 
 ## Settings
 
-Before running any analysis, check for a project-local settings file at `.claude/debugging-workflow.local.md`.
-
-If found, read it with the Read tool and parse the YAML frontmatter:
+Before running any analysis, check for `.claude/debugging-workflow.local.md`. If found, read it with the Read tool and parse the YAML frontmatter:
 
 ```
 ---
-lint_config_path: "path/to/custom-config"   # optional
-skip_verification: false                    # set to true to skip all analysis
-analyze_command: ""                         # optional custom command, e.g. "make lint"
+lint_config_path: ""       # path to custom lint config, or leave blank
+skip_verification: false   # set to true to skip all analysis
+analyze_command: ""        # optional override command, e.g. "make lint"
 ---
 ```
 
-- **`lint_config_path`**: Path to a custom lint/analysis config file. When set, pass it to the tool as a flag (see language-specific flag table below). Leave empty or omit to use the project default.
-- **`skip_verification`**: If `true`, skip analysis entirely and report "Verification skipped (skip_verification: true in settings)".
-- **`analyze_command`**: If set and non-empty, run this command instead of the auto-detected tool for the primary analysis step (e.g. `make lint`, `pnpm run lint`, `./scripts/check.sh`).
+- **`lint_config_path`**: When set, pass as a config flag to the tool (see table below). Omit the flag entirely if blank or missing.
+- **`skip_verification`**: If `true`, skip all analysis and report "Verification skipped (skip_verification: true in settings)".
+- **`analyze_command`**: When set, run this instead of the auto-detected tool for the primary analysis step. The formatting check (Step 2) still runs unless `skip_verification` is `true`.
 
-If the file does not exist, run the following setup checklist before proceeding:
-
-### Settings Setup Checklist
-
-Create a todo list using TaskCreate with these steps:
-1. Ask user whether to create a settings file
-2. Collect `lint_config_path` from user
-3. Collect `skip_verification` from user
-4. Ask for optional custom analyze command
-5. Write `.claude/debugging-workflow.local.md`
-
-Mark each item `in_progress` before starting and `completed` after finishing.
-
----
-
-**Step 1 — Ask whether to create a settings file**
-
-Ask: "No settings file found at `.claude/debugging-workflow.local.md`. Would you like me to create one?"
-
-- If **no**: skip remaining steps, proceed with analysis using project defaults.
-- If **yes**: continue to Step 2.
-
-**Step 2 — Collect `lint_config_path`**
-
-Ask: "Enter the path to your custom lint/analysis config file, relative to the project root. Leave blank to use the project default.
-
-Examples:
-- Dart:        `config/analysis_options.yaml`
-- ESLint:      `.eslintrc.strict.json`
-- Ruff:        `config/ruff.toml`
-- RuboCop:     `.rubocop.ci.yml`
-- SwiftLint:   `.swiftlint.strict.yml`
-
-`lint_config_path`:"
-
-Wait for the user's response. Store the value (empty string if blank).
-
-**Step 3 — Collect `skip_verification`**
-
-Ask: "Skip static analysis entirely when this setting is active? (true/false, default: false)
-
-`skip_verification`:"
-
-Wait for the user's response. Default to `false` if blank or invalid.
-
-**Step 4 — Optional: custom analyze command (skip if not needed)**
-
-Ask: "If you use a custom command to run analysis (e.g. `make lint`, `./scripts/check.sh`), enter it here. Leave blank to use the auto-detected tool.
-
-`analyze_command` (optional):"
-
-Wait for the user's response. Store the value (empty string if blank).
-
-**Step 5 — Write `.claude/debugging-workflow.local.md`**
-
-Create `.claude/` directory if it does not exist (`mkdir -p .claude`), then write the file using the Write tool:
-
-```markdown
----
-lint_config_path: "<value from Step 2>"
-skip_verification: <value from Step 3>
-analyze_command: "<value from Step 4>"
----
-```
-
-Omit `analyze_command` line entirely if the user left it blank.
-
-Confirm to the user: "`.claude/debugging-workflow.local.md` has been created."
-
----
-
-After the checklist completes, proceed with analysis using the newly created settings.
+If no settings file exists, proceed with project defaults.
 
 ### Lint config path flags by language
 
-| Language               | Flag to use                                                                              |
-|------------------------|------------------------------------------------------------------------------------------|
-| Dart                   | `dart analyze --options <lint_config_path>`                                              |
-| Rust                   | `RUSTFMT_TOML=<lint_config_path> cargo fmt` / `rustfmt --config-path <lint_config_path>` |
-| TypeScript/JS (ESLint) | `npx eslint --config <lint_config_path>`                                                 |
-| Python (Ruff)          | `ruff check --config <lint_config_path>`                                                 |
-| Python (Pylint)        | `pylint --rcfile <lint_config_path>`                                                     |
-| Ruby                   | `rubocop --config <lint_config_path>`                                                    |
-| Go                     | (no flag — `go vet` uses standard toolchain config)                                      |
-| Swift                  | `swiftlint lint --config <lint_config_path>`                                             |
+| Language               | Flag to use                                             |
+|------------------------|---------------------------------------------------------|
+| Dart                   | `dart analyze --options <lint_config_path>`             |
+| Rust                   | `rustfmt --config-path <lint_config_path>`              |
+| TypeScript/JS (ESLint) | `npx eslint --config <lint_config_path>`                |
+| Python (Ruff)          | `ruff check --config <lint_config_path>`                |
+| Python (Pylint)        | `pylint --rcfile <lint_config_path>`                    |
+| Ruby                   | `rubocop --config <lint_config_path>`                   |
+| Go                     | (no flag — `go vet` uses standard toolchain config)     |
+| Swift                  | `swiftlint lint --config <lint_config_path>`            |
 
 ---
 
 ### `analyze_command` override
 
-If `analyze_command` is set and non-empty in the settings file, **run that command instead of the auto-detected tool** for the primary analysis step. Still run the formatting check using the standard tool unless `skip_verification` is `true`.
+If `analyze_command` is set and non-empty, **run that command instead of the auto-detected tool** for the primary analysis step. The formatting check (Step 2) still runs using the standard tool unless `skip_verification` is `true`.
 
 Example: if `analyze_command: "make lint"`, run `make lint` and report its output directly.
 
@@ -126,21 +52,23 @@ Example: if `analyze_command: "make lint"`, run `make lint` and report its outpu
 
 ## Language Detection
 
-Detect the primary language by checking for these files (in priority order):
+Detect the primary language by checking for marker files in priority order (first match wins):
 
-1. `pubspec.yaml` → **Dart/Flutter**
-2. `Cargo.toml` → **Rust**
-3. `tsconfig.json` or `.ts`/`.tsx` files → **TypeScript**
-4. `package.json` (without tsconfig) → **JavaScript**
-5. `go.mod` → **Go**
-6. `requirements.txt`, `pyproject.toml`, or `setup.py` → **Python**
-7. `pom.xml` → **Java/Maven**
-8. `build.gradle` or `build.gradle.kts` → **Kotlin/Java/Gradle**
-9. `Package.swift` or `.xcodeproj` → **Swift**
-10. `Gemfile` → **Ruby**
-11. `CMakeLists.txt` or `Makefile` → **C/C++**
+| Priority | Marker file(s)                                       | Language        |
+|----------|------------------------------------------------------|-----------------|
+| 1        | `pubspec.yaml`                                       | Dart / Flutter  |
+| 2        | `Cargo.toml`                                         | Rust            |
+| 3        | `tsconfig.json` or any `.ts` / `.tsx` file           | TypeScript      |
+| 4        | `package.json` (no tsconfig present)                 | JavaScript      |
+| 5        | `go.mod`                                             | Go              |
+| 6        | `requirements.txt`, `pyproject.toml`, or `setup.py`  | Python          |
+| 7        | `pom.xml`                                            | Java / Maven    |
+| 8        | `build.gradle` or `build.gradle.kts`                 | Kotlin / Gradle |
+| 9        | `Package.swift` or `.xcodeproj`                      | Swift           |
+| 10       | `Gemfile`                                            | Ruby            |
+| 11       | `CMakeLists.txt` or `Makefile`                       | C / C++         |
 
-If multiple are present, prefer the language of the file most recently edited.
+For Dart: if `pubspec.yaml` contains `flutter:` as a top-level key, treat as Flutter; otherwise pure Dart. If no marker file is found, ask the user which language the project uses.
 
 ## Analysis Steps
 
@@ -161,6 +89,7 @@ Run the language's primary analysis command from the project root:
 | Kotlin/Gradle | `./gradlew check`                                            |
 | Swift         | `swiftlint lint`                                             |
 | Ruby          | `rubocop`                                                    |
+| C/C++         | `cmake --build build/` or `make` (whichever applies)         |
 
 ### 2. Check Formatting
 
@@ -169,7 +98,7 @@ Run a formatting check (non-destructive) if a formatter is available:
 | Language      | Format Check Command                                |
 |---------------|-----------------------------------------------------|
 | Dart          | `dart format --output=none --set-exit-if-changed .` |
-| Rust          | `rustfmt --check src/**/*.rs`                       |
+| Rust          | `cargo fmt -- --check`                              |
 | TypeScript/JS | `npx prettier --check .`                            |
 | Go            | `gofmt -l .`                                        |
 | Python        | `ruff format --check .`                             |
@@ -221,6 +150,64 @@ Report analysis results in this structure:
 - [Passed / N files need formatting]
 ```
 
+If no settings file was found, append to the report:
+
+> **Tip:** No `.claude/debugging-workflow.local.md` found. Ask me to "set up debugging-workflow settings" to configure custom lint paths or override commands.
+
+---
+
+## Settings Setup
+
+Run this only when the user explicitly asks to "set up debugging-workflow settings", "create a settings file", or similar — not automatically on first analysis.
+
+Create a todo list with these steps. If TaskCreate is unavailable, track steps as a numbered checklist instead. Mark each task `in_progress` before starting and `completed` after finishing.
+
+**Step 1 — Confirm intent**
+
+Ask: "Would you like me to create `.claude/debugging-workflow.local.md` with custom settings?"
+
+- If **no**: stop.
+- If **yes**: continue.
+
+**Step 2 — Collect `lint_config_path`**
+
+Ask: "Enter the path to your custom lint/analysis config file (relative to project root), or leave blank to use project defaults.
+
+Examples: `config/analysis_options.yaml`, `.eslintrc.strict.json`, `config/ruff.toml`
+
+`lint_config_path`:"
+
+**Step 3 — Collect `skip_verification`**
+
+Ask: "Skip all static analysis when this setting is active? (true/false, default: false)
+
+`skip_verification`:"
+
+Default to `false` if blank or invalid.
+
+**Step 4 — Optional custom analyze command**
+
+Ask: "Custom analysis command (e.g. `make lint`, `./scripts/check.sh`), or leave blank to auto-detect.
+
+`analyze_command`:"
+
+**Step 5 — Write the settings file**
+
+Run `mkdir -p .claude`, then write `.claude/debugging-workflow.local.md`:
+
+```markdown
+---
+lint_config_path: "<value from Step 2>"
+skip_verification: <value from Step 3>
+analyze_command: "<value from Step 4>"
+---
+```
+
+Confirm: "`.claude/debugging-workflow.local.md` has been created."
+
+---
+
 ## Additional Resources
 
-- **`../debug/references/analyze-tools.md`** — Full per-language tool options, common error patterns, and best practices
+- **`../../references/analyze-tools.md`** — Full per-language tool options, common error patterns, and best practices
+- **`../../references/language-detection.md`** — Canonical language detection priority table
