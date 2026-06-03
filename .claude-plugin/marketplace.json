@@ -9,7 +9,7 @@
     {
       "name": "changelog-manager",
       "description": "Changelog manager plugin for Claude Code by Sembrani Team",
-      "version": "0.3.2",
+      "version": "0.3.3",
       "source": "./changelog-manager",
       "author": {
         "name": "Ahmad Rifa'i",
@@ -19,7 +19,7 @@
     {
       "name": "debugging-workflow",
       "description": "Debugging workflow plugin for Claude Code by Sembrani Team",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "source": "./debugging-workflow",
       "author": {
         "name": "Ahmad Rifa'i",
@@ -29,7 +29,7 @@
     {
       "name": "git-helper",
       "description": "Git helper plugin for Claude Code by Sembrani Team",
-      "version": "0.3.2",
+      "version": "0.3.3",
       "source": "./git-helper",
       "author": {
         "name": "Ahmad Rifa'i",

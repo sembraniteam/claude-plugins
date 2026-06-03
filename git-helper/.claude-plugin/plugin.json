@@ -1,6 +1,6 @@
 {
   "name": "git-helper",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Generate conventional commit messages and branch names from git context and user descriptions.",
   "author": {
     "name": "Ahmad Rifa'i",
@@ -12,9 +12,5 @@
     "conventional-commits",
     "branch-naming",
     "commit-message"
-  ],
-  "skills": [
-    "skills/generate-branch",
-    "skills/generate-commit"
   ]
 }
