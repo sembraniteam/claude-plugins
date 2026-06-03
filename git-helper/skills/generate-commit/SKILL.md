@@ -3,7 +3,6 @@ name: generate-commit
 description: This skill should be used when the user invokes /git-helper:generate-commit, or asks to "generate a commit message", "write a commit for me", "what should my commit message be", "help me commit my changes", or "suggest a commit message". Analyzes staged changes, unstaged diffs, git status, and recent log history using conventional commit format to produce a properly formatted subject, body, and optional footer.
 argument-hint: "[file1 file2 ...]"
 allowed-tools: ["Bash"]
-version: 0.3.1
 license: MIT
 ---
 
@@ -13,22 +12,38 @@ Generate a conventional commit message by analyzing the current git context. Beg
 
 ## Step 1: Pre-flight Checklist
 
-Before running any git commands or scripts, create a todo list and ask the user these four questions **all at once**:
+Before running any git commands or scripts, create a todo list and gather user intent in two rounds.
+
+**Round 1 — ask both questions at once:**
 
 1. **New branch** — Do you want to create a new branch for this commit?
-2. **Stage files** — Do you want to run `git add <files>`? If yes, which files? (or `--all` for everything)
-3. **Checkout branch** — Do you want to run `git checkout -b <branch-name>` after the branch name is generated?
-4. **Execute commit** — Do you want to run `git commit -m "<message>"` automatically?
+2. **Stage files** — Offer options based on whether the user provided files:
+   - **If files was provided**, present three choices:
+     1. Yes — all (`git add --all`)
+     2. Yes — `<the provided files>` (`git add <files>`)
+     3. No
+   - **If no file path was provided**, present three choices:
+     1. Yes — all (`git add --all`)
+     2. Yes — specific files (user fills in which files)
+     3. No
 
-Wait for the user to answer all four questions before proceeding.
+Wait for the user to answer, then determine follow-up questions:
 
-After receiving answers, display a clear summary before continuing:
+- If **Q1 = Yes** → include Q3: **Checkout branch** — Do you want to run `git checkout -b <branch-name>` after the branch name is generated?
+- If **Q1 = No** → skip Q3, treat as No.
+
+- If **Q2 = Yes** → include Q4: **Execute commit** — Do you want to run `git commit -m "<message>"` automatically?
+- If **Q2 = No** → skip Q4, treat as No.
+
+**Round 2 — ask any applicable follow-up questions together** (Q3, Q4, or both). If neither applies, skip Round 2 entirely.
+
+After all answers are collected, display a clear summary before continuing:
 
 > **Your selections:**
 > - New branch: Yes / No
 > - Stage files: Yes (`git add <files>`) / No
-> - Checkout branch: Yes / No
-> - Execute commit: Yes / No
+> - Checkout branch: Yes / No / N/A
+> - Execute commit: Yes / No / N/A
 
 Then proceed to Step 2.
 

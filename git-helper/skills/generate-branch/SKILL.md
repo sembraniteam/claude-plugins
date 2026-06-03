@@ -3,7 +3,6 @@ name: generate-branch
 description: 'This skill should be used when the user invokes /git-helper:generate-branch, or asks to "create a branch", "name my branch", "what should I name this branch", "generate a branch name for this ticket", "help me create a branch for #42", or describes work they are about to start and needs a branch name. Applies team naming conventions with prefix rules (feature/, bugfix/, hotfix/, release/, chore/, bump/) and optional ticket number support.'
 argument-hint: "[#ticket]"
 allowed-tools: ["Bash"]
-version: 0.2.0
 license: MIT
 ---
 
