@@ -1,7 +1,6 @@
 ---
 name: changelog-config
 description: This skill should be used when the user asks to "configure changelog", "set changelog languages", "changelog settings", "setup changelog manager", "add a language to release notes", "change release notes language", "update changelog config", or "set platforms for release notes".
-version: 0.3.0
 license: MIT
 ---
 

@@ -1,7 +1,6 @@
 ---
 name: generate-release-notes
 description: This skill should be used when the user asks to generate release notes, create release notes, prepare an App Store or Play Store release, write a web announcement, produce bilingual release notes, or update store listing copy. Relevant phrases include "generate release notes", "create release notes", "prepare App Store release", "prepare Play Store release", "bilingual release notes", "translate release notes", or references to RELEASE_NOTES, RELEASE_NOTES_APPSTORE, or RELEASE_NOTES_PLAYSTORE files.
-version: 0.3.0
 license: MIT
 ---
 
@@ -72,7 +71,7 @@ Convert CHANGELOG entries to user-friendly, non-technical language. Format as `"
 
 For Play Store, prioritize: Breaking Changes > Added > Fixed > Changed > Reverted.
 
-#### Writing the `--outro` (optional)
+#### Writing the `--outro` (optional) but recommended
 
 A closing line appended after the items, separated by a blank line. Use it for calls to action, thank-you notes, or support links. Omit entirely when not needed.
 

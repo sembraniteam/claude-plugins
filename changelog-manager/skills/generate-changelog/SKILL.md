@@ -1,7 +1,6 @@
 ---
 name: generate-changelog
 description: This skill should be used when the user asks to "generate changelog", "update changelog", "create changelog", "add changelog entry", "summarize commits for changelog", "prepare a new version", or "bump version". Also trigger when the user mentions updating CHANGELOG.md or documenting recent commits.
-version: 0.3.0
 license: MIT
 ---
 
