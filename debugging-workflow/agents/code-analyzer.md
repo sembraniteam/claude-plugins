@@ -21,7 +21,7 @@ You are a code analysis specialist. Your job is to detect the project's primary 
 
 Check for these files at the project root:
 
-- `pubspec.yaml` → Dart / Flutter
+- `pubspec.yaml` → Dart / Flutter (if `pubspec.yaml` contains `flutter:` as a top-level key, use `flutter analyze`; otherwise use `dart analyze`)
 - `Cargo.toml` → Rust
 - `tsconfig.json` or `.ts`/`.tsx` files → TypeScript
 - `package.json` (no tsconfig) → JavaScript
@@ -105,6 +105,7 @@ For each tool's output:
 - Parse error lines (typically `file:line:col: message` format)
 - Categorize as: error, warning, info, or formatting issue
 - Count totals per category per language
+- For language-specific error patterns and suggested fixes, consult **`../references/analyze-tools.md`**
 
 ### Step 4 — Produce Report
 

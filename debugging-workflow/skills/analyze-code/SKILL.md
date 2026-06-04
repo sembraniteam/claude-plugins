@@ -52,23 +52,7 @@ Example: if `analyze_command: "make lint"`, run `make lint` and report its outpu
 
 ## Language Detection
 
-Detect the primary language by checking for marker files in priority order (first match wins):
-
-| Priority | Marker file(s)                                       | Language        |
-|----------|------------------------------------------------------|-----------------|
-| 1        | `pubspec.yaml`                                       | Dart / Flutter  |
-| 2        | `Cargo.toml`                                         | Rust            |
-| 3        | `tsconfig.json` or any `.ts` / `.tsx` file           | TypeScript      |
-| 4        | `package.json` (no tsconfig present)                 | JavaScript      |
-| 5        | `go.mod`                                             | Go              |
-| 6        | `requirements.txt`, `pyproject.toml`, or `setup.py`  | Python          |
-| 7        | `pom.xml`                                            | Java / Maven    |
-| 8        | `build.gradle` or `build.gradle.kts`                 | Kotlin / Gradle |
-| 9        | `Package.swift` or `.xcodeproj`                      | Swift           |
-| 10       | `Gemfile`                                            | Ruby            |
-| 11       | `CMakeLists.txt` or `Makefile`                       | C / C++         |
-
-For Dart: if `pubspec.yaml` contains `flutter:` as a top-level key, treat as Flutter; otherwise pure Dart. If no marker file is found, ask the user which language the project uses.
+Detect the primary language by checking for marker files in priority order — see **`references/language-detection.md`** for the full priority table and Flutter/Dart distinction rules. If no marker file is found, ask the user which language the project uses.
 
 ## Analysis Steps
 
@@ -209,5 +193,6 @@ Confirm: "`.claude/debugging-workflow.local.md` has been created."
 
 ## Additional Resources
 
-- **`../../references/analyze-tools.md`** — Full per-language tool options, common error patterns, and best practices
-- **`../../references/language-detection.md`** — Canonical language detection priority table
+- **`references/analyze-tools.md`** — Full per-language tool options, common error patterns, and best practices
+- **`references/language-detection.md`** — Canonical language detection priority table
+- **`examples/debugging-workflow.local.md`** — Ready-made settings template to copy to `.claude/debugging-workflow.local.md`

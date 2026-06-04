@@ -19,7 +19,7 @@
     {
       "name": "debugging-workflow",
       "description": "Debugging workflow plugin for Claude Code by Sembrani Team",
-      "version": "0.2.1",
+      "version": "0.2.2",
       "source": "./debugging-workflow",
       "author": {
         "name": "Ahmad Rifa'i",

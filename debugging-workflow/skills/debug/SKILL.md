@@ -120,7 +120,7 @@ Apply a targeted fix following language-specific best practices:
 - Write no comments unless the fix is non-obvious (hidden constraint, workaround)
 
 **Language-specific patterns:**
-- See `../../references/analyze-tools.md` for language-specific idioms and best practices
+- See `references/analyze-tools.md` for language-specific idioms and best practices
 - Match the existing naming conventions, type system usage, and architecture patterns
 - For async code: handle futures/promises correctly; avoid fire-and-forget
 - For null safety (Dart/Kotlin/TS): use proper null checks, not `!` unless provably safe
@@ -132,7 +132,7 @@ After applying the fix, briefly summarize what changed and why.
 ## Step 7 — Verify Changes
 
 Before running tools, check for `.claude/debugging-workflow.local.md`. If it exists, parse the YAML frontmatter:
-- `lint_config_path` — pass to the tool as a config flag (see `../../references/analyze-tools.md` for per-language flags)
+- `lint_config_path` — pass to the tool as a config flag (see `references/analyze-tools.md` for per-language flags)
 - `skip_verification: true` — skip this step entirely and note it in the summary
 
 If no settings file exists, proceed with project defaults. To configure custom lint paths, ask me to "set up debugging-workflow settings".
@@ -198,7 +198,7 @@ If any test fails:
 
 ### Reference Files
 
-- **`../../references/analyze-tools.md`** — Full language → tool mapping, flags, and common error patterns
+- **`references/analyze-tools.md`** — Full language → tool mapping, flags, and common error patterns
 - **`references/debugging-patterns.md`** — Common root cause patterns by error category (null pointer, type mismatch, async race, import cycle, etc.)
 
 ### Code Analyzer Agent
