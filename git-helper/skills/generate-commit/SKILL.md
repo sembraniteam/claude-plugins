@@ -218,7 +218,7 @@ git add --all
 
 ### 2. Generate branch name (if new branch was confirmed in Step 1)
 
-Invoke the `generate-branch` skill now. Pass the commit subject line as the work description context so the branch name stays consistent with the commit intent. Do not ask for a work description again — use what is already known.
+Use the Skill tool to invoke `git-helper:generate-branch` now. Pass the commit subject line as the work description context so the branch name stays consistent with the commit intent. Do not ask for a work description again — use what is already known.
 
 ### 3. Checkout new branch (if confirmed in Step 1)
 
