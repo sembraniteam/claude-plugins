@@ -23,7 +23,7 @@ Before doing anything else, check whether `.claude/changelog-manager.local.md` e
 [ -f ".claude/changelog-manager.local.md" ] && echo "exists" || echo "missing"
 ```
 
-**If the file is missing**, invoke the `changelog-config` skill now to create it. That skill will collect the user's preferred languages and platforms and write the file. Wait for it to complete before continuing.
+**If the file is missing**, use the Skill tool to invoke `changelog-manager:changelog-config` now to create it. That skill will collect the user's preferred languages and platforms and write the file. Wait for it to complete before continuing.
 
 **If the file exists**, read it to load the current `languages` and `platforms` values — these will be used as defaults in the pre-flight questions below.
 
@@ -147,7 +147,7 @@ Use the `next_version` value from the script output in Step 3 (e.g., `v1.2.0`). 
 
 ### Step 9: Generate Release Notes (if confirmed in Step 2)
 
-If the user answered **Yes** to release notes in Step 2, invoke `generate-release-notes` now.
+If the user answered **Yes** to release notes in Step 2, use the Skill tool to invoke `changelog-manager:generate-release-notes` now.
 
 Map the platform answers collected in Step 2:
 - A → `appstore`

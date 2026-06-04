@@ -71,7 +71,7 @@ Convert CHANGELOG entries to user-friendly, non-technical language. Format as `"
 
 For Play Store, prioritize: Breaking Changes > Added > Fixed > Changed > Reverted.
 
-#### Writing the `--outro` (optional) but recommended
+#### Writing the `--outro` (optional)
 
 A closing line appended after the items, separated by a blank line. Use it for calls to action, thank-you notes, or support links. Omit entirely when not needed.
 
