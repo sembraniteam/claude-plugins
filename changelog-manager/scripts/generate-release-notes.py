@@ -132,7 +132,16 @@ def validate_against_changelog(items, categories):
     return valid
 
 
+def auto_extract_items(categories):
+    priority_order = ["breaking", "added", "changed", "fixed", "reverted"]
+    items = []
+    for cat in priority_order:
+        items.extend(categories.get(cat, []))
+    return items
+
+
 MIN_INTRO_CHARS = 100
+MAX_ITEMS = 6
 
 
 def build_section(intro, items, max_chars, outro=""):
@@ -246,16 +255,20 @@ def main():
         intro = lang_data["intro"]
         items_raw = lang_data["items"]
 
-        items = normalize_bullets(items_raw)
-        items = lint_items(items)
+        if items_raw.strip():
+            items = normalize_bullets(items_raw)
+            items = lint_items(items)
+        else:
+            items = lint_items(auto_extract_items(categories))
 
-        if code.lower() == "en":
+        if code.lower().split("_")[0] == "en":
             items = validate_against_changelog(items, categories)
 
         if not items:
             raise RuntimeError(f"{code} must contain at least one valid change")
 
         items = rank_items(items, categories)
+        items = items[:MAX_ITEMS]
         outro = lang_data.get("outro", "")
 
         section = build_section(intro, items, max_chars, outro)

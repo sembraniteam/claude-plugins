@@ -30,7 +30,7 @@ Read `.claude/changelog-manager.local.md`. If it does not exist, use defaults an
 
 ```yaml
 languages:
-  - code: en
+  - code: en_US
     name: English
 platforms:
   - web
@@ -49,35 +49,41 @@ For each platform in settings, build and run one command with all language block
 ```bash
 python3 $CLAUDE_PLUGIN_ROOT/scripts/generate-release-notes.py \
   --platform <platform> \
-  --lang <code1> --intro "<intro1>" --items "<items1>" [--outro "<outro1>"] \
-  --lang <code2> --intro "<intro2>" --items "<items2>" [--outro "<outro2>"]
+  --lang <code1> --intro "<intro1>" [--items "<items1>"] [--outro "<outro1>"] \
+  --lang <code2> --intro "<intro2>" [--items "<items2>"] [--outro "<outro2>"]
 ```
 
 #### Writing the `--intro`
 
-The intro must be **at least 100 characters** (enforced by the script), at most 2 sentences, friendly, and free of technical terms. Include the version number or release context. Translate faithfully per language.
+Write the intro with **at least 100 characters** (enforced by the script), capped at 2 sentences, in friendly non-technical language. Include the version number or release context. Translate faithfully per language.
 
 #### Writing the `--items`
 
-Convert CHANGELOG entries to user-friendly, non-technical language. Format as `"- First change\n- Second change"`. Translate each item per language — non-English items are not validated against CHANGELOG.
+Optional — if omitted, the script auto-extracts items from CHANGELOG.md in priority order (Breaking Changes → Added → Changed → Fixed → Reverted), capped at 6.
+
+When provided, convert CHANGELOG entries to user-friendly, non-technical language. Format as `"- First change\n- Second change"`. Translate each item per language — non-English items are not validated against CHANGELOG.
+
+For non-English languages, always provide `--items` with translated content — omitting it falls back to English CHANGELOG text.
+
+**Maximum 6 items** — the script drops extras automatically.
 
 **Platform-specific item count:**
 
-| Platform    | Recommended Items                        |
-|-------------|------------------------------------------|
-| `playstore` | 3–5 (must fit 500 chars including intro) |
-| `appstore`  | 5–10 (can expand on key features)        |
-| `web`       | All significant changes, full detail     |
+| Platform    | Recommended Items                                |
+|-------------|--------------------------------------------------|
+| `playstore` | 3–5 (max 6, must fit 500 chars including intro)  |
+| `appstore`  | 5–6 (max 6, can expand on key features)          |
+| `web`       | Up to 6 significant changes, in full detail      |
 
 For Play Store, prioritize: Breaking Changes > Added > Fixed > Changed > Reverted.
 
-#### Writing the `--outro` (optional)
+#### Writing the `--outro` (optional, strongly recommended)
 
-A closing line appended after the items, separated by a blank line. Use it for calls to action, thank-you notes, or support links. Omit entirely when not needed.
+A closing line appended after the items, separated by a blank line. Use it for calls to action, thank-you notes, or support links. Include it unless character limits force an omission.
 
 - Keep it to 1 sentence
 - Translate per language
-- Counts toward the platform character limit — omit for Play Store if space is tight
+- Counts toward the platform character limit — omit for Play Store only if the section is near 500 chars
 
 Example: `"Thank you for updating — we hope you enjoy the new features!"`
 

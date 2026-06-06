@@ -39,7 +39,7 @@ Before running any scripts or reading git history, create a todo list and ask th
    - B. Play Store
    - C. Web
    - Accept single or multiple answers (e.g., "A", "A and B", "all").
-3. **Languages** *(only if answer to #1 is Yes)* — Which languages should the release notes be written in? Show the current value from `.claude/changelog-manager.local.md` as the default suggestion. (ISO 639-1 codes separated by commas, e.g. `en, id`)
+3. **Languages** *(only if answer to #1 is Yes)* — Which languages should the release notes be written in? Show the current value from `.claude/changelog-manager.local.md` as the default suggestion. (Locale codes in `language_REGION` format separated by commas, e.g. `en_US, id_ID`)
 4. **Git tag** — Do you want to create a new git tag based on the computed version number?
 
 Wait for the user's answers before continuing. After receiving them, display a summary:
@@ -47,7 +47,7 @@ Wait for the user's answers before continuing. After receiving them, display a s
 > **Your selections:**
 > - Release notes: Yes / No
 > - Platform(s): App Store / Play Store / Web *(omit if release notes = No)*
-> - Languages: `en, id` *(omit if release notes = No)*
+> - Languages: `en_US, id_ID` *(omit if release notes = No)*
 > - Git tag: Yes / No
 
 Then proceed to Step 3.
@@ -86,8 +86,6 @@ Omit empty sections entirely. The script does not currently produce `Deprecated`
 Format each entry as:
 - `- <message> (#<pr>)` — when PR number is present
 - `- <message>` — when PR number is absent
-
-Omit empty sections entirely.
 
 ### Step 5: Build the Version Block
 

@@ -2,11 +2,11 @@
 
 ## Platform Rules Summary
 
-| Platform   | File                      | Char Limit   | Items | Tone              |
-|------------|---------------------------|--------------|-------|-------------------|
-| Play Store | `RELEASE_NOTES_PLAYSTORE` | 500 / lang   | 3–5   | Short, clear      |
-| App Store  | `RELEASE_NOTES_APPSTORE`  | 4,000 / lang | 5–10  | Warm, detailed    |
-| Web        | `RELEASE_NOTES`           | None         | All   | Full, informative |
+| Platform   | File                      | Char Limit   | Items       | Tone              |
+|------------|---------------------------|--------------|-------------|-------------------|
+| Play Store | `RELEASE_NOTES_PLAYSTORE` | 500 / lang   | 3–5 (max 6) | Short, clear      |
+| App Store  | `RELEASE_NOTES_APPSTORE`  | 4,000 / lang | 5–6 (max 6) | Warm, detailed    |
+| Web        | `RELEASE_NOTES`           | None         | Up to 6     | Full, informative |
 
 ---
 
@@ -38,7 +38,7 @@ The intro appears before bullet points and sets the tone for the entire release 
 
 **Budget breakdown (500 chars):**
 - Intro: ~110–130 chars (just over minimum)
-- Items: ~60–80 chars each → fits 3–5 items
+- Items: ~60–80 chars each → fits 3–5 items (script caps at 6)
 
 **English example:**
 ```
@@ -127,20 +127,20 @@ Thank you to everyone who submitted feedback and bug reports. Keep them coming!
 - Match the warmth and energy of the source language
 - Use the natural register of the target language (formal vs. informal varies by culture)
 
-### Indonesian (id)
+### Indonesian (id_ID)
 - Use "Anda" for formal, "kamu" for casual — pick one and be consistent
 - "Fitur baru" = new feature, "Perbaikan" = fix, "Peningkatan" = improvement
 - Avoid direct translations of English tech terms — use the Indonesian equivalent where it exists
 
-### Japanese (ja)
+### Japanese (ja_JP)
 - Use です/ます form for app store copy (polite but not overly formal)
 - Keep bullet points short — Japanese characters are visually denser
 
-### Korean (ko)
+### Korean (ko_KR)
 - Use 합니다 form (formal polite) for store copy
 - Korean store users expect clean, professional tone
 
-### Arabic (ar)
+### Arabic (ar_SA)
 - Right-to-left — the script handles text only; ensure your publishing platform handles RTL display
 - Use Modern Standard Arabic for store copy, not regional dialect
 

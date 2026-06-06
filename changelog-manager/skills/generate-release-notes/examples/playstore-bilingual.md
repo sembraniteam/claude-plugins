@@ -18,13 +18,13 @@
 ```bash
 python3 $CLAUDE_PLUGIN_ROOT/scripts/generate-release-notes.py \
   --platform playstore \
-  --lang en \
+  --lang en_US \
     --intro "We've packed this update with features you've been asking for, plus important fixes to make your experience smoother and more reliable every day." \
     --items "- You can now switch to dark mode from Settings
 - Notifications arrive faster and more reliably
 - Fixed a crash when opening the app without internet" \
     --outro "Update now and let us know what you think!" \
-  --lang id \
+  --lang id_ID \
     --intro "Pembaruan ini hadir dengan fitur-fitur yang kalian minta dan perbaikan penting untuk pengalaman yang lebih lancar setiap harinya." \
     --items "- Kini bisa beralih ke mode gelap dari Pengaturan
 - Notifikasi datang lebih cepat dan andal
@@ -37,7 +37,7 @@ python3 $CLAUDE_PLUGIN_ROOT/scripts/generate-release-notes.py \
 ```
 # Release Notes — Play Store
 
-## EN
+## EN_US
 We've packed this update with features you've been asking for, plus important fixes to make your experience smoother and more reliable every day.
 
 - You can now switch to dark mode from Settings
@@ -46,7 +46,7 @@ We've packed this update with features you've been asking for, plus important fi
 
 Update now and let us know what you think!
 
-## ID
+## ID_ID
 Pembaruan ini hadir dengan fitur-fitur yang kalian minta dan perbaikan penting untuk pengalaman yang lebih lancar setiap harinya.
 
 - Kini bisa beralih ke mode gelap dari Pengaturan
@@ -58,9 +58,9 @@ Perbarui sekarang dan beri tahu kami pendapat Anda!
 
 ## Notes
 
-- EN section: ~384 chars (well within 500 limit)
-- ID section: ~332 chars (well within 500 limit)
-- Intro EN: 144 chars (above 100-char minimum)
-- Intro ID: 131 chars (above 100-char minimum)
-- Outro is optional — remove it first if the section approaches the 500-char limit
+- EN_US section: ~384 chars (well within 500 limit)
+- ID_ID section: ~332 chars (well within 500 limit)
+- Intro EN_US: 144 chars (above 100-char minimum)
+- Intro ID_ID: 131 chars (above 100-char minimum)
+- Outro is optional but strongly recommended — remove it first if the section approaches the 500-char limit
 - Items prioritized: Added first, then Fixed (no Breaking Changes or Reverted in this release)
