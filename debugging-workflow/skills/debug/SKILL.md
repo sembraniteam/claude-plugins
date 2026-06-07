@@ -1,6 +1,6 @@
 ---
 name: debug
-description: This skill should be used when the user invokes /debugging-workflow:debug, reports an error or bug, pastes a stack trace, says "I have a bug", "this is not working", "fix this error", "debug this", or shares any runtime error, crash report, or unexpected behavior (as opposed to a static analysis request, which should use analyze-code). Runs a systematic debugging workflow with pre-flight checklist, context gathering, git diff analysis, test discovery, root cause analysis, targeted fix, and multi-language code verification.
+description: This skill should be used when the user invokes /debugging-workflow:debug, reports an error or bug, pastes a stack trace, says "I have a bug", "this is not working", "fix this error", "debug this", or shares any runtime error, crash report, or unexpected behavior. As opposed to static analysis requests, which should use analyze-code.
 argument-hint: "[error message, stack trace, or bug description — leave blank to inspect current state]"
 allowed-tools: ["Read", "Bash", "Grep", "Glob"]
 license: MIT
@@ -25,9 +25,7 @@ Upon invocation, immediately create a todo list using TaskCreate with these step
 
 Mark each task `in_progress` before starting it and `completed` after finishing.
 
----
-
-## Step 1 — Read & Parse Error
+## Read & Parse Error
 
 If the user provided an error message or stack trace:
 - Extract the error type, message, file path, and line number
@@ -38,9 +36,7 @@ If no error was provided:
 - Ask: "What error or unexpected behavior are you seeing? If you have a stack trace or error message, paste it here."
 - If the response is vague (e.g., "it doesn't work"), follow up with: "Which file or feature is misbehaving?"
 
----
-
-## Step 2 — Gather Context
+## Context Gathering
 
 Read source files relevant to the error origin:
 
@@ -51,9 +47,7 @@ Read source files relevant to the error origin:
 
 Use `Grep` to find all usages of the failing symbol if the error is about an undefined or misused identifier.
 
----
-
-## Step 3 — Check Git Diff
+## Git Diff Review
 
 Run `git diff` to inspect what recently changed:
 
@@ -69,9 +63,7 @@ Look for:
 - New imports or removed functions that could cause the issue
 - Configuration or dependency changes (pubspec.yaml, Cargo.toml, package.json, etc.)
 
----
-
-## Step 4 — Find Related Tests
+## Test Discovery
 
 Search for test files associated with the failing code:
 
@@ -92,13 +84,10 @@ find . \( -path "*/test*" -o -path "*/tests*" \) \
 
 Note which test functions cover the failing code.
 
----
-
-## Step 5 — Conclude Root Cause
+## Root Cause Analysis
 
 Synthesize all gathered information into a clear diagnosis:
 
-State explicitly:
 - **Root cause**: One sentence describing the actual bug
 - **Why it happened**: The underlying condition that allowed the bug
 - **Affected scope**: Which files, functions, or data flows are impacted
@@ -106,9 +95,7 @@ State explicitly:
 
 Do not proceed to fixing until the root cause is clearly stated.
 
----
-
-## Step 6 — Fix the Bug
+## Fix
 
 Apply a targeted fix following language-specific best practices:
 
@@ -120,24 +107,22 @@ Apply a targeted fix following language-specific best practices:
 - Write no comments unless the fix is non-obvious (hidden constraint, workaround)
 
 **Language-specific patterns:**
-- See `references/analyze-tools.md` for language-specific idioms and best practices
+- See `../../references/analyze-tools.md` for the full table with flags and language-specific idioms
 - Match the existing naming conventions, type system usage, and architecture patterns
 - For async code: handle futures/promises correctly; avoid fire-and-forget
 - For null safety (Dart/Kotlin/TS): use proper null checks, not `!` unless provably safe
 
 After applying the fix, briefly summarize what changed and why.
 
----
+## Verification
 
-## Step 7 — Verify Changes
-
-Before running tools, check for `.claude/debugging-workflow.local.md`. If it exists, parse the YAML frontmatter:
+Check for `.claude/debugging-workflow.local.md` before running tools. If it exists, parse the YAML frontmatter:
 - `lint_config_path` — pass to the tool as a config flag (see `references/analyze-tools.md` for per-language flags)
 - `skip_verification: true` — skip this step entirely and note it in the summary
 
-If no settings file exists, proceed with project defaults. To configure custom lint paths, ask me to "set up debugging-workflow settings".
+If no settings file exists, proceed with project defaults. To configure custom lint paths, run the `analyze-code` skill and ask to "set up debugging-workflow settings".
 
-Detect the project language using the same priority table as `analyze-code` (first match wins):
+Detect the project language and run the appropriate tool:
 
 | Detected file/config                            | Tool(s) to run                           |
 |-------------------------------------------------|------------------------------------------|
@@ -155,15 +140,13 @@ Detect the project language using the same priority table as `analyze-code` (fir
 Run from the project root. If the tool reports errors:
 - Fix each reported error before proceeding
 - Re-run the tool once more if errors persist
-- If errors remain after two fix-and-rerun cycles, stop and report the remaining errors to the user with a diagnosis of why they cannot be auto-resolved
+- If errors remain after two fix-and-rerun cycles, stop and report the remaining errors to the user
 
 Note: this step runs only the primary analysis tool. For a full formatting check, use the `analyze-code` skill.
 
----
+## Test Execution
 
-## Step 8 — Run Tests
-
-Execute the test files found in Step 4:
+Execute the test files found in Test Discovery:
 
 ```bash
 # Dart
@@ -187,18 +170,25 @@ go test ./... -run TestFunctionName
 If all tests pass: report the fix as complete with a summary.
 
 If any test fails:
-- The fix may have introduced a regression — re-read the failing test to understand expected behavior
-- Perform one additional root cause analysis (Steps 2–5 only) on the failing test
+- Re-read the failing test to understand expected behavior
+- Perform one additional root cause analysis (Context Gathering → Root Cause Analysis) on the failing test
 - Apply a targeted fix and re-run the failing test
 - If the test still fails after this second pass, stop and report both the original fix and the newly failing test to the user, and ask for guidance
 
----
+## Summary
+
+After completing all steps, display a summary block:
+
+| Field            | Value                      |
+|------------------|----------------------------|
+| **Root cause**   | Brief one-line description |
+| **Fix applied**  | What was changed           |
+| **Verification** | Pass / Fail / Skipped      |
+| **Tests**        | Pass / Fail / Not found    |
 
 ## Additional Resources
 
-### Reference Files
-
-- **`references/analyze-tools.md`** — Full language → tool mapping, flags, and common error patterns
+- **`../../references/analyze-tools.md`** — Full language → tool mapping, flags, and common error patterns
 - **`references/debugging-patterns.md`** — Common root cause patterns by error category (null pointer, type mismatch, async race, import cycle, etc.)
 
 ### Code Analyzer Agent

@@ -1,6 +1,7 @@
 ---
 name: analyze-code
-description: This skill should be used when verifying code changes after a bug fix, running static analysis, checking code quality before committing, or when the user asks to "analyze code", "check for errors", "run lint", "verify my changes", "run dart analyze", "run cargo check", "run eslint", "check types", or mentions any language-specific analysis tool. Detects the project's primary language automatically and runs the appropriate set of analysis tools.
+description: This skill should be used when verifying code changes after a bug fix, running static analysis, checking code quality before committing, or when the user asks to "analyze code", "check for errors", "run lint", "verify my changes", "run dart analyze", "run cargo check", "run eslint", "check types", or mentions any language-specific analysis tool. As opposed to runtime errors, crashes, or active bugs, which should use the debug skill.
+argument-hint: "[file or directory to analyze — leave blank to analyze entire project]"
 license: MIT
 allowed-tools: ["Read", "Bash", "Grep", "Glob"]
 ---
@@ -23,7 +24,7 @@ analyze_command: ""        # optional override command, e.g. "make lint"
 
 - **`lint_config_path`**: When set, pass as a config flag to the tool (see table below). Omit the flag entirely if blank or missing.
 - **`skip_verification`**: If `true`, skip all analysis and report "Verification skipped (skip_verification: true in settings)".
-- **`analyze_command`**: When set, run this instead of the auto-detected tool for the primary analysis step. The formatting check (Step 2) still runs unless `skip_verification` is `true`.
+- **`analyze_command`**: When set, run this instead of the auto-detected tool for the primary analysis step. The formatting check still runs unless `skip_verification` is `true`.
 
 If no settings file exists, proceed with project defaults.
 
@@ -40,23 +41,13 @@ If no settings file exists, proceed with project defaults.
 | Go                     | (no flag — `go vet` uses standard toolchain config)     |
 | Swift                  | `swiftlint lint --config <lint_config_path>`            |
 
----
-
-### `analyze_command` override
-
-If `analyze_command` is set and non-empty, **run that command instead of the auto-detected tool** for the primary analysis step. The formatting check (Step 2) still runs using the standard tool unless `skip_verification` is `true`.
-
-Example: if `analyze_command: "make lint"`, run `make lint` and report its output directly.
-
----
+If `analyze_command` is set and non-empty, run that command instead of the auto-detected tool for the primary analysis step. Example: `analyze_command: "make lint"` → run `make lint` and report its output directly.
 
 ## Language Detection
 
 Detect the primary language by checking for marker files in priority order — see **`references/language-detection.md`** for the full priority table and Flutter/Dart distinction rules. If no marker file is found, ask the user which language the project uses.
 
-## Analysis Steps
-
-### 1. Run Primary Analyze Tool
+## Run Primary Tool
 
 Run the language's primary analysis command from the project root:
 
@@ -75,7 +66,7 @@ Run the language's primary analysis command from the project root:
 | Ruby          | `rubocop`                                                    |
 | C/C++         | `cmake --build build/` or `make` (whichever applies)         |
 
-### 2. Check Formatting
+## Check Formatting
 
 Run a formatting check (non-destructive) if a formatter is available:
 
@@ -88,31 +79,13 @@ Run a formatting check (non-destructive) if a formatter is available:
 | Python        | `ruff format --check .`                             |
 | Ruby          | `rubocop --only Layout`                             |
 
-### 3. Interpret Results
+## Interpret Results
 
 After running tools:
 - **Zero errors**: Report "Analysis passed — no issues found"
 - **Warnings only**: List each warning with file:line and a brief fix suggestion
 - **Errors**: List each error with file:line, explain the cause, and propose a fix
 - **Tool not found**: Report which tool is missing and suggest how to install it
-
-### 4. Auto-Fix (if requested)
-
-When the user explicitly asks to "fix lint errors" or "apply auto-fix":
-
-| Language      | Auto-fix Command                               |
-|---------------|------------------------------------------------|
-| Dart          | `dart fix --apply && dart format .`            |
-| Rust          | `cargo fix --allow-dirty && cargo fmt`         |
-| TypeScript/JS | `npx eslint --fix . && npx prettier --write .` |
-| Go            | `gofmt -w .`                                   |
-| Python        | `ruff check --fix . && ruff format .`          |
-| Ruby          | `rubocop -A`                                   |
-| Swift         | `swiftlint --fix`                              |
-
-Always show a summary of what was auto-fixed (number of files changed, types of fixes applied).
-
-## Reporting Format
 
 Report analysis results in this structure:
 
@@ -136,63 +109,62 @@ Report analysis results in this structure:
 
 If no settings file was found, append to the report:
 
-> **Tip:** No `.claude/debugging-workflow.local.md` found. Ask me to "set up debugging-workflow settings" to configure custom lint paths or override commands.
+> **Tip:** No `.claude/debugging-workflow.local.md` found. Ask to "set up debugging-workflow settings" to configure custom lint paths or override commands.
 
----
+## Auto-Fix
+
+When the user explicitly asks to "fix lint errors" or "apply auto-fix":
+
+| Language      | Auto-fix Command                               |
+|---------------|------------------------------------------------|
+| Dart          | `dart fix --apply && dart format .`            |
+| Rust          | `cargo fix --allow-dirty && cargo fmt`         |
+| TypeScript/JS | `npx eslint --fix . && npx prettier --write .` |
+| Go            | `gofmt -w .`                                   |
+| Python        | `ruff check --fix . && ruff format .`          |
+| Ruby          | `rubocop -A`                                   |
+| Swift         | `swiftlint --fix`                              |
+
+Always show a summary of what was auto-fixed (number of files changed, types of fixes applied).
 
 ## Settings Setup
 
 Run this only when the user explicitly asks to "set up debugging-workflow settings", "create a settings file", or similar — not automatically on first analysis.
 
-Create a todo list with these steps. If TaskCreate is unavailable, track steps as a numbered checklist instead. Mark each task `in_progress` before starting and `completed` after finishing.
+**Confirm intent** — ask: "Would you like me to create `.claude/debugging-workflow.local.md` with custom settings?" Stop if no.
 
-**Step 1 — Confirm intent**
+**Collect settings** — ask all three questions together:
+- `lint_config_path`: Path to custom lint/analysis config file (relative to project root), or leave blank for project defaults. Examples: `config/analysis_options.yaml`, `.eslintrc.strict.json`, `config/ruff.toml`
+- `skip_verification`: Skip all static analysis when active? (true/false, default: false)
+- `analyze_command`: Custom analysis command (e.g. `make lint`, `./scripts/check.sh`), or leave blank to auto-detect
 
-Ask: "Would you like me to create `.claude/debugging-workflow.local.md` with custom settings?"
-
-- If **no**: stop.
-- If **yes**: continue.
-
-**Step 2 — Collect `lint_config_path`**
-
-Ask: "Enter the path to your custom lint/analysis config file (relative to project root), or leave blank to use project defaults.
-
-Examples: `config/analysis_options.yaml`, `.eslintrc.strict.json`, `config/ruff.toml`
-
-`lint_config_path`:"
-
-**Step 3 — Collect `skip_verification`**
-
-Ask: "Skip all static analysis when this setting is active? (true/false, default: false)
-
-`skip_verification`:"
-
-Default to `false` if blank or invalid.
-
-**Step 4 — Optional custom analyze command**
-
-Ask: "Custom analysis command (e.g. `make lint`, `./scripts/check.sh`), or leave blank to auto-detect.
-
-`analyze_command`:"
-
-**Step 5 — Write the settings file**
-
-Run `mkdir -p .claude`, then write `.claude/debugging-workflow.local.md`:
+**Write the settings file** — run `mkdir -p .claude`, then write `.claude/debugging-workflow.local.md`:
 
 ```markdown
 ---
-lint_config_path: "<value from Step 2>"
-skip_verification: <value from Step 3>
-analyze_command: "<value from Step 4>"
+lint_config_path: "<value>"
+skip_verification: <value>
+analyze_command: "<value>"
 ---
 ```
 
 Confirm: "`.claude/debugging-workflow.local.md` has been created."
 
----
+## Summary
+
+After completing analysis, display a summary block:
+
+| Field          | Value                          |
+|----------------|--------------------------------|
+| **Language**   | `Dart`                         |
+| **Tool**       | `flutter analyze`              |
+| **Status**     | Pass / Fail / Skipped          |
+| **Errors**     | `0`                            |
+| **Warnings**   | `2`                            |
+| **Formatting** | Pass / N files need formatting |
 
 ## Additional Resources
 
-- **`references/analyze-tools.md`** — Full per-language tool options, common error patterns, and best practices
+- **`../../references/analyze-tools.md`** — Full per-language tool options, common error patterns, and best practices
 - **`references/language-detection.md`** — Canonical language detection priority table
 - **`examples/debugging-workflow.local.md`** — Ready-made settings template to copy to `.claude/debugging-workflow.local.md`

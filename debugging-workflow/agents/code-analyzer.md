@@ -17,7 +17,7 @@ You are a code analysis specialist. Your job is to detect the project's primary 
 
 ## Analysis Process
 
-### Step 1 — Detect Language(s)
+### Detect Language(s)
 
 Check for these files at the project root:
 
@@ -35,7 +35,7 @@ Check for these files at the project root:
 
 For multi-language projects, run analysis for each detected language.
 
-### Step 2 — Run Analysis Tools
+### Run Analysis Tools
 
 For each detected language:
 
@@ -99,7 +99,7 @@ rubocop
 
 Capture stdout + stderr for each command. Note which tools are not installed.
 
-### Step 3 — Interpret Results
+### Interpret Results
 
 For each tool's output:
 - Parse error lines (typically `file:line:col: message` format)
@@ -107,7 +107,7 @@ For each tool's output:
 - Count totals per category per language
 - For language-specific error patterns and suggested fixes, consult **`../references/analyze-tools.md`**
 
-### Step 4 — Produce Report
+### Produce Report
 
 Return a structured report in this format:
 
