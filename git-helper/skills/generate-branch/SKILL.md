@@ -1,124 +1,100 @@
 ---
 name: generate-branch
-description: 'This skill should be used when the user invokes /git-helper:generate-branch, or asks to "create a branch", "name my branch", "what should I name this branch", "generate a branch name for this ticket", "help me create a branch for #42", or describes work they are about to start and needs a branch name. Applies team naming conventions with prefix rules (feature/, bugfix/, hotfix/, release/, chore/, bump/) and optional ticket number support.'
-argument-hint: "[#ticket]"
+description: This skill should be used when the user invokes /git-helper:generate-branch, or asks to "create a branch", "name my branch", "what should I name this branch", "suggest a branch name", "what prefix should I use", or describes work they are about to start and needs a branch name. Applies team naming conventions with prefix rules (feature/, bugfix/, hotfix/, release/, chore/, bump/).
+argument-hint: "[file1 file2 ...]"
 allowed-tools: ["Bash"]
 license: MIT
 ---
 
 # Generate Branch Name
 
-Generate a valid git branch name following the team's branch naming conventions. Display the result for the user to copy and run manually — never create the branch automatically.
+Generate a valid git branch name following team naming conventions. Display the result for the user to copy — never create the branch automatically unless invoked from `generate-commit`.
 
-## Step 1: Read Settings
+## Input Collection
 
-Check if `.claude/git-helper.local.md` exists. If it does, parse the YAML frontmatter to get `default_branch_prefix`:
+Collect from the invocation and conversation context:
+- **Work description** — what the user will work on (optional)
+- **File paths** — from the argument, limits the diff to specific files (optional)
 
-```bash
-SETTINGS=".claude/git-helper.local.md"
-if [ -f "$SETTINGS" ]; then
-  FRONTMATTER=$(sed -n '/^---$/,/^---$/{ /^---$/d; p; }' "$SETTINGS")
-  DEFAULT_PREFIX=$(echo "$FRONTMATTER" | grep '^default_branch_prefix:' | sed 's/default_branch_prefix: *//' | sed 's/^"\(.*\)"$/\1/')
-fi
-```
-
-Use `default_branch_prefix` as the fallback prefix when the work description does not clearly indicate a type (Step 2).
-
-## Step 2: Collect Input
-
-Collect the following from the invocation and conversation context:
-
-1. **Work description** — what the user says they will work on (optional)
-2. **Ticket number** — from the argument, in `#123` format (optional)
-
-**If neither a work description nor a ticket number is provided**, analyze the current git changes to infer the branch purpose:
+If no work description is provided, run the context script and infer a 2–5 word description from the staged diff (primary) or unstaged diff (secondary). Pass any file paths as arguments to scope the diff. Do not ask — infer from diff:
 
 ```bash
+# All changes
 bash "$CLAUDE_PLUGIN_ROOT/scripts/collect-context.sh"
+
+# Scoped to specific files
+bash "$CLAUDE_PLUGIN_ROOT/scripts/collect-context.sh" "src/auth/login.ts" "src/auth/logout.ts"
 ```
 
-Use the staged diff as the primary signal, unstaged diff as secondary. Derive a 2–5 word description that captures the intent of the changes. Do not ask the user for a description — infer it from the diff.
+If the description is provided but unclear, ask one brief question before proceeding.
 
-If the work description is provided but unclear, ask one brief question before proceeding.
+## Branch Construction
 
-## Step 3: Select Branch Prefix
+**Select prefix** — choose the best match; default to `feature/` when ambiguous:
 
-Choose the prefix that best matches the nature of the work. If ambiguous and `default_branch_prefix` is set in settings, use it as the fallback:
+| Prefix     | When to use                                  |
+|------------|----------------------------------------------|
+| `feature/` | New feature development                      |
+| `bugfix/`  | Non-urgent bug fix                           |
+| `hotfix/`  | Urgent production fix                        |
+| `release/` | Release preparation (e.g., `release/v1.2.0`) |
+| `chore/`   | Non-code tasks: docs, tooling, config        |
+| `bump/`    | Dependency/version update                    |
 
-| Prefix     | Aliases | When to use                                       |
-|------------|---------|---------------------------------------------------|
-| `feature/` | `feat/` | New feature development                           |
-| `bugfix/`  | `fix/`  | Bug fixes (non-urgent)                            |
-| `hotfix/`  | —       | Urgent production fixes                           |
-| `release/` | —       | Release preparation branches                      |
-| `chore/`   | —       | Non-code tasks: dependency updates, docs, tooling |
-| `bump/`    | —       | Version/dependency increment                      |
+**Build the slug** from the work description:
+1. Extract 2–5 core words, lowercase, replace spaces and special chars with hyphens
+2. Remove leading/trailing and consecutive hyphens
+3. If scope implied by description: use `type/scope/slug` format
 
-**Selection rules:**
-- Use `hotfix/` only for critical, time-sensitive production fixes
-- Use `release/` only when preparing a version release (e.g., `release/v1.2.0`)
-- Use `bump/` specifically for dependency/version bumps, not general chores
-- Default to `feature/` when the work adds new functionality
-- Default to `chore/` when the work does not change production code
+**Naming constraints:**
 
-## Step 4: Build the Description Slug
+| Rule                          | Valid               | Invalid              |
+|-------------------------------|---------------------|----------------------|
+| Lowercase only                | `feature/add-login` | `feature/Add-Login`  |
+| Hyphens as word separator     | `fix/header-bug`    | `fix/header_bug`     |
+| No special characters         | `feat/oauth2-login` | `feat/oauth2@login`  |
+| No consecutive hyphens        | `feature/new-login` | `feature/new--login` |
+| Dots only for version numbers | `release/v1.2.0`    | `feature/new.login`  |
 
-Transform the work description into a slug:
+## Output
 
-1. Extract the core intent (2–5 words)
-2. Convert to lowercase
-3. Replace spaces and special characters with hyphens
-4. Remove leading/trailing hyphens
-5. Remove consecutive hyphens
-
-**If a ticket number is provided** (`#123`), strip the `#` and prepend to slug: `123-<slug>`
-
-**If a scope is implied by the description**, use `type/scope/description` format. For scope decision rules and CI/CD alias compatibility, see **`references/branch-rules.md`** — Branch Formats.
-
-## Step 5: Apply Naming Rules
-
-Validate the generated name against all constraints:
-
-| Rule                                | Valid               | Invalid              |
-|-------------------------------------|---------------------|----------------------|
-| Lowercase only                      | `feature/add-login` | `feature/Add-Login`  |
-| Hyphens to separate words           | `fix/header-bug`    | `fix/header_bug`     |
-| No special characters               | `feat/oauth2-login` | `feat/oauth2@login`  |
-| No consecutive hyphens              | `feature/new-login` | `feature/new--login` |
-| No leading/trailing hyphens in slug | `fix/header-bug`    | `fix/-header-bug-`   |
-| Dots only for version numbers       | `release/v1.2.0`    | `feature/new.login`  |
-| No spaces                           | `feature/add-login` | `feature/add login`  |
-
-## Step 6: Display the Result
-
-Present the branch name in a code block, then show the ready-to-run command:
+Present the branch name in a code block with the ready-to-run command:
 
 ```
-feature/123-add-oauth2-login
+feature/add-oauth2-login
 ```
 
 ```bash
-git checkout -b feature/123-add-oauth2-login
+git checkout -b feature/add-oauth2-login
 ```
 
-If multiple interpretations are valid (e.g., both `bugfix/` and `hotfix/` could apply), present the primary recommendation and one alternative:
+If multiple prefixes are valid, show a primary recommendation and one alternative:
 
 ```
-Recommended: bugfix/123-fix-login-crash
-Alternative: hotfix/123-fix-login-crash  ← use this if the fix is urgent
+Recommended: bugfix/fix-login-crash
+Alternative: hotfix/fix-login-crash  ← use this if the fix is urgent
 ```
+
+## Summary
+
+After generating the branch name, display a summary block:
+
+| Field      | Value                      | Reason                              |
+|------------|----------------------------|-------------------------------------|
+| **Branch** | `feature/add-oauth2-login` | N/A                                 |
+| **Slug**   | `add-oauth2-login`         | Derived from work description       |
 
 ## Examples
 
-| User description                         | Ticket | Generated branch                    |
-|------------------------------------------|--------|-------------------------------------|
-| "Add dark mode toggle to settings"       | `#42`  | `feature/42-add-dark-mode-toggle`   |
-| "Fix crash when opening app offline"     | `#38`  | `bugfix/38-fix-offline-crash`       |
-| "Urgent: security patch for auth bypass" | —      | `hotfix/security-patch-auth-bypass` |
-| "Prepare v2.0.0 release"                 | —      | `release/v2.0.0`                    |
-| "Update dependencies"                    | —      | `chore/update-dependencies`         |
-| "Bump lodash to 4.17.21"                 | `#15`  | `bump/15-lodash-4.17.21`            |
-| "Refactor auth module" (auth scope)      | —      | `chore/auth/refactor-module`        |
+| User description                         | Generated branch                    |
+|------------------------------------------|-------------------------------------|
+| "Add dark mode toggle to settings"       | `feature/add-dark-mode-toggle`      |
+| "Fix crash when opening app offline"     | `bugfix/fix-offline-crash`          |
+| "Urgent: security patch for auth bypass" | `hotfix/security-patch-auth-bypass` |
+| "Prepare v2.0.0 release"                 | `release/v2.0.0`                    |
+| "Update dependencies"                    | `chore/update-dependencies`         |
+| "Bump lodash to 4.17.21"                 | `bump/lodash-4.17.21`               |
+| "Refactor auth module" (auth scope)      | `chore/auth/refactor-module`        |
 
 ## Additional Resources
 

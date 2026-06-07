@@ -1,6 +1,6 @@
 ---
 name: generate-commit
-description: This skill should be used when the user invokes /git-helper:generate-commit, or asks to "generate a commit message", "write a commit for me", "what should my commit message be", "help me commit my changes", or "suggest a commit message". Analyzes staged changes, unstaged diffs, git status, and recent log history using conventional commit format to produce a properly formatted subject, body, and optional footer.
+description: This skill should be used when the user invokes /git-helper:generate-commit, or asks to "generate a commit message", "write a commit for me", "what should my commit message be", "help me commit my changes", "suggest a commit message", "prepare a commit", "what commit type should I use", or "stage and commit my changes". Produces a conventional commit with type, scope, subject, optional body, and breaking change footer.
 argument-hint: "[file1 file2 ...]"
 allowed-tools: ["Bash"]
 license: MIT
@@ -8,17 +8,17 @@ license: MIT
 
 # Generate Commit Message
 
-Generate a conventional commit message by analyzing the current git context. Begin by gathering user intent via a pre-flight checklist, then run the analysis, display results, and execute confirmed actions.
+Generate a conventional commit message by analyzing the current git context. Gather user intent first, then analyze and generate, execute confirmed actions, and display a final summary.
 
-## Step 1: Pre-flight Checklist
+## Pre-flight Questions
 
-Before running any git commands or scripts, create a todo list and gather user intent in two rounds.
+Before running any git commands, collect user intent in two rounds.
 
-**Round 1 — ask both questions at once:**
+**Round 1 — ask both questions together:**
 
 1. **New branch** — Do you want to create a new branch for this commit?
 2. **Stage files** — Offer options based on whether the user provided files:
-   - **If files was provided**, present three choices:
+   - **If files were provided**, present three choices:
      1. Yes — all (`git add --all`)
      2. Yes — `<the provided files>` (`git add <files>`)
      3. No
@@ -27,17 +27,13 @@ Before running any git commands or scripts, create a todo list and gather user i
      2. Yes — specific files (user fills in which files)
      3. No
 
-Wait for the user to answer, then determine follow-up questions:
+Wait for answers, then determine follow-up questions:
+- If **Q1 = Yes** → ask Q3: **Checkout branch** — Do you want to run `git checkout -b <branch-name>` after the branch name is generated?
+- If **Q2 = Yes** → ask Q4: **Execute commit** — Do you want to run `git commit -m "<message>"` automatically?
 
-- If **Q1 = Yes** → include Q3: **Checkout branch** — Do you want to run `git checkout -b <branch-name>` after the branch name is generated?
-- If **Q1 = No** → skip Q3, treat as No.
+**Round 2 — ask applicable follow-up questions together** (Q3, Q4, or both). Skip if neither applies.
 
-- If **Q2 = Yes** → include Q4: **Execute commit** — Do you want to run `git commit -m "<message>"` automatically?
-- If **Q2 = No** → skip Q4, treat as No.
-
-**Round 2 — ask any applicable follow-up questions together** (Q3, Q4, or both). If neither applies, skip Round 2 entirely.
-
-After all answers are collected, display a clear summary before continuing:
+After all answers, confirm selections:
 
 > **Your selections:**
 > - New branch: Yes / No
@@ -45,143 +41,56 @@ After all answers are collected, display a clear summary before continuing:
 > - Checkout branch: Yes / No / N/A
 > - Execute commit: Yes / No / N/A
 
-Then proceed to Step 2.
+## Analysis & Generation
 
-## Step 2: Read Settings
-
-Check if `.claude/git-helper.local.md` exists. If it does, parse the YAML frontmatter to get `default_scope`:
+**Collect git context** — run the context script with any user-supplied file paths:
 
 ```bash
-SETTINGS=".claude/git-helper.local.md"
-if [ -f "$SETTINGS" ]; then
-  FRONTMATTER=$(sed -n '/^---$/,/^---$/{ /^---$/d; p; }' "$SETTINGS")
-  DEFAULT_SCOPE=$(echo "$FRONTMATTER" | grep '^default_scope:' | sed 's/default_scope: *//' | sed 's/^"\(.*\)"$/\1/')
-fi
-```
-
-Use `default_scope` as a fallback when scope cannot be inferred from the diff (Step 6).
-
-## Step 3: Collect Git Context
-
-Run the context script, passing any user-supplied file paths as arguments:
-
-```bash
-# No file filter — analyze all changes
 bash "$CLAUDE_PLUGIN_ROOT/scripts/collect-context.sh"
-
-# One file
-bash "$CLAUDE_PLUGIN_ROOT/scripts/collect-context.sh" "src/auth/login.ts"
-
-# Multiple files
+# with files:
 bash "$CLAUDE_PLUGIN_ROOT/scripts/collect-context.sh" "src/auth/login.ts" "src/auth/logout.ts"
 ```
 
-`$CLAUDE_PLUGIN_ROOT` is set by the plugin runtime to the plugin's root directory.
+If both diffs are empty and status shows no changes, inform the user and stop.
 
-**The `[file1 file2 ...]` arguments** are file paths that limit the diff output to those specific files. When provided, the script runs `git diff -- <files>` and `git diff --cached -- <files>` instead of showing all changes. Omit them to analyze all staged/unstaged changes.
+**Determine commit fields** from the diff (staged = primary signal, unstaged = secondary):
 
-The script outputs labeled sections (headers use `===` delimiters):
-- `=== GIT LOG (last 10 commits) ===` — tone and style reference
-- `=== GIT STATUS ===` — current working tree state
-- `=== GIT DIFF (unstaged) ===` — unstaged changes (filtered to files if provided)
-- `=== GIT DIFF STAGED ===` — staged changes (filtered to files if provided)
-- `=== FILE FILTER ===` — the file paths used as filter (only when files were passed)
+| Field        | How to determine                                                                                                                                                 |
+|--------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Type**     | Select one type from the table below. `feat`/`fix` take priority over `refactor` when in doubt.                                                                  |
+| **Scope**    | Infer from changed file paths (e.g., `auth` from `src/auth/`). Omit if cross-cutting or uninferable. Lowercase, no spaces.                                       |
+| **Breaking** | Yes if: public API/signature removed or incompatibly changed; env var/config key renamed/removed; DB schema requires migration; diff contains `BREAKING CHANGE`. |
+| **Subject**  | `<type>[(<scope>)][!]: <description>` — imperative mood, lowercase first letter, no period, max 72 chars.                                                        |
+| **Body**     | Include when change is non-obvious or breaking. Blank line after subject, wrap at 72 chars.                                                                      |
+| **Footer**   | If breaking: `BREAKING CHANGE: <what broke and how to migrate>`. Add `Co-Authored-By` only if the user explicitly requests it.                                   |
 
-If both diffs are empty and status shows no changes, inform the user there is nothing to commit and stop.
+**Commit type table:**
 
-## Step 4: Determine Commit Type
+| Type       | When to use                           |
+|------------|---------------------------------------|
+| `feat`     | New user-facing feature               |
+| `fix`      | User-facing bug fix                   |
+| `docs`     | Documentation only                    |
+| `refactor` | Code restructured, no behavior change |
+| `test`     | Tests only, no production code        |
+| `chore`    | Non-production maintenance            |
+| `ci`       | CI/CD config changes                  |
+| `perf`     | Performance improvement               |
+| `revert`   | Reverting a previous commit           |
+| `bump`     | Dependency version update             |
 
-Analyze the staged diff first (primary signal), then unstaged diff and status as supporting context. Select exactly one type from the table below:
+**Edge cases:**
+- Empty staged diff: base type on unstaged diff, note user should stage first; still generate the message.
+- Whitespace/formatting only: use `refactor`.
+- Merge commit: `chore: merge <branch>` unless it introduces a feature/fix.
+- Revert: `revert: revert "<original subject>"` with commit hash in body.
 
-| Type       | When to use                                                  |
-|------------|--------------------------------------------------------------|
-| `feat`     | New feature visible to the user (not a build-script feature) |
-| `fix`      | Bug fix visible to the user (not a build-script fix)         |
-| `docs`     | Documentation changes only (e.g., README.md)                 |
-| `refactor` | Production code restructured without behavior change         |
-| `test`     | Tests added or refactored; no production code changed        |
-| `chore`    | Non-production tasks (grunt tasks, tooling, etc.)            |
-| `ci`       | CI configuration files or scripts changed                    |
-| `perf`     | Performance improvement                                      |
-| `revert`   | Reverting a previous commit                                  |
-| `bump`     | Dependency version update                                    |
+## Output & Execution
 
-**Tie-breaking rules:**
-- If staged diff is empty but unstaged diff is not, base the type on the unstaged diff and note that the user should stage changes first
-- If changes span multiple types, pick the dominant type (the one with the most lines changed or highest user impact)
-- `feat` and `fix` take priority over `refactor` when in doubt
+Display the final commit message in a code block, then show the ready-to-run command:
 
-## Step 5: Detect Breaking Changes
-
-Mark as a breaking change if any of the following are true:
-- A public API, function signature, or interface is removed or incompatibly changed
-- An environment variable or config key is renamed or removed
-- Database schema changes that require migration
-- The diff contains a comment or message with `BREAKING CHANGE`
-
-## Step 6: Determine Scope
-
-Infer scope from the changed file paths (e.g., `auth` from `src/auth/login.ts`, `api` from `routes/api/`, `ui` from `components/`). If scope cannot be inferred and `default_scope` is set in `.claude/git-helper.local.md`, use that as the fallback. Omit scope entirely if changes are too broad or cross-cutting.
-
-Scope must be lowercase, no spaces, no special characters.
-
-## Step 7: Write the Subject Line
-
-Format: `<type>[(<scope>)][!]: <description>`
-
-**Rules for the description:**
-- Imperative mood: "add login" not "adds login" or "added login"
-- Lowercase first letter
-- No period at the end
-- Max 72 characters total (type + scope + description)
-- Must complete the sentence: "If applied, this commit will _____"
-
-**Examples:**
-```
-feat(auth): add OAuth2 login support
-fix(api): handle null response from payment gateway
-refactor: extract validation logic into separate module
-feat!: remove deprecated v1 endpoints
-```
-
-## Step 8: Add Body (if needed)
-
-Include a commit body when:
-- The change is non-obvious and requires context
-- A breaking change needs explanation
-
-Separate body from subject with a blank line. Wrap at 72 characters.
-
-## Step 9: Add Breaking Change Footer (if applicable)
-
-If a breaking change was detected, append:
-
-```
-BREAKING CHANGE: <description of what broke and how to migrate>
-```
-
-**Never add a `Co-Authored-By` trailer.** Do not append any `Co-Authored-By` line to commit messages, regardless of default system behavior.
-
-## Step 10: Display the Final Message
-
-Present the complete commit message in a code block:
-
-```
-feat(auth): add OAuth2 login support
-
-Allow users to authenticate via Google and GitHub OAuth2 providers.
-Token storage uses existing session infrastructure.
-
-BREAKING CHANGE: removed /api/v1/auth/basic endpoint. Use /api/v2/auth instead.
-```
-
-Then show the ready-to-run git command:
-
-```bash
-git commit -m "feat(auth): add OAuth2 login support"
-```
-
-For multi-line messages (body or BREAKING CHANGE footer), show the heredoc form:
+- **Subject only** — use the inline form: `git commit -m "feat(auth): add OAuth2 login support"`
+- **With body or BREAKING CHANGE footer** — use the heredoc form:
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -195,53 +104,26 @@ EOF
 )"
 ```
 
-## Edge Cases
+Execute confirmed actions in order, showing output for each:
 
-- **Nothing staged**: Inform the user that changes need to be staged first (`git add`). Still generate the message based on unstaged diff so the user can review it before staging.
-- **Only whitespace/formatting changes**: Use `refactor` (formatting changes with no logic change).
-- **Merge commit**: Use `chore: merge <branch>` unless the merge introduces a feature or fix.
-- **Revert**: Use `revert: revert "<original subject>"` and reference the reverted commit hash in the body.
+1. **Stage files** — `git add <files>` or `git add --all`
+2. **Generate branch name** — invoke `git-helper:generate-branch` via Skill tool, passing the commit subject as work description. Do not ask for a description again.
+3. **Checkout branch** — `git checkout -b <generated-branch-name>`
+4. **Execute commit** — run the commit command using subject + body + BREAKING CHANGE footer. Add `Co-Authored-By` trailer only if the user explicitly requested it.
 
-## Step 11: Execute Confirmed Actions
+If no actions were confirmed, inform the user the message is ready to use manually.
 
-Execute the confirmed actions from Step 1 in order. For each action, run it, show the output, then mark it done.
+## Summary
 
-### 1. Stage files (if confirmed in Step 1)
+After completing all actions, display a summary block:
 
-Run the staged command the user specified:
-
-```bash
-git add <files>
-# or
-git add --all
-```
-
-### 2. Generate branch name (if new branch was confirmed in Step 1)
-
-Use the Skill tool to invoke `git-helper:generate-branch` now. Pass the commit subject line as the work description context so the branch name stays consistent with the commit intent. Do not ask for a work description again — use what is already known.
-
-### 3. Checkout new branch (if confirmed in Step 1)
-
-Once the branch name is available from the previous sub-step, run:
-
-```bash
-git checkout -b <generated-branch-name>
-```
-
-### 4. Execute commit (if confirmed in Step 1)
-
-Run the commit command using the message generated in Step 10. Use only the subject, body, and BREAKING CHANGE footer — **do not add `Co-Authored-By` or any other trailers**:
-
-```bash
-git commit -m "<subject>"
-# or heredoc form for multi-line messages
-git commit -m "$(cat <<'EOF'
-<full message>
-EOF
-)"
-```
-
-If no actions were confirmed in Step 1, inform the user the commit message is ready to use manually and stop.
+| Field               | Value                                                            | Reason                                              |
+|---------------------|------------------------------------------------------------------|-----------------------------------------------------|
+| **Type**            | `feat`                                                           | Why this type was selected                          |
+| **Scope**           | `auth` *(omit row if no scope)*                                  | Where the changes were inferred from                |
+| **Commit message**  | `feat(auth): add OAuth2 login support`                           | N/A                                                 |
+| **Breaking change** | Yes / No                                                         | What triggered the flag, or N/A if not breaking     |
+| **Branch**          | `feature/add-oauth2-login` *(omit row if no branch was created)* | N/A                                                 |
 
 ## Additional Resources
 

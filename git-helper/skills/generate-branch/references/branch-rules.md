@@ -78,36 +78,6 @@ bugfix/api/fix-null-response
 chore/ui/update-component-library
 ```
 
-### With Ticket: `type/ticket-description`
-
-Use when a ticket number is available (`#123` → `123`):
-```
-feature/123-add-dark-mode
-bugfix/38-fix-login-crash
-feature/issue-123-add-oauth2-login
-```
-
-### With Ticket and Scope: `type/scope/ticket-description`
-
-Use for scoped changes with a ticket:
-```
-feature/auth/123-add-oauth2-login
-bugfix/api/38-fix-null-response
-```
-
----
-
-## Ticket Number Formatting
-
-User input `#123` is transformed to:
-- Strip `#` → `123`
-- Prepend to slug: `123-<slug>`
-- Full example: `feature/123-add-oauth2-login`
-
-Do not use `issue-` prefix unless the team explicitly uses that convention.
-
----
-
 ## Slug Construction Rules
 
 Given a work description, construct the slug:
@@ -121,13 +91,13 @@ Given a work description, construct the slug:
 
 **Examples:**
 
-| User description                   | Slug                           |
-|------------------------------------|--------------------------------|
-| "Add OAuth2 login support"         | `add-oauth2-login`             |
-| "Fix crash when app opens offline" | `fix-offline-crash`            |
-| "Update lodash to 4.17.21"         | `lodash-4.17.21` (for `bump/`) |
-| "Prepare release 2.0.0"            | `v2.0.0` (for `release/`)      |
-| "Refactor authentication module"   | `refactor-auth-module`         |
+| User description                   | Slug                            |
+|------------------------------------|---------------------------------|
+| "Add OAuth2 login support"         | `add-oauth2-login`              |
+| "Fix crash when app opens offline" | `fix-offline-crash`             |
+| "Update lodash to 4.17.21"         | `lodash-4.17.21` (for `bump/`)  |
+| "Prepare release 2.0.0"            | `v2.0.0` (for `release/`)       |
+| "Refactor authentication module"   | `refactor-auth-module`          |
 
 ---
 
@@ -163,7 +133,6 @@ Consistent prefix usage ensures CI rules work correctly. Always use the primary 
 |-------------------|----------------------------------------------------|----------------------------|
 | Uppercase letters | `Feature/Add-Login`                                | `feature/add-login`        |
 | Underscore        | `feature/add_login`                                | `feature/add-login`        |
-| Ticket with `#`   | `feature/#123-add-login`                           | `feature/123-add-login`    |
 | Too long slug     | `feature/add-a-new-login-page-with-oauth2-and-sso` | `feature/add-oauth2-login` |
 | No prefix         | `add-login`                                        | `feature/add-login`        |
 | Double hyphens    | `feature/add--login`                               | `feature/add-login`        |
