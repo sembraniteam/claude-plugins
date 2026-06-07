@@ -2,7 +2,7 @@
 name: debug
 description: This skill should be used when the user invokes /debugging-workflow:debug, reports an error or bug, pastes a stack trace, says "I have a bug", "this is not working", "fix this error", "debug this", or shares any runtime error, crash report, or unexpected behavior. As opposed to static analysis requests, which should use analyze-code.
 argument-hint: "[error message, stack trace, or bug description — leave blank to inspect current state]"
-allowed-tools: ["Read", "Bash", "Grep", "Glob"]
+allowed-tools: ["Read", "Bash", "Grep", "Glob", "TaskCreate"]
 license: MIT
 ---
 
@@ -12,7 +12,7 @@ A systematic debugging process that moves from symptom to root cause to verified
 
 ## Pre-Flight Checklist
 
-Upon invocation, immediately create a todo list using TaskCreate with these steps. If TaskCreate is unavailable, track steps as a numbered checklist instead.
+Upon invocation, immediately create a todo list using `TaskCreate` with these steps. If `TaskCreate` is unavailable, track steps as a numbered checklist instead.
 
 1. **Read & parse error** — understand the error message/stack trace
 2. **Gather context** — read relevant source files

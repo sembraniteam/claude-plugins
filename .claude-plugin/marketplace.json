@@ -29,7 +29,7 @@
     {
       "name": "git-helper",
       "description": "Git helper plugin for Claude Code by Sembrani Team",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "source": "./git-helper",
       "author": {
         "name": "Ahmad Rifa'i",

@@ -2,7 +2,7 @@
 name: generate-commit
 description: This skill should be used when the user invokes /git-helper:generate-commit, or asks to "generate a commit message", "write a commit for me", "what should my commit message be", "help me commit my changes", "suggest a commit message", "prepare a commit", "what commit type should I use", or "stage and commit my changes". Produces a conventional commit with type, scope, subject, optional body, and breaking change footer.
 argument-hint: "[file1 file2 ...]"
-allowed-tools: ["Bash"]
+allowed-tools: ["Bash", "AskUserQuestion", "Skill"]
 license: MIT
 ---
 
@@ -12,28 +12,99 @@ Generate a conventional commit message by analyzing the current git context. Gat
 
 ## Pre-flight Questions
 
-Before running any git commands, collect user intent in two rounds.
+Before running any git commands, collect user intent using `AskUserQuestion` in up to two rounds.
 
-**Round 1 — ask both questions together:**
+**Round 1 — call `AskUserQuestion` with both questions in a single call.**
 
-1. **New branch** — Do you want to create a new branch for this commit?
-2. **Stage files** — Offer options based on whether the user provided files:
-   - **If files were provided**, present three choices:
-     1. Yes — all (`git add --all`)
-     2. Yes — `<the provided files>` (`git add <files>`)
-     3. No
-   - **If no file path was provided**, present three choices:
-     1. Yes — all (`git add --all`)
-     2. Yes — specific files (user fills in which files)
-     3. No
+The "Stage files" options depend on whether file paths were provided by the user.
 
-Wait for answers, then determine follow-up questions:
-- If **Q1 = Yes** → ask Q3: **Checkout branch** — Do you want to run `git checkout -b <branch-name>` after the branch name is generated?
-- If **Q2 = Yes** → ask Q4: **Execute commit** — Do you want to run `git commit -m "<message>"` automatically?
+*If files were provided:*
 
-**Round 2 — ask applicable follow-up questions together** (Q3, Q4, or both). Skip if neither applies.
+```json
+{
+  "questions": [
+    {
+      "question": "Do you want to create a new branch for this commit?",
+      "header": "New branch",
+      "multiSelect": false,
+      "options": [
+        { "label": "Yes", "description": "Generate a branch name and optionally check it out" },
+        { "label": "No",  "description": "Stay on the current branch" }
+      ]
+    },
+    {
+      "question": "Which files should be staged before committing?",
+      "header": "Stage files",
+      "multiSelect": false,
+      "options": [
+        { "label": "Yes — all",            "description": "git add --all" },
+        { "label": "Yes — provided files", "description": "git add <the provided files>" },
+        { "label": "No",                   "description": "Skip staging" }
+      ]
+    }
+  ]
+}
+```
 
-After all answers, confirm selections:
+*If no files were provided (users can select "Other" to specify custom paths):*
+
+```json
+{
+  "questions": [
+    {
+      "question": "Do you want to create a new branch for this commit?",
+      "header": "New branch",
+      "multiSelect": false,
+      "options": [
+        { "label": "Yes", "description": "Generate a branch name and optionally check it out" },
+        { "label": "No",  "description": "Stay on the current branch" }
+      ]
+    },
+    {
+      "question": "Which files should be staged before committing?",
+      "header": "Stage files",
+      "multiSelect": false,
+      "options": [
+        { "label": "Yes — all", "description": "git add --all" },
+        { "label": "No",        "description": "Skip staging" }
+      ]
+    }
+  ]
+}
+```
+
+Evaluate which follow-up questions are needed:
+- If **New branch = Yes** → include the Checkout question
+- If **Stage files ≠ No** → include the Auto-commit question
+
+**Round 2 — if either condition is met, call `AskUserQuestion` with the applicable questions together.** Skip Round 2 entirely if neither applies.
+
+```json
+{
+  "questions": [
+    {
+      "question": "After generating the branch name, run `git checkout -b <branch>` automatically?",
+      "header": "Checkout",
+      "multiSelect": false,
+      "options": [
+        { "label": "Yes", "description": "Switch to the new branch immediately" },
+        { "label": "No",  "description": "Just show the branch name to copy" }
+      ]
+    },
+    {
+      "question": "After generating the commit message, run `git commit -m \"...\"` automatically?",
+      "header": "Auto-commit",
+      "multiSelect": false,
+      "options": [
+        { "label": "Yes", "description": "Commit will be created automatically" },
+        { "label": "No",  "description": "Just display the command to run manually" }
+      ]
+    }
+  ]
+}
+```
+
+After all answers, display a confirmation to the user:
 
 > **Your selections:**
 > - New branch: Yes / No

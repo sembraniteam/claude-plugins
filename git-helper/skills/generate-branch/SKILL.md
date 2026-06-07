@@ -1,7 +1,7 @@
 ---
 name: generate-branch
 description: This skill should be used when the user invokes /git-helper:generate-branch, or asks to "create a branch", "name my branch", "what should I name this branch", "suggest a branch name", "what prefix should I use", or describes work they are about to start and needs a branch name. Applies team naming conventions with prefix rules (feature/, bugfix/, hotfix/, release/, chore/, bump/).
-argument-hint: "[file1 file2 ...]"
+argument-hint: "[work description] [file1 file2 ...]"
 allowed-tools: ["Bash"]
 license: MIT
 ---
@@ -95,6 +95,8 @@ After generating the branch name, display a summary block:
 | "Update dependencies"                    | `chore/update-dependencies`         |
 | "Bump lodash to 4.17.21"                 | `bump/lodash-4.17.21`               |
 | "Refactor auth module" (auth scope)      | `chore/auth/refactor-module`        |
+
+For the `type/scope/slug` three-part format, see **`references/branch-rules.md`**.
 
 ## Additional Resources
 
