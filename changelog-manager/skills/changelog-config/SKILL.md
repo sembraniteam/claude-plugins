@@ -51,19 +51,13 @@ platforms:
 
 ## Workflow
 
-### Step 1: Check Existing Settings
+**Check existing settings** — if `.claude/changelog-manager.local.md` exists, read and display current settings before making changes.
 
-Check if `.claude/changelog-manager.local.md` exists. If it does, read and display current settings to the user before making changes.
-
-### Step 2: Collect Languages and Platforms
-
-If the user's request already specifies languages and platforms, use them directly. Otherwise, ask:
+**Collect languages and platforms** — if the request already specifies them, use directly. Otherwise, ask:
 - Which languages should release notes be generated in?
 - Which platforms should be targeted?
 
-### Step 3: Write Settings File
-
-Write the file with YAML frontmatter only (no Markdown body required):
+**Write settings file** — write YAML frontmatter only (no Markdown body required):
 
 ```yaml
 ---
@@ -78,24 +72,29 @@ platforms:
 ---
 ```
 
-### Step 4: Validate
-
-Confirm:
+**Validate:**
 - At least one language is present
 - All platform values are from the valid list
-- Language codes use the `language_REGION` locale format (e.g. `en_US`, not `en`)
-- If any English locale (`en_*`) is included, it is listed first — the script validates English items against CHANGELOG.md and skips validation for all other languages
+- Language codes use `language_REGION` format (e.g. `en_US`, not `en`)
+- If any English locale (`en_*`) is included, list it first — this ensures the English section appears before translated sections in the output file
 - File is valid YAML
 
-### Step 5: Report to User
+## Summary
 
-Show the final settings and remind the user:
+After writing, display a summary block:
+
+| Field         | Value                                  | Reason |
+|---------------|----------------------------------------|--------|
+| **Languages** | `en_US, id_ID`                         | N/A    |
+| **Platforms** | `playstore, appstore`                  | N/A    |
+| **File**      | `.claude/changelog-manager.local.md`   | N/A    |
+| **Action**    | Created / Updated                      | N/A    |
+
+Remind the user:
 - The file is **gitignored** and should not be committed
 - Run `generate-changelog` before `generate-release-notes` to ensure CHANGELOG.md is current
 
 ## Common Locale Codes
-
-Use the following as a reference when the user specifies a language by name rather than code:
 
 | Locale    | Language                     |
 |-----------|------------------------------|

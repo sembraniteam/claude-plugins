@@ -13,36 +13,32 @@ Generate or update `CHANGELOG.md` by analyzing git commit history and formatting
 - Git repository with conventional commits
 - `jq` installed (`brew install jq` or `apt install jq`)
 
-## Workflow
+## Settings Check
 
-### Step 1: Check Settings File
-
-Before doing anything else, check whether `.claude/changelog-manager.local.md` exists:
+Check whether `.claude/changelog-manager.local.md` exists:
 
 ```bash
 [ -f ".claude/changelog-manager.local.md" ] && echo "exists" || echo "missing"
 ```
 
-**If the file is missing**, use the Skill tool to invoke `changelog-manager:changelog-config` now to create it. That skill will collect the user's preferred languages and platforms and write the file. Wait for it to complete before continuing.
+**If missing** — invoke `changelog-manager:changelog-config` via Skill tool to create it. Wait for it to complete before continuing.
 
-**If the file exists**, read it to load the current `languages` and `platforms` values — these will be used as defaults in the pre-flight questions below.
+**If exists** — read the current `languages` and `platforms` values; use them as defaults in the pre-flight questions below.
 
-After the settings file is confirmed to exist, proceed to Step 2.
+## Pre-flight Questions
 
-### Step 2: Pre-flight Checklist
-
-Before running any scripts or reading git history, create a todo list and ask the user these questions **all at once**:
+Ask all questions at once:
 
 1. **Release notes** — Do you want release notes generated after the changelog is created?
-2. **Platform** *(only if answer to #1 is Yes)* — Which platform(s)? Show the current value from `.claude/changelog-manager.local.md` as the default suggestion.
+2. **Platform(s)** *(only if #1 = Yes)* — Which platform(s)? Show current value from settings as default.
    - A. App Store
    - B. Play Store
    - C. Web
    - Accept single or multiple answers (e.g., "A", "A and B", "all").
-3. **Languages** *(only if answer to #1 is Yes)* — Which languages should the release notes be written in? Show the current value from `.claude/changelog-manager.local.md` as the default suggestion. (Locale codes in `language_REGION` format separated by commas, e.g. `en_US, id_ID`)
-4. **Git tag** — Do you want to create a new git tag based on the computed version number?
+3. **Languages** *(only if #1 = Yes)* — Which languages? Show current value from settings as default. (Locale codes in `language_REGION` format, e.g. `en_US, id_ID`)
+4. **Git tag** — Do you want to create a new git tag based on the computed version?
 
-Wait for the user's answers before continuing. After receiving them, display a summary:
+After answers, confirm selections:
 
 > **Your selections:**
 > - Release notes: Yes / No
@@ -50,17 +46,15 @@ Wait for the user's answers before continuing. After receiving them, display a s
 > - Languages: `en_US, id_ID` *(omit if release notes = No)*
 > - Git tag: Yes / No
 
-Then proceed to Step 3.
+## Commit Analysis
 
-### Step 3: Analyze Commits
-
-Always run the commit analysis script first — it outputs structured JSON:
+Run the commit analysis script:
 
 ```bash
 bash $CLAUDE_PLUGIN_ROOT/scripts/analyze-commits.sh
 ```
 
-If the script prints `No changes since last release.` (plain text, not JSON), inform the user and stop.
+If the script prints `No changes since last release.`, inform the user and stop.
 
 The JSON output contains:
 
@@ -71,23 +65,26 @@ The JSON output contains:
 | `date`         | Today's date (YYYY-MM-DD)                              |
 | `commits`      | Array of `{ category, message, pr, breaking }` objects |
 
-### Step 4: Map Commits to CHANGELOG Sections
+## Write CHANGELOG.md
 
-| Commit Category | CHANGELOG Section      |
-|-----------------|------------------------|
-| `breaking`      | `### Breaking Changes` |
-| `added`         | `### Added`            |
-| `changed`       | `### Changed`          |
-| `fixed`         | `### Fixed`            |
-| `reverted`      | `### Reverted`         |
+**Map commits to sections:**
 
-Omit empty sections entirely. The script does not currently produce `Deprecated`, `Removed`, or `Security` categories — if those appear in a future script version, map them to `### Deprecated`, `### Removed`, and `### Security` respectively.
+| Commit Category | CHANGELOG Section                          |
+|-----------------|--------------------------------------------|
+| `breaking`      | `### Breaking Changes`                     |
+| `added`         | `### Added`                                |
+| `changed`       | `### Changed`                              |
+| `fixed`         | `### Fixed`                                |
+| `reverted`      | `### Reverted`                             |
+| `deprecated`    | `### Deprecated` *(future script version)* |
+| `removed`       | `### Removed` *(future script version)*    |
+| `security`      | `### Security` *(future script version)*   |
 
-Format each entry as:
-- `- <message> (#<pr>)` — when PR number is present
-- `- <message>` — when PR number is absent
+Omit empty sections. Format entries as:
+- `- <message> (#<pr>)` when PR number is present
+- `- <message>` when absent
 
-### Step 5: Build the Version Block
+**Build the version block:**
 
 ```markdown
 ## [v1.2.0] - 2025-01-15
@@ -102,59 +99,31 @@ Format each entry as:
 - Login crash on empty password field (#38)
 ```
 
-### Step 6: Write CHANGELOG.md
+**If CHANGELOG.md does not exist** — create from scratch with header + `## [Unreleased]` section + new version block.
 
-**If CHANGELOG.md does not exist**, create it from scratch:
+**If CHANGELOG.md exists** — prepend the new version block after `## [Unreleased]` (or after the header if no Unreleased section). Never overwrite or remove existing entries.
 
-```markdown
-# Changelog
+## Confirmed Actions
 
-All notable changes to this project will be documented in this file.
+Execute in order, showing output for each:
 
-This project adheres to [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
-and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+1. **Create git tag** (if confirmed) — run `git tag <next_version>`. Show command and output. Do not push.
+2. **Generate release notes** (if confirmed) — invoke `changelog-manager:generate-release-notes` via Skill tool. Map platform answers: A → `appstore`, B → `playstore`, C → `web`. Pass platform(s) and language codes as context — do not ask again.
 
-## [Unreleased]
+If both git tag and release notes were No, stop after writing CHANGELOG.md.
 
-<!-- Next release goes here -->
+## Summary
 
-## [v1.2.0] - 2025-01-15
+After completing all actions, display a summary block:
 
-### Added
-- Dark mode support (#42)
-```
-
-**If CHANGELOG.md already exists**, prepend the new version block after the `## [Unreleased]` section (or immediately after the header if no Unreleased section exists). Never overwrite or remove existing entries.
-
-### Step 7: Report to User
-
-Summarize what was done:
-- Previous version → next version (e.g., `v1.1.0 → v1.2.0`)
-- Count of entries per category
-- Whether CHANGELOG.md was created or updated
-
-### Step 8: Create Git Tag (if confirmed in Step 2)
-
-If the user answered **Yes** to git tag in Step 2, run:
-
-```bash
-git tag <next_version>
-```
-
-Use the `next_version` value from the script output in Step 3 (e.g., `v1.2.0`). Show the command and its output. Do not push the tag — only create it locally.
-
-### Step 9: Generate Release Notes (if confirmed in Step 2)
-
-If the user answered **Yes** to release notes in Step 2, use the Skill tool to invoke `changelog-manager:generate-release-notes` now.
-
-Map the platform answers collected in Step 2:
-- A → `appstore`
-- B → `playstore`
-- C → `web`
-
-Pass the platform(s) and language codes as conversation context. These values override whatever is in `.claude/changelog-manager.local.md` for this run. Do not ask for platform or language again — use the answers from Step 2.
-
-If the user answered **No** to both git tag and release notes in Step 2, stop after Step 7.
+| Field                | Value                         | Reason                                   |
+|----------------------|-------------------------------|------------------------------------------|
+| **Previous version** | `v1.1.0`                      | N/A                                      |
+| **Next version**     | `v1.2.0`                      | Semver bump based on commit types        |
+| **Entries added**    | `3`                           | N/A                                      |
+| **CHANGELOG.md**     | Created / Updated             | N/A                                      |
+| **Git tag**          | `v1.2.0` / Not created        | N/A                                      |
+| **Release notes**    | Generated / Not generated     | N/A                                      |
 
 ## Rules
 
