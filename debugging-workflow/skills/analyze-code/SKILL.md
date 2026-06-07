@@ -3,7 +3,7 @@ name: analyze-code
 description: This skill should be used when verifying code changes after a bug fix, running static analysis, checking code quality before committing, or when the user asks to "analyze code", "check for errors", "run lint", "verify my changes", "run dart analyze", "run cargo check", "run eslint", "check types", or mentions any language-specific analysis tool. As opposed to runtime errors, crashes, or active bugs, which should use the debug skill.
 argument-hint: "[file or directory to analyze — leave blank to analyze entire project]"
 license: MIT
-allowed-tools: ["Read", "Bash", "Grep", "Glob"]
+allowed-tools: ["Read", "Write", "Bash", "Grep", "Glob"]
 ---
 
 # Analyze Code

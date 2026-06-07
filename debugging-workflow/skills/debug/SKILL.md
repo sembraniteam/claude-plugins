@@ -2,7 +2,7 @@
 name: debug
 description: This skill should be used when the user invokes /debugging-workflow:debug, reports an error or bug, pastes a stack trace, says "I have a bug", "this is not working", "fix this error", "debug this", or shares any runtime error, crash report, or unexpected behavior. As opposed to static analysis requests, which should use analyze-code.
 argument-hint: "[error message, stack trace, or bug description — leave blank to inspect current state]"
-allowed-tools: ["Read", "Bash", "Grep", "Glob", "TaskCreate"]
+allowed-tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "TaskCreate", "TaskUpdate", "Agent"]
 license: MIT
 ---
 
@@ -61,7 +61,7 @@ git diff HEAD~1        # changes in last commit
 Look for:
 - Changes to the file that threw the error
 - New imports or removed functions that could cause the issue
-- Configuration or dependency changes (pubspec.yaml, Cargo.toml, package.json, etc.)
+- Configuration or dependency changes (`pubspec.yaml`, `Cargo.toml`, `package.json`, etc.)
 
 ## Test Discovery
 
