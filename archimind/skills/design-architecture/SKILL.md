@@ -93,11 +93,45 @@ Before generating any architecture options, ask structured A/B/C/D questions in 
     - C) GDPR / data privacy regulations
     - D) PCI DSS / HIPAA / financial or healthcare regulations
 
-If the user has already provided sufficient context to answer most of these, proceed directly to Step 2.
+If the user has already provided sufficient context to answer most of these, proceed directly to Step 2 (confirmation).
 
-### 2. Generate Three Architecture Options
+### 2. Confirm Requirements Summary
 
-After collecting answers, analyze requirements and present **exactly 3 options**: Low Risk, Medium Risk, and High Risk.
+After collecting all answers, display a structured summary **before** generating any architecture options. This lets the user verify that nothing was misunderstood.
+
+Present the summary in this exact format, then wait for confirmation:
+
+---
+
+**Requirements Summary**
+
+| Category | Your Answer |
+|---|---|
+| System purpose | {interpreted value from Q1} |
+| User scale | {interpreted value from Q2} |
+| Transaction volume | {interpreted value from Q3} |
+| Team | {interpreted value from Q4} |
+| Consistency | {interpreted value from Q5} |
+| Analytics | {interpreted value from Q6} |
+| Object storage | {interpreted value from Q7} |
+| Deployment | {interpreted value from Q8} |
+| SLA / SLO | {interpreted value from Q9} |
+| Observability | {interpreted value from Q10} |
+| Language | {interpreted value from Q11} |
+| Compliance | {interpreted value from Q12} |
+
+**Key inferences:**
+- {1–3 bullets summarizing constraints or priorities inferred from the combination of answers — e.g., "High volume + strong consistency → replication and connection pooling will be required", "Small team + tight deadline → Low Risk option will likely be the recommendation"}
+
+> Does this accurately capture your requirements? Reply with any corrections, or say **"Yes, proceed"** to generate the architecture options.
+
+---
+
+Wait for the user to confirm or correct before proceeding to Step 3. If the user provides corrections, update the summary and re-confirm. Only proceed when the user explicitly approves.
+
+### 3. Generate Three Architecture Options
+
+After confirmation, analyze requirements and present **exactly 3 options**: Low Risk, Medium Risk, and High Risk.
 
 For each option, cover all required sections (see "Required Sections Per Option" below). Do not skip any section.
 
@@ -116,7 +150,7 @@ For each option, cover all required sections (see "Required Sections Per Option"
 - Typical: Microservices, Event-Driven + CQRS, Serverless-first, Hexagonal.
 - Best for teams with operational maturity and long investment horizon.
 
-### 3. Required Sections Per Option
+### 4. Required Sections Per Option
 
 Structure each option under the `## Architecture Diagram` document section using `### Option N:` subheadings. Use `####` for subsections within each option. The full blank scaffold is in `references/output-template.md`.
 
@@ -134,25 +168,25 @@ Required `####` subsections for each option:
 
 Read `references/architecture-patterns.md`, `references/database-selection-guide.md`, and `references/observability-guide.md` when designing each option's respective sections.
 
-### 4. ERD Section
+### 5. ERD Section
 
 After presenting all options, include a `## ERD` section with Mermaid `erDiagram` covering the primary data model (use the recommended option's schema or a composite if all options share similar entities).
 
 Include table specifications for key entities (PK, columns, types, key indexes).
 
-### 5. Add Recommendation
+### 6. Add Recommendation
 
 After all options, include a `## Recommendation` section: which option is recommended for the user's specific context, referencing their actual requirements (team size, timeline, scale). Keep to 4–6 sentences.
 
-### 6. Do NOT Write Final Documentation Yet
+### 7. Do NOT Write Final Documentation Yet
 
 **The work is not complete until the user selects one option.** After presenting options, prompt:
 
 > "Which architecture would you like to proceed with — Option 1 (Low Risk), Option 2 (Medium Risk), or Option 3 (High Risk)? You can request modifications to any option before deciding."
 
-Iterate freely if the user wants adjustments (e.g., "swap MongoDB for PostgreSQL in Option 2", "add Redis to Option 1"). Do not proceed to Step 7 until the user states an explicit choice.
+Iterate freely if the user wants adjustments (e.g., "swap MongoDB for PostgreSQL in Option 2", "add Redis to Option 1"). Do not proceed to Step 8 until the user states an explicit choice.
 
-### 7. Save the Design Document
+### 8. Save the Design Document
 
 Once the user selects one, compute the timestamp and save:
 
@@ -164,11 +198,11 @@ Once the user selects one, compute the timestamp and save:
 
 The saved document must follow the **Document Structure Convention** below.
 
-### 8. Offer to Visualize
+### 9. Offer to Visualize
 
 After saving, ask: "Would you like to open the architecture viewer to see the diagrams rendered? Use `/archimind:visualize` to start the server."
 
-### 9. Mark the Selected Option
+### 10. Mark the Selected Option
 
 1. Read the saved document
 2. Insert decision header after the document title:
@@ -179,7 +213,7 @@ After saving, ask: "Would you like to open the architecture viewer to see the di
 3. Append `✅ SELECTED` to the chosen option's `### Option N:` heading
 4. Append a `## Decision Notes` section capturing user-requested adjustments, migration timing, and next steps
 
-### 10. Write Final Documentation Sections
+### 11. Write Final Documentation Sections
 
 After selection is marked, append the full documentation sections to the document:
 
@@ -211,7 +245,7 @@ After selection is marked, append the full documentation sections to the documen
 
 For the database migration strategy, include: schema versioning (Flyway / Liquibase / Prisma Migrate / Alembic / etc.), migration workflow, rollback strategy, zero-downtime considerations, data migration for large datasets, backward compatibility.
 
-### 11. Stop the Viewer Server
+### 12. Stop the Viewer Server
 
 After the choice is finalized, check if the viewer is running and offer to stop it:
 ```bash

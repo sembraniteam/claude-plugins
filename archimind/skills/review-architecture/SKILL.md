@@ -32,7 +32,36 @@ Evaluate the existing architecture against the checklist in `references/review-c
 
 Keep the analysis concise: 3–6 bullet points per category. Be specific ("single DB handles both OLTP and analytics queries, causing lock contention"), not vague.
 
-### 3. Document the Revision in a Single Document
+### 3. Confirm Analysis Summary
+
+After completing the analysis, display a summary to the user **before** generating redesign options. This ensures the assessment is accurate.
+
+Present the summary in this format, then wait for confirmation:
+
+---
+
+**Analysis Summary**
+
+**Current Architecture:** {1–2 sentence description of what was understood}
+
+| Category | Finding |
+|---|---|
+| Tech stack | {languages, frameworks, databases identified} |
+| Architecture style | {monolith / modular monolith / microservices / etc.} |
+| Strengths | {1–2 key positives} |
+| Primary pain points | {top 2–3 issues identified} |
+| Antipatterns detected | {canonical names from references/anti-patterns.md, or "None identified"} |
+| Constraints (cannot change) | {legacy integrations, compliance, team skills, etc.} |
+
+**Root cause hypothesis:** {1–2 sentences on why the main issues exist — e.g., "The system evolved from a monolith without service boundaries, resulting in tight coupling that now blocks independent scaling."}
+
+> Does this accurately capture the current state and issues? Reply with any corrections, or say **"Yes, proceed"** to generate the redesign options.
+
+---
+
+Wait for the user to confirm or correct before proceeding to Step 4. If the user provides corrections, update the summary and re-confirm.
+
+### 4. Document the Revision in a Single Document
 
 Save the review document with a `## Revision` section that contains both `### Before` and `### After` subsections. This is what the viewer renders as Before/After tabs.
 
@@ -86,7 +115,7 @@ flowchart TD
 ## Recommendation
 ```
 
-### 4. Generate Three Redesign Options
+### 5. Generate Three Redesign Options
 
 Present three options within the `## Architecture Diagram` section using `### Option N:` sub-headings (the viewer renders these as tabs).
 
@@ -105,7 +134,7 @@ Present three options within the `## Architecture Diagram` section using `### Op
 - Approach: Adopt a fundamentally different architecture (microservices, event-driven, serverless).
 - Migration effort: Months to quarters. Use Strangler Fig or parallel run — not big bang. See `references/anti-patterns.md` for why.
 
-### 5. Required Sections Per Option
+### 6. Required Sections Per Option
 
 Each `### Option N:` section must include:
 
@@ -156,7 +185,7 @@ For Option 3: specify Strangler Fig, parallel run, or big bang and justify.
 2–3 bullets for ideal scenario.
 ```
 
-### 6. Save the Document
+### 7. Save the Document
 
 1. `node -e 'process.stdout.write(String(Date.now()))'` (macOS/Node) or `date +%s%3N` (Linux)
 2. `mkdir -p docs/archimind/architecture/`
@@ -164,21 +193,21 @@ For Option 3: specify Strangler Fig, parallel run, or big bang and justify.
 4. Save to: `docs/archimind/architecture/{timestamp_ms}-{topic}-architecture-review.md`
 5. Inform the user of the saved path
 
-### 7. Offer to Visualize
+### 8. Offer to Visualize
 
 Prompt: "Would you like to open the viewer to compare the redesign options? Use `/archimind:visualize` to launch the diagram server."
 
 The viewer's **Architecture Diagram** nav shows the three option tabs. The **Revision** nav shows the Before/After comparison.
 
-### 8. Require Redesign Selection (mandatory)
+### 9. Require Redesign Selection (mandatory)
 
 **The work is not complete until the user has explicitly chosen one redesign option.** After presenting options, prompt:
 
 > "Which redesign would you like to proceed with — Option 1 (Conservative Refactor), Option 2 (Moderate Redesign), or Option 3 (Full Overhaul)? Request modifications before deciding if needed."
 
-Iterate if the user wants adjustments. Do not proceed to Step 9 until the user states an explicit choice.
+Iterate if the user wants adjustments. Do not proceed to Step 10 until the user states an explicit choice.
 
-### 9. Mark the Chosen Option
+### 10. Mark the Chosen Option
 
 1. Read the saved review document
 2. Insert decision header after the title:
@@ -190,7 +219,7 @@ Iterate if the user wants adjustments. Do not proceed to Step 9 until the user s
 4. Update the `### After` section in `## Revision` to show the selected option's proposed architecture (if not already there)
 5. Append a `## Decision Notes` section with user-requested adjustments, migration timing, and next steps
 
-### 10. Stop the Viewer Server
+### 11. Stop the Viewer Server
 
 After the choice is finalized, offer to stop the viewer:
 ```bash
