@@ -1,5 +1,5 @@
 ---
-name: Design Database
+name: design-database
 description: This skill should be used when the user asks to "design a database", "create a database schema", "normalize my database", "normalize my schema", "help me with database design", "design database tables", "what indexes should I add", "help me with my ER diagram", "design the data model", "optimize my database schema", "what data types should I use", "design a relational database", "review my SQL schema", "create an ERD", or pastes SQL DDL statements for normalization and improvement.
 ---
 

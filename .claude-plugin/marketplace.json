@@ -9,7 +9,7 @@
     {
       "name": "archimind",
       "description": "AI-powered software architecture and database designer with Mermaid JS visualization",
-      "version": "0.2.1",
+      "version": "0.2.2",
       "source": "./archimind",
       "author": {
         "name": "Ahmad Rifa'i",
