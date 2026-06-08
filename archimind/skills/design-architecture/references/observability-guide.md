@@ -179,7 +179,7 @@ Application → OTel SDK → OTel Collector → Backend (SigNoz / Grafana / Data
 
 **Weaknesses**: More components to operate vs. SigNoz/Uptrace; trace-log correlation requires configuration; more complex setup.
 
-**Self-hosted**: Yes. Also Grafana Cloud (managed).
+**Self-hosted**: Yes. Also, Grafana Cloud (managed).
 
 **When to choose**: Teams already using Grafana for metrics who want to add logs (Loki) and traces (Tempo) to the same platform. Good for Kubernetes-native environments. Best for maximum flexibility and composability.
 

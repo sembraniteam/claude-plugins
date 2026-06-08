@@ -21,7 +21,7 @@ Use this checklist during Step 2 (Architecture Analysis) of the `review-architec
 - [ ] Do services or modules have clear, minimal interfaces? Or do they reach into each other's internals?
 - [ ] Is there a "God Service" that does too much and is depended on by everything?
 - [ ] Are there circular dependencies between modules/services?
-- [ ] Is the shared database the integration point between components (shared DB anti-pattern)?
+- [ ] Is the shared database the integration point between components (shared DB antipattern)?
 - [ ] Would changing one component's internal schema break other components?
 - [ ] Are concerns properly separated (e.g., business logic in controllers, infrastructure in DAL)?
 

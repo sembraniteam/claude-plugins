@@ -44,14 +44,14 @@ Present the summary in this format, then wait for confirmation:
 
 **Current Architecture:** {1–2 sentence description of what was understood}
 
-| Category | Finding |
-|---|---|
-| Tech stack | {languages, frameworks, databases identified} |
-| Architecture style | {monolith / modular monolith / microservices / etc.} |
-| Strengths | {1–2 key positives} |
-| Primary pain points | {top 2–3 issues identified} |
-| Antipatterns detected | {canonical names from references/anti-patterns.md, or "None identified"} |
-| Constraints (cannot change) | {legacy integrations, compliance, team skills, etc.} |
+| Category                    | Finding                                                                  |
+|-----------------------------|--------------------------------------------------------------------------|
+| Tech stack                  | {languages, frameworks, databases identified}                            |
+| Architecture style          | {monolith / modular monolith / microservices / etc.}                     |
+| Strengths                   | {1–2 key positives}                                                      |
+| Primary pain points         | {top 2–3 issues identified}                                              |
+| Antipatterns detected       | {canonical names from references/anti-patterns.md, or "None identified"} |
+| Constraints (cannot change) | {legacy integrations, compliance, team skills, etc.}                     |
 
 **Root cause hypothesis:** {1–2 sentences on why the main issues exist — e.g., "The system evolved from a monolith without service boundaries, resulting in tight coupling that now blocks independent scaling."}
 

@@ -157,7 +157,7 @@ For each table in an existing schema:
 
 1. **Identify the primary key** (natural or surrogate)
 2. **List all functional dependencies** (what determines what)
-3. **Check 1NF**: Any multi-valued columns? → Extract to junction table
+3. **Check 1NF**: Any multivalued columns? → Extract to junction table
 4. **Check 2NF** (composite PKs only): Any partial dependency? → Move to separate table
 5. **Check 3NF**: Any transitive dependency? → Extract to separate table
 6. **Document what was changed** and why

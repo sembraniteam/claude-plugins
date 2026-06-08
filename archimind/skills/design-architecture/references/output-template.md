@@ -305,10 +305,10 @@ flowchart TD
 
 - **Instrumentation**: OTel SDK + OTel Collector — {tail-based or head-based sampling, ratio}
 - **Logs**: {Loki / ELK / ClickHouse — high-volume choice, log shipping agent}
-- **Metrics**: {VictoriaMetrics / Mimir — long-term storage, multi-service dashboards}
+- **Metrics**: {VictoriaMetrics / Mimir — long-term storage, multiservice dashboards}
 - **Distributed tracing**: {Jaeger / Tempo — full trace sampling for microservices}
 - **Unified backend**: {SigNoz / Grafana Stack / Datadog — self-hosted vs. managed, cost at scale}
-- **Alerting**: {Alertmanager + PagerDuty — multi-channel incident response}
+- **Alerting**: {Alertmanager + PagerDuty — multichannel incident response}
 - **Profiling** (optional): {Pyroscope / Parca for continuous CPU/memory profiling}
 
 #### Technology Decision Rationale

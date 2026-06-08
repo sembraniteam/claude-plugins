@@ -65,7 +65,7 @@ What is the shape of the data?
 
 **Weaknesses**: Not suitable for multi-process write concurrency.
 
-**When to choose**: Embedded use cases only. Also excellent for prototypes and test environments.
+**When to choose**: Embedded use cases only. Also, excellent for prototypes and test environments.
 
 ---
 
@@ -138,7 +138,7 @@ What is the shape of the data?
 ### Memcached
 **Best for**: Simple in-memory caching only.
 
-**Strengths**: Slightly faster than Redis for pure cache-get/set workloads, multi-threaded.
+**Strengths**: Slightly faster than Redis for pure cache-get/set workloads, multithreaded.
 
 **Weaknesses**: No persistence, no data structures beyond strings, no cluster coordination.
 
@@ -248,7 +248,7 @@ What is the shape of the data?
 
 **Weaknesses**: Operational complexity (Java JVM, cluster management), expensive at scale, not a primary DB.
 
-**When to choose**: When full-text search is a core feature and pg_trgm/tsvector in PostgreSQL is insufficient. Also standard for log aggregation in the ELK/EFK stack.
+**When to choose**: When full-text search is a core feature and pg_trgm/tsvector in PostgreSQL is insufficient. Also, standard for log aggregation in the ELK/EFK stack.
 
 ---
 

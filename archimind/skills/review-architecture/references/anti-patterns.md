@@ -1,6 +1,6 @@
 # Architecture Anti-Patterns Reference
 
-Canonical names and descriptions for common architecture anti-patterns. Reference these when naming identified problems in `review-architecture` Step 2 (Architecture Analysis).
+Canonical names and descriptions for common architecture antipatterns. Reference these when naming identified problems in `review-architecture` Step 2 (Architecture Analysis).
 
 ---
 

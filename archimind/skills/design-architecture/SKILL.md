@@ -105,20 +105,20 @@ Present the summary in this exact format, then wait for confirmation:
 
 **Requirements Summary**
 
-| Category | Your Answer |
-|---|---|
-| System purpose | {interpreted value from Q1} |
-| User scale | {interpreted value from Q2} |
-| Transaction volume | {interpreted value from Q3} |
-| Team | {interpreted value from Q4} |
-| Consistency | {interpreted value from Q5} |
-| Analytics | {interpreted value from Q6} |
-| Object storage | {interpreted value from Q7} |
-| Deployment | {interpreted value from Q8} |
-| SLA / SLO | {interpreted value from Q9} |
-| Observability | {interpreted value from Q10} |
-| Language | {interpreted value from Q11} |
-| Compliance | {interpreted value from Q12} |
+| Category           | Your Answer                  |
+|--------------------|------------------------------|
+| System purpose     | {interpreted value from Q1}  |
+| User scale         | {interpreted value from Q2}  |
+| Transaction volume | {interpreted value from Q3}  |
+| Team               | {interpreted value from Q4}  |
+| Consistency        | {interpreted value from Q5}  |
+| Analytics          | {interpreted value from Q6}  |
+| Object storage     | {interpreted value from Q7}  |
+| Deployment         | {interpreted value from Q8}  |
+| SLA / SLO          | {interpreted value from Q9}  |
+| Observability      | {interpreted value from Q10} |
+| Language           | {interpreted value from Q11} |
+| Compliance         | {interpreted value from Q12} |
 
 **Key inferences:**
 - {1–3 bullets summarizing constraints or priorities inferred from the combination of answers — e.g., "High volume + strong consistency → replication and connection pooling will be required", "Small team + tight deadline → Low Risk option will likely be the recommendation"}
