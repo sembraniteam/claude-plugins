@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Archimind Viewer</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22253a;
+      --border: #2e3250;
+      --accent: #6c8ef5;
+      --accent-hover: #8aaaf7;
+      --text: #e2e4f0;
+      --text-muted: #7a7f9e;
+      --text-code: #c9d1f5;
+      --tab-active: #6c8ef5;
+      --tab-bg: #1a1d27;
+      --sidebar-w: 280px;
+      --radius: 8px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      width: var(--sidebar-w);
+      min-width: var(--sidebar-w);
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #sidebar-header {
+      padding: 18px 16px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    #sidebar-header h1 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    #sidebar-header p {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    #file-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+
+    .file-item {
+      padding: 10px 16px;
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .file-item:hover { background: var(--surface2); }
+
+    .file-item.active {
+      background: var(--surface2);
+      border-left-color: var(--accent);
+    }
+
+    .file-item .file-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-transform: capitalize;
+    }
+
+    .file-item .file-ts {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    #sidebar-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* ── Main ── */
+    #main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Tabs ── */
+    #tab-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      padding: 0 16px;
+      height: 44px;
+      flex-shrink: 0;
+    }
+
+    #tab-bar.hidden { display: none; }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px 16px;
+      border-radius: var(--radius) var(--radius) 0 0;
+      cursor: pointer;
+      transition: color 0.15s, background 0.15s;
+      border-bottom: 2px solid transparent;
+    }
+
+    .tab-btn:hover { color: var(--text); background: var(--surface2); }
+
+    .tab-btn.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .tab-btn.selected {
+      background: rgba(76, 217, 100, 0.08);
+      color: #4cd964;
+    }
+
+    .tab-btn.selected.active {
+      color: #4cd964;
+      border-bottom-color: #4cd964;
+    }
+
+    /* ── Content ── */
+    #content-wrap {
+      flex: 1;
+      overflow-y: auto;
+      padding: 32px 48px;
+    }
+
+    #placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-muted);
+      gap: 12px;
+    }
+
+    #placeholder svg { opacity: 0.3; }
+    #placeholder p { font-size: 14px; }
+
+    /* ── Markdown Styles ── */
+    #doc-content h1 {
+      font-size: 24px; font-weight: 700; color: var(--text);
+      margin-bottom: 8px; border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+    }
+
+    #doc-content h2 {
+      font-size: 18px; font-weight: 700; color: var(--accent);
+      margin: 32px 0 12px;
+    }
+
+    #doc-content h3 {
+      font-size: 15px; font-weight: 600; color: var(--text);
+      margin: 20px 0 8px;
+    }
+
+    #doc-content h4 {
+      font-size: 13px; font-weight: 600; color: var(--text-muted);
+      margin: 16px 0 6px; text-transform: uppercase; letter-spacing: 0.06em;
+    }
+
+    #doc-content p { line-height: 1.7; margin-bottom: 12px; font-size: 14px; color: var(--text); }
+
+    #doc-content ul, #doc-content ol {
+      padding-left: 20px; margin-bottom: 12px;
+    }
+
+    #doc-content li { font-size: 14px; line-height: 1.7; color: var(--text); margin-bottom: 4px; }
+
+    #doc-content strong { color: var(--text); font-weight: 600; }
+
+    #doc-content code {
+      background: var(--surface2);
+      color: var(--text-code);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-family: 'Fira Code', 'JetBrains Mono', Menlo, monospace;
+    }
+
+    #doc-content pre {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      overflow-x: auto;
+      margin-bottom: 16px;
+    }
+
+    #doc-content pre code {
+      background: none;
+      padding: 0;
+      font-size: 13px;
+      color: var(--text-code);
+    }
+
+    #doc-content table {
+      width: 100%; border-collapse: collapse; margin-bottom: 16px;
+      font-size: 13px;
+    }
+
+    #doc-content th {
+      background: var(--surface2); padding: 8px 12px;
+      text-align: left; font-weight: 600; color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    #doc-content td {
+      padding: 7px 12px; color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    #doc-content tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+
+    #doc-content blockquote {
+      border-left: 3px solid var(--accent);
+      padding: 8px 16px; margin-bottom: 16px;
+      background: var(--surface2); border-radius: 0 var(--radius) var(--radius) 0;
+      font-style: italic; color: var(--text-muted);
+    }
+
+    #doc-content hr {
+      border: none; border-top: 1px solid var(--border); margin: 24px 0;
+    }
+
+    /* Mermaid diagrams */
+    .mermaid-wrap {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin: 16px 0;
+      overflow-x: auto;
+      text-align: center;
+    }
+
+    /* Tab section panels */
+    .tab-section { display: none; }
+    .tab-section.visible { display: block; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+  </style>
+</head>
+<body>
+
+<aside id="sidebar">
+  <div id="sidebar-header">
+    <h1>Archimind</h1>
+    <p>Design Viewer</p>
+  </div>
+  <div id="file-list">
+    <p style="padding:16px;font-size:12px;color:var(--text-muted)">Loading documents…</p>
+  </div>
+  <div id="sidebar-footer">
+    <span id="doc-count">0 documents</span>
+  </div>
+</aside>
+
+<main id="main">
+  <div id="tab-bar" class="hidden"></div>
+
+  <div id="content-wrap">
+    <div id="placeholder">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="3" y="3" width="18" height="18" rx="2"/>
+        <path d="M3 9h18M9 21V9"/>
+      </svg>
+      <p>Select a document from the sidebar</p>
+    </div>
+    <div id="doc-content" style="display:none"></div>
+  </div>
+</main>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: 'dark',
+    themeVariables: {
+      background: '#22253a',
+      primaryColor: '#6c8ef5',
+      primaryTextColor: '#e2e4f0',
+      primaryBorderColor: '#2e3250',
+      lineColor: '#7a7f9e',
+      secondaryColor: '#1a1d27',
+      tertiaryColor: '#0f1117',
+      edgeLabelBackground: '#22253a',
+      fontFamily: '-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif',
+    }
+  });
+
+  let currentFile = null;
+  let tabSections = [];
+  let refreshTimer = null;
+
+  // ── Load manifest ──
+  async function loadManifest() {
+    try {
+      const r = await fetch('manifest.json?_=' + Date.now());
+      if (!r.ok) throw new Error('manifest not found');
+      return await r.json();
+    } catch {
+      return { files: [] };
+    }
+  }
+
+  async function populateSidebar() {
+    const manifest = await loadManifest();
+    const list = document.getElementById('file-list');
+    const counter = document.getElementById('doc-count');
+
+    const files = manifest.files || [];
+    counter.textContent = files.length + ' document' + (files.length !== 1 ? 's' : '');
+
+    if (files.length === 0) {
+      list.innerHTML = '<p style="padding:16px;font-size:12px;color:var(--text-muted)">No design documents found in docs/archimind/</p>';
+      return;
+    }
+
+    list.innerHTML = '';
+    files.forEach(f => {
+      const item = document.createElement('div');
+      item.className = 'file-item';
+      item.dataset.name = f.name;
+
+      // Extract timestamp from filename for display
+      const tsMatch = f.name.match(/^(\d+)_/);
+      let tsLabel = '';
+      if (tsMatch) {
+        const d = new Date(parseInt(tsMatch[1]));
+        tsLabel = d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      }
+
+      item.innerHTML = `
+        <div class="file-title">${escapeHtml(f.title)}</div>
+        ${tsLabel ? `<div class="file-ts">${tsLabel}</div>` : ''}
+      `;
+      item.addEventListener('click', () => loadDoc(f.name));
+      list.appendChild(item);
+    });
+  }
+
+  // ── Load and render document ──
+  async function loadDoc(filename) {
+    currentFile = filename;
+
+    // Mark active sidebar item
+    document.querySelectorAll('.file-item').forEach(el => {
+      el.classList.toggle('active', el.dataset.name === filename);
+    });
+
+    try {
+      const r = await fetch(filename + '?_=' + Date.now());
+      if (!r.ok) throw new Error('Could not load ' + filename);
+      const md = await r.text();
+      renderDoc(md);
+    } catch (e) {
+      showError(e.message);
+    }
+
+    // Auto-refresh every 10s
+    clearInterval(refreshTimer);
+    refreshTimer = setInterval(() => loadDoc(currentFile), 10000);
+  }
+
+  function renderDoc(markdown) {
+    // Split into sections by "## Option N:"
+    const optionRegex = /^## Option \d+:/m;
+    const hasOptions = optionRegex.test(markdown);
+
+    const tabBar = document.getElementById('tab-bar');
+    const docContent = document.getElementById('doc-content');
+    const placeholder = document.getElementById('placeholder');
+
+    placeholder.style.display = 'none';
+    docContent.style.display = 'block';
+
+    if (hasOptions) {
+      // Split markdown into: preamble + option sections
+      const parts = splitByOptions(markdown);
+      tabSections = parts.options;
+      renderTabs(parts.preamble, parts.options);
+      tabBar.classList.remove('hidden');
+    } else {
+      // Single document (e.g. database design)
+      tabBar.classList.add('hidden');
+      tabBar.innerHTML = '';
+      renderSingleContent(docContent, markdown);
+    }
+  }
+
+  function splitByOptions(md) {
+    const lines = md.split('\n');
+    let preambleLines = [];
+    let currentOptionLines = null;
+    let currentTitle = '';
+    const options = [];
+
+    for (const line of lines) {
+      const optionMatch = line.match(/^## (Option \d+:[^\n]*)/);
+      if (optionMatch) {
+        if (currentOptionLines !== null) {
+          options.push({ title: currentTitle, content: currentOptionLines.join('\n') });
+        }
+        currentTitle = optionMatch[1];
+        currentOptionLines = ['## ' + currentTitle];
+      } else if (currentOptionLines !== null) {
+        currentOptionLines.push(line);
+      } else {
+        preambleLines.push(line);
+      }
+    }
+    if (currentOptionLines !== null) {
+      options.push({ title: currentTitle, content: currentOptionLines.join('\n') });
+    }
+
+    return { preamble: preambleLines.join('\n'), options };
+  }
+
+  function renderTabs(preamble, options) {
+    const tabBar = document.getElementById('tab-bar');
+    const docContent = document.getElementById('doc-content');
+
+    tabBar.innerHTML = '';
+    docContent.innerHTML = '';
+
+    // Preamble (always visible above tabs)
+    if (preamble.trim()) {
+      const preambleDiv = document.createElement('div');
+      preambleDiv.id = 'preamble';
+      preambleDiv.innerHTML = marked.parse(preamble);
+      docContent.appendChild(preambleDiv);
+      renderMermaid(preambleDiv);
+    }
+
+    // Auto-focus the selected option's tab if one exists, else default to first
+    const selectedIndex = options.findIndex(o => /✅\s*SELECTED/i.test(o.title));
+    const initialTab = selectedIndex >= 0 ? selectedIndex : 0;
+
+    // Create tab buttons + sections
+    const sections = [];
+    options.forEach((opt, i) => {
+      const isSelected = /✅\s*SELECTED/i.test(opt.title);
+      // Tab button
+      const btn = document.createElement('button');
+      btn.className = 'tab-btn' + (i === initialTab ? ' active' : '') + (isSelected ? ' selected' : '');
+      btn.textContent = formatTabLabel(opt.title);
+      btn.addEventListener('click', () => switchTab(i, sections, tabBar));
+      tabBar.appendChild(btn);
+
+      // Section panel
+      const panel = document.createElement('div');
+      panel.className = 'tab-section' + (i === initialTab ? ' visible' : '');
+      panel.innerHTML = marked.parse(opt.content);
+      docContent.appendChild(panel);
+      sections.push(panel);
+
+      if (i === initialTab) renderMermaid(panel);
+    });
+  }
+
+  function switchTab(index, sections, tabBar) {
+    sections.forEach((s, i) => s.classList.toggle('visible', i === index));
+    tabBar.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', i === index));
+    // Lazy-render Mermaid for newly visible tab
+    renderMermaid(sections[index]);
+  }
+
+  function formatTabLabel(title) {
+    // "Option 1: Low Risk — Monolithic ✅ SELECTED" → "Low Risk ✅"
+    const isSelected = /✅\s*SELECTED/i.test(title);
+    const cleaned = title.replace(/✅\s*SELECTED/i, '').trim();
+    const match = cleaned.match(/Option \d+:\s*([\w\s]+?)(?:\s*—|$)/);
+    const label = match ? match[1].trim() : cleaned.replace(/^Option \d+:\s*/, '');
+    return isSelected ? `${label} ✅` : label;
+  }
+
+  function renderSingleContent(container, markdown) {
+    container.innerHTML = marked.parse(markdown);
+    renderMermaid(container);
+  }
+
+  async function renderMermaid(container) {
+    // Find all code blocks with language "mermaid"
+    const codeBlocks = container.querySelectorAll('pre code.language-mermaid');
+    for (let i = 0; i < codeBlocks.length; i++) {
+      const code = codeBlocks[i];
+      const pre = code.parentElement;
+      const diagramDef = code.textContent;
+
+      const wrap = document.createElement('div');
+      wrap.className = 'mermaid-wrap';
+
+      const diagramId = 'mermaid-' + Date.now() + '-' + i;
+      try {
+        const { svg } = await mermaid.render(diagramId, diagramDef);
+        wrap.innerHTML = svg;
+      } catch (err) {
+        wrap.innerHTML = `<pre style="color:#f47983;font-size:12px">Mermaid error:\n${escapeHtml(err.message)}</pre>`;
+      }
+
+      pre.parentNode.replaceChild(wrap, pre);
+    }
+  }
+
+  function showError(msg) {
+    const docContent = document.getElementById('doc-content');
+    docContent.style.display = 'block';
+    docContent.innerHTML = `<p style="color:#f47983;font-size:14px">Error: ${escapeHtml(msg)}</p>`;
+  }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // Configure marked
+  marked.setOptions({ gfm: true, breaks: false });
+
+  // ── Init ──
+  populateSidebar();
+</script>
+</body>
+</html>
