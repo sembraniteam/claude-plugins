@@ -5,7 +5,7 @@ AI-powered software architecture and database designer for Claude Code. Designs 
 ## Features
 
 - **Design Architecture** — Present three options (Low / Medium / High risk) with Mermaid diagrams, tech stack recommendations, database suggestions, and risk analysis.
-- **Review Architecture** — Audit an existing system, identify anti-patterns, and propose three redesign options with migration paths.
+- **Review Architecture** — Audit an existing system, identify antipatterns, and propose three redesign options with migration paths.
 - **Design Database** — Design new schemas or normalize existing SQL DDL. Includes ER diagrams, data type recommendations, index strategy, and normalization analysis.
 - **Visualize** — Run a local static site viewer with Mermaid JS rendering, sidebar document list, and tabbar navigation between architecture options.
 
@@ -85,9 +85,11 @@ All design documents are saved to `docs/archimind/` in your project directory:
 
 ```
 docs/archimind/
-├── {timestamp_ms}_{topic}-architecture-design.md
-├── {timestamp_ms}_{topic}-architecture-review.md
-└── {timestamp_ms}_{topic}-database-design.md
+├── architecture/
+│   ├── {timestamp_ms}-{topic}-design.md           ← new architecture design
+│   └── {timestamp_ms}-{topic}-architecture-review.md  ← existing system review
+└── database/
+    └── {timestamp_ms}-{topic}-database-design.md  ← database schema design
 ```
 
 The timestamp prefix (Unix milliseconds) ensures newest files sort to the top in the viewer sidebar.
@@ -96,8 +98,12 @@ The timestamp prefix (Unix milliseconds) ensures newest files sort to the top in
 
 The static site viewer provides:
 
-- **Sidebar** — Lists all design documents sorted by newest first
-- **Tab bar** — Tabs for each architecture option (Low Risk / Medium Risk / High Risk)
+- **Sidebar** — Lists all design documents (architecture + database) sorted by newest first, with category badges
+- **Section nav** — Three items: **Architecture Diagram** | **ERD** | **Revision**
+- **Architecture Diagram** — Option tabs (Low Risk / Medium Risk / High Risk / Recommendation) with full content
+- **ERD** — Dedicated view for entity-relationship diagrams
+- **Revision** — Before / After tabs for architecture review comparisons
+- **Download as Image** — Every Mermaid diagram has ↓ SVG and ↓ PNG download buttons
 - **Mermaid rendering** — All `mermaid` code blocks rendered as interactive diagrams
 - **Auto-refresh** — Reloads the document every 10 seconds to show diagram updates
 
@@ -112,6 +118,8 @@ archimind/
 │   │   ├── SKILL.md
 │   │   └── references/
 │   │       ├── architecture-patterns.md
+│   │       ├── database-selection-guide.md
+│   │       ├── observability-guide.md
 │   │       └── output-template.md
 │   ├── review-architecture/
 │   │   ├── SKILL.md

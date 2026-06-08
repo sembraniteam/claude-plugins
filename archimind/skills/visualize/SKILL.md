@@ -5,7 +5,7 @@ description: This skill should be used when the user asks to "visualize the arch
 
 # Visualize Architecture
 
-Manage the Mermaid JS diagram viewer. This covers three responsibilities:
+Manage the Mermaid JS diagram viewer. Three responsibilities:
 1. **Start** the local static site server to render architecture/database design documents
 2. **Stop** the server when done
 3. **Update** Mermaid diagrams inline within saved design documents
@@ -26,13 +26,13 @@ When the user asks to open, launch, or start the viewer:
 
 ### Step 1: Verify docs exist
 
-Check that `docs/archimind/` exists and contains at least one `.md` file:
+Check that `docs/archimind/` or its subdirectories contain at least one `.md` file:
 
 ```bash
-ls docs/archimind/*.md 2>/dev/null | head -5
+find docs/archimind -name "*.md" 2>/dev/null | head -5
 ```
 
-If no docs found, report: "No architecture or database designs found in `docs/archimind/`. Generate a design first using `/archimind:design-architecture` or `/archimind:design-database`."
+If no docs found, report: "No architecture or database designs found. Generate a design first using `/archimind:design-architecture` or `/archimind:design-database`."
 
 ### Step 2: Start the server
 
@@ -43,7 +43,7 @@ bash "$CLAUDE_PLUGIN_ROOT/scripts/start-server.sh"
 The script will:
 1. Find a free port using `find-port.sh`
 2. Copy `index.html` to `docs/archimind/`
-3. Generate `docs/archimind/manifest.json` with the list of `.md` files
+3. Generate `docs/archimind/manifest.json` scanning both `architecture/` and `database/` subdirectories and flat files
 4. Start `python3 -m http.server` from `docs/archimind/`
 5. Print the URL and save the PID
 
@@ -51,12 +51,12 @@ The script will:
 
 After the server starts, report:
 - The URL (e.g., `http://localhost:3421`)
-- What the viewer shows (list of design documents, tabbar for architecture options)
+- What the viewer shows: sidebar with document list, 3-item section navigation
 - How to stop it: "Say 'stop the server' or 'close the viewer' to shut it down"
 
 ## Stopping the Viewer
 
-When the user says "stop the server", "close the viewer", "stop archimind server" — or when an architecture decision has just been finalized by `design-architecture` or `review-architecture` — run:
+When the user says "stop the server", "close the viewer", "stop archimind server" — or when an architecture decision has been finalized — run:
 
 ```bash
 bash "$CLAUDE_PLUGIN_ROOT/scripts/stop-server.sh"
@@ -64,7 +64,7 @@ bash "$CLAUDE_PLUGIN_ROOT/scripts/stop-server.sh"
 
 Report: "Server stopped." If the PID file doesn't exist, report: "No running server found."
 
-**Auto-stop trigger**: After the user explicitly selects one of the architecture options (and the design document is updated with `✅ SELECTED`), proactively offer to stop the viewer since the decision phase is complete.
+**Auto-stop trigger**: After the user selects one architecture option (and the document is updated with `✅ SELECTED`), proactively offer to stop the viewer.
 
 ## Updating a Diagram
 
@@ -72,9 +72,9 @@ When the user asks to update, revise, or regenerate a Mermaid diagram in an exis
 
 ### Step 1: Identify the document
 
-Ask which document to update if not specified:
+List available documents:
 ```bash
-ls docs/archimind/*.md
+find docs/archimind -name "*.md" | sort
 ```
 
 ### Step 2: Read the document
@@ -83,33 +83,36 @@ Read the target file and locate the Mermaid code block(s).
 
 ### Step 3: Generate the revised diagram
 
-Based on the user's instruction (e.g., "add a Redis cache layer", "show the auth flow", "redesign this for Option 2"), produce the updated Mermaid code. Follow these rules:
+Based on the user's instruction, produce the updated Mermaid code:
 
-- Keep diagram focused: 8–15 nodes
-- Use `flowchart TD` for service topology
-- Use `erDiagram` for database diagrams
-- Use `sequenceDiagram` for flows
+- `flowchart TD` for service topology
+- `erDiagram` for database diagrams
+- `sequenceDiagram` for flows
+- Keep diagrams focused: 8–15 nodes
 - Label all edges with action verbs
 - Use subgraphs to group related nodes
 
 ### Step 4: Apply the update
 
-Replace the old Mermaid block in the file with the new one. Preserve all surrounding markdown content.
+Replace the old Mermaid block in the file with the new one. Preserve all surrounding Markdown content.
 
 ### Step 5: Confirm
 
-Inform the user: "Diagram updated in `{filepath}`. Refresh the browser to see the changes."
+Inform the user: "Diagram updated in `{filepath}`. Refresh the browser to see the changes (auto-refresh every 10 seconds)."
 
 ## Viewer UI Overview
 
-The `index.html` viewer provides:
+The viewer provides:
 
-- **Sidebar**: Lists all `.md` files in `docs/archimind/`, sorted by timestamp (newest first). Click to load.
-- **Tab bar**: Detects headings matching `## Option N:` and renders each as a clickable tab. Tabs labeled: Low Risk, Medium Risk, High Risk (or Conservative / Moderate / Full Overhaul for reviews).
-- **Content area**: Renders markdown with syntax highlighting and Mermaid diagrams.
+- **Sidebar (left)**: Lists all `.md` files found in `docs/archimind/`, with category badges (architecture / database) and timestamps. Click to load a document.
+- **Section Nav (top)**: 3 items — **Architecture Diagram** | **ERD** | **Revision**. ERD and Revision buttons are disabled (grayed out) when those sections don't exist in the document.
+- **Architecture Diagram view**: Shows option tabs (Option 1 / Option 2 / Option 3 / Recommendation). Tabs are parsed from `### Option N:` subheadings within `## Architecture Diagram`.
+- **ERD view**: Renders the `## ERD` section.
+- **Revision view**: Shows **Before** / **After** tabs parsed from `### Before` and `### After` within `## Revision`.
+- **Download as Image**: Every rendered Mermaid diagram has "↓ SVG" and "↓ PNG" download buttons.
 - **Auto-refresh**: Page polls for changes every 10 seconds when a document is open.
 
-For database design documents (no options), the tabbar is hidden and content renders as a single scrollable view.
+For database design documents (no Architecture Diagram options), the Architecture Diagram nav shows the content as a single view without option tabs.
 
 ## Manifest Format
 
@@ -118,23 +121,33 @@ For database design documents (no options), the tabbar is hidden and content ren
 ```json
 {
   "files": [
-    { "name": "1718012345678_ecommerce-architecture-design.md", "title": "ecommerce architecture design" },
-    { "name": "1718009876543_users-database-design.md", "title": "users database design" }
+    {
+      "path": "architecture/1735689600000-payment-platform-design.md",
+      "name": "1735689600000-payment-platform-design.md",
+      "title": "payment platform design",
+      "category": "architecture"
+    },
+    {
+      "path": "database/1735689600000-order-management-design.md",
+      "name": "1735689600000-order-management-design.md",
+      "title": "order management design",
+      "category": "database"
+    }
   ],
   "generated": "2025-06-08T10:00:00Z"
 }
 ```
 
-The viewer reads this manifest to populate the sidebar.
-
 ## Troubleshooting
 
 **"Address already in use"**: Run stop-server.sh first, then start again.
 
-**"python3 not found"**: Inform user: "Python 3 is required to run the viewer. Install it from https://python.org or via your system package manager."
+**"python3 not found"**: Inform user: "Python 3 is required to run the viewer. Install it or use your system package manager."
 
 **Diagrams not rendering**: Verify the Mermaid code block uses triple backticks with `mermaid` tag. Check browser console for Mermaid syntax errors.
 
 **Browser doesn't open automatically**: Provide the URL manually: "Open `http://localhost:{port}` in your browser."
 
-**Sidebar shows no files**: The `manifest.json` may be stale or missing. Stop the server and restart it — `start-server.sh` regenerates `manifest.json` on each start.
+**Sidebar shows no files**: The `manifest.json` may be stale. Stop the server and restart — `start-server.sh` regenerates `manifest.json` on each start.
+
+**ERD or Revision nav is disabled**: The loaded document doesn't contain a `## ERD` or `## Revision` section. Add one using the appropriate skill or manually.

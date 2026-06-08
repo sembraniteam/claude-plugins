@@ -15,12 +15,10 @@
       --surface2: #22253a;
       --border: #2e3250;
       --accent: #6c8ef5;
-      --accent-hover: #8aaaf7;
       --text: #e2e4f0;
       --text-muted: #7a7f9e;
       --text-code: #c9d1f5;
-      --tab-active: #6c8ef5;
-      --tab-bg: #1a1d27;
+      --green: #4cd964;
       --sidebar-w: 280px;
       --radius: 8px;
     }
@@ -51,24 +49,13 @@
     }
 
     #sidebar-header h1 {
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--accent);
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
+      font-size: 15px; font-weight: 700; color: var(--accent);
+      letter-spacing: 0.04em; text-transform: uppercase;
     }
 
-    #sidebar-header p {
-      font-size: 11px;
-      color: var(--text-muted);
-      margin-top: 3px;
-    }
+    #sidebar-header p { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
 
-    #file-list {
-      flex: 1;
-      overflow-y: auto;
-      padding: 8px 0;
-    }
+    #file-list { flex: 1; overflow-y: auto; padding: 8px 0; }
 
     .file-item {
       padding: 10px 16px;
@@ -85,37 +72,69 @@
     }
 
     .file-item .file-title {
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      font-size: 13px; font-weight: 500; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       text-transform: capitalize;
     }
 
-    .file-item .file-ts {
-      font-size: 10px;
-      color: var(--text-muted);
-      margin-top: 2px;
+    .file-item .file-meta {
+      font-size: 10px; color: var(--text-muted);
+      margin-top: 3px; display: flex; gap: 8px; align-items: center;
     }
+
+    .file-badge {
+      padding: 1px 5px; border-radius: 3px;
+      font-size: 9px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+
+    .file-badge.architecture { background: rgba(108,142,245,0.2); color: var(--accent); }
+    .file-badge.database { background: rgba(76,217,100,0.15); color: var(--green); }
 
     #sidebar-footer {
       padding: 12px 16px;
       border-top: 1px solid var(--border);
-      font-size: 11px;
-      color: var(--text-muted);
+      font-size: 11px; color: var(--text-muted);
     }
 
     /* ── Main ── */
-    #main {
-      flex: 1;
+    #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
+    /* ── Section Nav: Architecture Diagram | ERD | Revision ── */
+    #section-nav {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
       display: flex;
-      flex-direction: column;
-      overflow: hidden;
+      align-items: stretch;
+      height: 46px;
+      flex-shrink: 0;
+      padding: 0 16px;
+      gap: 4px;
     }
 
-    /* ── Tabs ── */
+    #section-nav.hidden { display: none; }
+
+    .snav-btn {
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 0 18px;
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      transition: color 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+
+    .snav-btn:hover:not(:disabled) { color: var(--text); }
+
+    .snav-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .snav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    /* ── Sub-tab bar (Option tabs / Before|After tabs) ── */
     #tab-bar {
       background: var(--surface);
       border-bottom: 1px solid var(--border);
@@ -123,7 +142,7 @@
       align-items: center;
       gap: 2px;
       padding: 0 16px;
-      height: 44px;
+      height: 40px;
       flex-shrink: 0;
     }
 
@@ -133,9 +152,9 @@
       background: none;
       border: none;
       color: var(--text-muted);
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 500;
-      padding: 6px 16px;
+      padding: 5px 14px;
       border-radius: var(--radius) var(--radius) 0 0;
       cursor: pointer;
       transition: color 0.15s, background 0.15s;
@@ -144,27 +163,14 @@
 
     .tab-btn:hover { color: var(--text); background: var(--surface2); }
 
-    .tab-btn.active {
-      color: var(--accent);
-      border-bottom-color: var(--accent);
-    }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
 
-    .tab-btn.selected {
-      background: rgba(76, 217, 100, 0.08);
-      color: #4cd964;
-    }
+    .tab-btn.selected { background: rgba(76,217,100,0.08); color: var(--green); }
 
-    .tab-btn.selected.active {
-      color: #4cd964;
-      border-bottom-color: #4cd964;
-    }
+    .tab-btn.selected.active { color: var(--green); border-bottom-color: var(--green); }
 
     /* ── Content ── */
-    #content-wrap {
-      flex: 1;
-      overflow-y: auto;
-      padding: 32px 48px;
-    }
+    #content-wrap { flex: 1; overflow-y: auto; padding: 32px 48px; }
 
     #placeholder {
       display: flex;
@@ -179,21 +185,18 @@
     #placeholder svg { opacity: 0.3; }
     #placeholder p { font-size: 14px; }
 
-    /* ── Markdown Styles ── */
+    /* ── Markdown ── */
     #doc-content h1 {
       font-size: 24px; font-weight: 700; color: var(--text);
-      margin-bottom: 8px; border-bottom: 1px solid var(--border);
-      padding-bottom: 10px;
+      margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 10px;
     }
 
     #doc-content h2 {
-      font-size: 18px; font-weight: 700; color: var(--accent);
-      margin: 32px 0 12px;
+      font-size: 18px; font-weight: 700; color: var(--accent); margin: 32px 0 12px;
     }
 
     #doc-content h3 {
-      font-size: 15px; font-weight: 600; color: var(--text);
-      margin: 20px 0 8px;
+      font-size: 15px; font-weight: 600; color: var(--text); margin: 20px 0 8px;
     }
 
     #doc-content h4 {
@@ -203,9 +206,7 @@
 
     #doc-content p { line-height: 1.7; margin-bottom: 12px; font-size: 14px; color: var(--text); }
 
-    #doc-content ul, #doc-content ol {
-      padding-left: 20px; margin-bottom: 12px;
-    }
+    #doc-content ul, #doc-content ol { padding-left: 20px; margin-bottom: 12px; }
 
     #doc-content li { font-size: 14px; line-height: 1.7; color: var(--text); margin-bottom: 4px; }
 
@@ -229,28 +230,16 @@
       margin-bottom: 16px;
     }
 
-    #doc-content pre code {
-      background: none;
-      padding: 0;
-      font-size: 13px;
-      color: var(--text-code);
-    }
+    #doc-content pre code { background: none; padding: 0; font-size: 13px; color: var(--text-code); }
 
-    #doc-content table {
-      width: 100%; border-collapse: collapse; margin-bottom: 16px;
-      font-size: 13px;
-    }
+    #doc-content table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 13px; }
 
     #doc-content th {
       background: var(--surface2); padding: 8px 12px;
-      text-align: left; font-weight: 600; color: var(--text);
-      border: 1px solid var(--border);
+      text-align: left; font-weight: 600; color: var(--text); border: 1px solid var(--border);
     }
 
-    #doc-content td {
-      padding: 7px 12px; color: var(--text);
-      border: 1px solid var(--border);
-    }
+    #doc-content td { padding: 7px 12px; color: var(--text); border: 1px solid var(--border); }
 
     #doc-content tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
 
@@ -261,24 +250,44 @@
       font-style: italic; color: var(--text-muted);
     }
 
-    #doc-content hr {
-      border: none; border-top: 1px solid var(--border); margin: 24px 0;
-    }
+    #doc-content hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
 
-    /* Mermaid diagrams */
+    /* ── Mermaid ── */
     .mermaid-wrap {
       background: var(--surface2);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 24px;
       margin: 16px 0;
-      overflow-x: auto;
-      text-align: center;
+      overflow: hidden;
     }
 
-    /* Tab section panels */
-    .tab-section { display: none; }
-    .tab-section.visible { display: block; }
+    .diagram-actions {
+      display: flex;
+      gap: 8px;
+      padding: 6px 12px;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      justify-content: flex-end;
+    }
+
+    .dl-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 500;
+      padding: 3px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+    }
+
+    .dl-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
+
+    .diagram-svg-container { padding: 20px; overflow-x: auto; text-align: center; }
+
+    .diagram-svg-container svg { max-width: 100%; }
 
     /* Scrollbar */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -303,6 +312,14 @@
 </aside>
 
 <main id="main">
+  <!-- Section Nav: Architecture Diagram | ERD | Revision -->
+  <nav id="section-nav" class="hidden">
+    <button class="snav-btn active" data-view="architecture">Architecture Diagram</button>
+    <button class="snav-btn" data-view="erd">ERD</button>
+    <button class="snav-btn" data-view="revision">Revision</button>
+  </nav>
+
+  <!-- Sub-tab bar (option tabs or before/after tabs) -->
   <div id="tab-bar" class="hidden"></div>
 
   <div id="content-wrap">
@@ -334,27 +351,34 @@
     }
   });
 
-  let currentFile = null;
-  let tabSections = [];
-  let refreshTimer = null;
+  marked.setOptions({ gfm: true, breaks: false });
 
-  // ── Load manifest ──
+  // ── State ──
+  let currentFile = null;
+  let currentView = 'architecture';
+  let currentOptionIndex = 0;
+  let currentRevisionTab = 'before';
+  let parsedDoc = null;
+  let optionContents = [];
+  let revisionData = { before: '', after: '' };
+  let refreshTimer = null;
+  let mermaidCounter = 0;
+
+  // ── Manifest / sidebar ──
   async function loadManifest() {
     try {
       const r = await fetch('manifest.json?_=' + Date.now());
       if (!r.ok) throw new Error('manifest not found');
       return await r.json();
-    } catch {
-      return { files: [] };
-    }
+    } catch { return { files: [] }; }
   }
 
   async function populateSidebar() {
     const manifest = await loadManifest();
     const list = document.getElementById('file-list');
     const counter = document.getElementById('doc-count');
-
     const files = manifest.files || [];
+
     counter.textContent = files.length + ' document' + (files.length !== 1 ? 's' : '');
 
     if (files.length === 0) {
@@ -366,204 +390,431 @@
     files.forEach(f => {
       const item = document.createElement('div');
       item.className = 'file-item';
-      item.dataset.name = f.name;
+      const filePath = f.path || f.name;
+      item.dataset.path = filePath;
 
-      // Extract timestamp from filename for display
-      const tsMatch = f.name.match(/^(\d+)_/);
+      // Extract timestamp for display
+      const tsMatch = filePath.match(/(\d{10,})[_\-]/);
       let tsLabel = '';
       if (tsMatch) {
         const d = new Date(parseInt(tsMatch[1]));
         tsLabel = d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
       }
 
+      const category = f.category || detectCategory(filePath);
       item.innerHTML = `
         <div class="file-title">${escapeHtml(f.title)}</div>
-        ${tsLabel ? `<div class="file-ts">${tsLabel}</div>` : ''}
+        <div class="file-meta">
+          <span class="file-badge ${category}">${category}</span>
+          ${tsLabel ? `<span>${tsLabel}</span>` : ''}
+        </div>
       `;
-      item.addEventListener('click', () => loadDoc(f.name));
+      item.addEventListener('click', () => loadDoc(filePath));
       list.appendChild(item);
     });
   }
 
-  // ── Load and render document ──
-  async function loadDoc(filename) {
-    currentFile = filename;
+  function detectCategory(path) {
+    if (/\/database\//i.test(path) || /database/i.test(path)) return 'database';
+    return 'architecture';
+  }
 
-    // Mark active sidebar item
+  // ── Document loading ──
+  async function loadDoc(filepath) {
+    currentFile = filepath;
     document.querySelectorAll('.file-item').forEach(el => {
-      el.classList.toggle('active', el.dataset.name === filename);
+      el.classList.toggle('active', el.dataset.path === filepath);
     });
 
     try {
-      const r = await fetch(filename + '?_=' + Date.now());
-      if (!r.ok) throw new Error('Could not load ' + filename);
+      const r = await fetch(filepath + '?_=' + Date.now());
+      if (!r.ok) throw new Error('Could not load ' + filepath);
       const md = await r.text();
-      renderDoc(md);
-    } catch (e) {
-      showError(e.message);
-    }
+      processDoc(md);
+    } catch (e) { showError(e.message); }
 
-    // Auto-refresh every 10s
     clearInterval(refreshTimer);
-    refreshTimer = setInterval(() => loadDoc(currentFile), 10000);
+    refreshTimer = setInterval(() => { if (currentFile) loadDoc(currentFile); }, 10000);
   }
 
-  function renderDoc(markdown) {
-    // Split into sections by "## Option N:"
-    const optionRegex = /^## Option \d+:/m;
-    const hasOptions = optionRegex.test(markdown);
+  // ── Document parsing ──
+  function parseDocument(markdown) {
+    const lines = markdown.split('\n');
+    const doc = {
+      preamble: [],
+      archSectionLines: [],   // content of ## Architecture Diagram
+      optionSections: [],     // top-level ## Option N: sections
+      erdLines: [],           // content of ## ERD
+      revisionLines: [],      // content of ## Revision
+      recommendationLines: [],
+      hasArchSection: false,
+      hasERD: false,
+      hasRevision: false,
+    };
 
-    const tabBar = document.getElementById('tab-bar');
-    const docContent = document.getElementById('doc-content');
+    let mode = 'preamble';
+    let optTitle = '';
+    let optLines = [];
+
+    function flushOption() {
+      if (optTitle) {
+        doc.optionSections.push({ title: optTitle, content: optLines.join('\n') });
+        optTitle = ''; optLines = [];
+      }
+    }
+
+    for (const line of lines) {
+      if (/^## Architecture Diagram\b/.test(line)) {
+        flushOption(); mode = 'arch'; doc.hasArchSection = true; continue;
+      }
+      if (/^## ERD\b/.test(line)) {
+        flushOption(); mode = 'erd'; doc.hasERD = true; doc.erdLines.push(line); continue;
+      }
+      if (/^## Revision\b/.test(line)) {
+        flushOption(); mode = 'revision'; doc.hasRevision = true; doc.revisionLines.push(line); continue;
+      }
+      if (/^## Recommendation\b/.test(line)) {
+        flushOption(); mode = 'recommendation'; doc.recommendationLines.push(line); continue;
+      }
+      if (/^## Option \d+:/.test(line)) {
+        flushOption(); mode = 'option';
+        optTitle = line.replace(/^## /, ''); optLines = [line]; continue;
+      }
+
+      if (mode === 'preamble') doc.preamble.push(line);
+      else if (mode === 'arch') doc.archSectionLines.push(line);
+      else if (mode === 'erd') doc.erdLines.push(line);
+      else if (mode === 'revision') doc.revisionLines.push(line);
+      else if (mode === 'recommendation') doc.recommendationLines.push(line);
+      else if (mode === 'option') optLines.push(line);
+    }
+    flushOption();
+    return doc;
+  }
+
+  // Split architecture section by ### Option N: sub-headings
+  function parseArchSubOptions(content) {
+    const optRegex = /^(### (?:Option \d+:|Conservative|Moderate|Full).*)$/gm;
+    const options = [];
+    let lastIndex = 0; let lastTitle = null; let m;
+
+    while ((m = optRegex.exec(content)) !== null) {
+      if (lastTitle !== null) {
+        options.push({ title: lastTitle, content: content.slice(lastIndex, m.index).trim() });
+      }
+      lastTitle = m[1].replace(/^### /, '');
+      lastIndex = m.index;
+    }
+    if (lastTitle !== null) {
+      options.push({ title: lastTitle, content: content.slice(lastIndex).trim() });
+    }
+    return options;
+  }
+
+  // Split revision content by ### Before / ### After
+  function parseRevisionContent(content) {
+    const bI = content.search(/^### Before\b/m);
+    const aI = content.search(/^### After\b/m);
+    let before = '', after = '';
+
+    if (bI >= 0 && aI >= 0) {
+      before = content.slice(bI).replace(/^### Before\b[^\n]*\n?/, '').slice(0, aI - bI);
+      after = content.slice(aI).replace(/^### After\b[^\n]*\n?/, '');
+    } else if (bI >= 0) {
+      before = content.slice(bI).replace(/^### Before\b[^\n]*\n?/, '');
+    } else if (aI >= 0) {
+      after = content.slice(aI).replace(/^### After\b[^\n]*\n?/, '');
+    } else {
+      before = content; // show all as before if no sub-sections
+    }
+    return { before: before.trim(), after: after.trim() };
+  }
+
+  // ── Main render ──
+  function processDoc(markdown) {
+    parsedDoc = parseDocument(markdown);
+    currentView = 'architecture';
+    currentOptionIndex = 0;
+    currentRevisionTab = 'before';
+    optionContents = [];
+
+    const sectionNav = document.getElementById('section-nav');
     const placeholder = document.getElementById('placeholder');
+    const docContent = document.getElementById('doc-content');
 
     placeholder.style.display = 'none';
     docContent.style.display = 'block';
 
-    if (hasOptions) {
-      // Split markdown into: preamble + option sections
-      const parts = splitByOptions(markdown);
-      tabSections = parts.options;
-      renderTabs(parts.preamble, parts.options);
-      tabBar.classList.remove('hidden');
+    sectionNav.classList.remove('hidden');
+
+    // Enable/disable nav buttons based on available sections
+    const erdBtn = sectionNav.querySelector('[data-view="erd"]');
+    const revBtn = sectionNav.querySelector('[data-view="revision"]');
+    erdBtn.disabled = !parsedDoc.hasERD;
+    revBtn.disabled = !parsedDoc.hasRevision;
+
+    setView('architecture');
+  }
+
+  function setView(view) {
+    currentView = view;
+    document.querySelectorAll('.snav-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.view === view);
+    });
+
+    if (view === 'architecture') renderArchView();
+    else if (view === 'erd') renderERDView();
+    else if (view === 'revision') renderRevisionView();
+  }
+
+  // ── Architecture view ──
+  function renderArchView() {
+    const doc = parsedDoc;
+    let opts;
+
+    if (doc.hasArchSection) {
+      const sub = parseArchSubOptions(doc.archSectionLines.join('\n'));
+      opts = sub.length > 0 ? sub : [{ title: 'Overview', content: doc.archSectionLines.join('\n') }];
     } else {
-      // Single document (e.g. database design)
+      opts = doc.optionSections.map(o => ({ title: o.title, content: o.content }));
+    }
+
+    if (doc.recommendationLines.length > 0) {
+      opts = [...opts, { title: 'Recommendation', content: doc.recommendationLines.join('\n') }];
+    }
+
+    optionContents = opts;
+
+    const tabBar = document.getElementById('tab-bar');
+    tabBar.innerHTML = '';
+
+    if (opts.length > 1) {
+      tabBar.classList.remove('hidden');
+      const selectedIdx = opts.findIndex(o => /✅\s*SELECTED/i.test(o.title));
+      if (selectedIdx >= 0 && currentOptionIndex === 0) currentOptionIndex = selectedIdx;
+
+      opts.forEach((opt, i) => {
+        const isSelected = /✅\s*SELECTED/i.test(opt.title);
+        const btn = document.createElement('button');
+        btn.className = 'tab-btn' + (isSelected ? ' selected' : '') + (i === currentOptionIndex ? ' active' : '');
+        btn.textContent = formatTabLabel(opt.title);
+        btn.addEventListener('click', () => switchOptionTab(i));
+        tabBar.appendChild(btn);
+      });
+    } else {
       tabBar.classList.add('hidden');
-      tabBar.innerHTML = '';
-      renderSingleContent(docContent, markdown);
     }
+
+    renderOptionContent(currentOptionIndex);
   }
 
-  function splitByOptions(md) {
-    const lines = md.split('\n');
-    let preambleLines = [];
-    let currentOptionLines = null;
-    let currentTitle = '';
-    const options = [];
-
-    for (const line of lines) {
-      const optionMatch = line.match(/^## (Option \d+:[^\n]*)/);
-      if (optionMatch) {
-        if (currentOptionLines !== null) {
-          options.push({ title: currentTitle, content: currentOptionLines.join('\n') });
-        }
-        currentTitle = optionMatch[1];
-        currentOptionLines = ['## ' + currentTitle];
-      } else if (currentOptionLines !== null) {
-        currentOptionLines.push(line);
-      } else {
-        preambleLines.push(line);
-      }
-    }
-    if (currentOptionLines !== null) {
-      options.push({ title: currentTitle, content: currentOptionLines.join('\n') });
-    }
-
-    return { preamble: preambleLines.join('\n'), options };
+  function switchOptionTab(index) {
+    currentOptionIndex = index;
+    document.querySelectorAll('#tab-bar .tab-btn').forEach((b, i) => {
+      b.classList.toggle('active', i === index);
+    });
+    renderOptionContent(index);
   }
 
-  function renderTabs(preamble, options) {
+  function renderOptionContent(index) {
+    const opt = optionContents[index];
+    if (!opt) return;
+
+    const docContent = document.getElementById('doc-content');
+    const preamble = parsedDoc.preamble.join('\n');
+
+    let html = '';
+    if (preamble.trim() && index === 0) html += marked.parse(preamble);
+    html += marked.parse(opt.content);
+
+    docContent.innerHTML = html;
+    renderMermaid(docContent);
+    document.getElementById('content-wrap').scrollTop = 0;
+  }
+
+  // ── ERD view ──
+  function renderERDView() {
     const tabBar = document.getElementById('tab-bar');
     const docContent = document.getElementById('doc-content');
 
+    tabBar.classList.add('hidden');
     tabBar.innerHTML = '';
-    docContent.innerHTML = '';
 
-    // Preamble (always visible above tabs)
-    if (preamble.trim()) {
-      const preambleDiv = document.createElement('div');
-      preambleDiv.id = 'preamble';
-      preambleDiv.innerHTML = marked.parse(preamble);
-      docContent.appendChild(preambleDiv);
-      renderMermaid(preambleDiv);
+    if (!parsedDoc.hasERD) {
+      docContent.innerHTML = '<p style="color:var(--text-muted);padding:20px 0">No ERD section found in this document.</p>';
+      return;
     }
 
-    // Auto-focus the selected option's tab if one exists, else default to first
-    const selectedIndex = options.findIndex(o => /✅\s*SELECTED/i.test(o.title));
-    const initialTab = selectedIndex >= 0 ? selectedIndex : 0;
+    docContent.innerHTML = marked.parse(parsedDoc.erdLines.join('\n'));
+    renderMermaid(docContent);
+    document.getElementById('content-wrap').scrollTop = 0;
+  }
 
-    // Create tab buttons + sections
-    const sections = [];
-    options.forEach((opt, i) => {
-      const isSelected = /✅\s*SELECTED/i.test(opt.title);
-      // Tab button
+  // ── Revision view ──
+  function renderRevisionView() {
+    const tabBar = document.getElementById('tab-bar');
+    const docContent = document.getElementById('doc-content');
+
+    if (!parsedDoc.hasRevision) {
+      tabBar.classList.add('hidden');
+      tabBar.innerHTML = '';
+      docContent.innerHTML = '<p style="color:var(--text-muted);padding:20px 0">No Revision section found in this document.</p>';
+      return;
+    }
+
+    revisionData = parseRevisionContent(parsedDoc.revisionLines.join('\n'));
+
+    tabBar.innerHTML = '';
+    tabBar.classList.remove('hidden');
+
+    ['before', 'after'].forEach(tab => {
       const btn = document.createElement('button');
-      btn.className = 'tab-btn' + (i === initialTab ? ' active' : '') + (isSelected ? ' selected' : '');
-      btn.textContent = formatTabLabel(opt.title);
-      btn.addEventListener('click', () => switchTab(i, sections, tabBar));
+      btn.className = 'tab-btn' + (tab === currentRevisionTab ? ' active' : '');
+      btn.textContent = tab === 'before' ? 'Before' : 'After';
+      btn.dataset.rtab = tab;
+      btn.addEventListener('click', () => switchRevisionTab(tab));
       tabBar.appendChild(btn);
-
-      // Section panel
-      const panel = document.createElement('div');
-      panel.className = 'tab-section' + (i === initialTab ? ' visible' : '');
-      panel.innerHTML = marked.parse(opt.content);
-      docContent.appendChild(panel);
-      sections.push(panel);
-
-      if (i === initialTab) renderMermaid(panel);
     });
+
+    renderRevisionTabContent(currentRevisionTab);
   }
 
-  function switchTab(index, sections, tabBar) {
-    sections.forEach((s, i) => s.classList.toggle('visible', i === index));
-    tabBar.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', i === index));
-    // Lazy-render Mermaid for newly visible tab
-    renderMermaid(sections[index]);
+  function switchRevisionTab(tab) {
+    currentRevisionTab = tab;
+    document.querySelectorAll('#tab-bar .tab-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.rtab === tab);
+    });
+    renderRevisionTabContent(tab);
   }
 
-  function formatTabLabel(title) {
-    // "Option 1: Low Risk — Monolithic ✅ SELECTED" → "Low Risk ✅"
-    const isSelected = /✅\s*SELECTED/i.test(title);
-    const cleaned = title.replace(/✅\s*SELECTED/i, '').trim();
-    const match = cleaned.match(/Option \d+:\s*([\w\s]+?)(?:\s*—|$)/);
-    const label = match ? match[1].trim() : cleaned.replace(/^Option \d+:\s*/, '');
-    return isSelected ? `${label} ✅` : label;
+  function renderRevisionTabContent(tab) {
+    const docContent = document.getElementById('doc-content');
+    const content = tab === 'before' ? revisionData.before : revisionData.after;
+
+    if (!content.trim()) {
+      docContent.innerHTML = `<p style="color:var(--text-muted);padding:20px 0">No "${tab}" content found.</p>`;
+      return;
+    }
+
+    docContent.innerHTML = marked.parse(content);
+    renderMermaid(docContent);
+    document.getElementById('content-wrap').scrollTop = 0;
   }
 
-  function renderSingleContent(container, markdown) {
-    container.innerHTML = marked.parse(markdown);
-    renderMermaid(container);
-  }
-
+  // ── Mermaid rendering with download buttons ──
   async function renderMermaid(container) {
-    // Find all code blocks with language "mermaid"
-    const codeBlocks = container.querySelectorAll('pre code.language-mermaid');
-    for (let i = 0; i < codeBlocks.length; i++) {
-      const code = codeBlocks[i];
-      const pre = code.parentElement;
-      const diagramDef = code.textContent;
+    const blocks = container.querySelectorAll('pre code.language-mermaid');
+    let idx = 0;
 
+    for (const code of blocks) {
+      const pre = code.parentElement;
+      const def = code.textContent;
+      const id = 'mermaid-' + (++mermaidCounter) + '-' + (idx++);
       const wrap = document.createElement('div');
       wrap.className = 'mermaid-wrap';
 
-      const diagramId = 'mermaid-' + Date.now() + '-' + i;
       try {
-        const { svg } = await mermaid.render(diagramId, diagramDef);
-        wrap.innerHTML = svg;
+        const { svg } = await mermaid.render(id, def);
+
+        const actions = document.createElement('div');
+        actions.className = 'diagram-actions';
+
+        const svgBtn = document.createElement('button');
+        svgBtn.className = 'dl-btn';
+        svgBtn.textContent = '↓ SVG';
+        svgBtn.title = 'Download as SVG';
+
+        const pngBtn = document.createElement('button');
+        pngBtn.className = 'dl-btn';
+        pngBtn.textContent = '↓ PNG';
+        pngBtn.title = 'Download as PNG';
+
+        actions.appendChild(svgBtn);
+        actions.appendChild(pngBtn);
+
+        const svgContainer = document.createElement('div');
+        svgContainer.className = 'diagram-svg-container';
+        svgContainer.innerHTML = svg;
+
+        const svgEl = svgContainer.querySelector('svg');
+        const diagName = 'diagram-' + mermaidCounter;
+
+        svgBtn.addEventListener('click', () => downloadSVG(svgEl, diagName));
+        pngBtn.addEventListener('click', () => downloadPNG(svgEl, diagName));
+
+        wrap.appendChild(actions);
+        wrap.appendChild(svgContainer);
       } catch (err) {
-        wrap.innerHTML = `<pre style="color:#f47983;font-size:12px">Mermaid error:\n${escapeHtml(err.message)}</pre>`;
+        wrap.innerHTML = `<pre style="color:#f47983;font-size:12px;padding:16px">Mermaid error:\n${escapeHtml(err.message)}</pre>`;
       }
 
       pre.parentNode.replaceChild(wrap, pre);
     }
   }
 
+  // ── Download helpers ──
+  function downloadSVG(svgEl, name) {
+    if (!svgEl) return;
+    const data = new XMLSerializer().serializeToString(svgEl);
+    const blob = new Blob([data], { type: 'image/svg+xml;charset=utf-8' });
+    triggerDownload(URL.createObjectURL(blob), name + '.svg');
+  }
+
+  function downloadPNG(svgEl, name) {
+    if (!svgEl) return;
+    const data = new XMLSerializer().serializeToString(svgEl);
+    const svgBlob = new Blob([data], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+    const img = new Image();
+    img.onload = () => {
+      const scale = 2;
+      const canvas = document.createElement('canvas');
+      canvas.width = (img.naturalWidth || 800) * scale;
+      canvas.height = (img.naturalHeight || 600) * scale;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(scale, scale);
+      ctx.fillStyle = '#22253a';
+      ctx.fillRect(0, 0, img.naturalWidth || 800, img.naturalHeight || 600);
+      ctx.drawImage(img, 0, 0);
+      canvas.toBlob(blob => {
+        if (blob) triggerDownload(URL.createObjectURL(blob), name + '.png');
+      }, 'image/png');
+      URL.revokeObjectURL(url);
+    };
+    img.onerror = () => URL.revokeObjectURL(url);
+    img.src = url;
+  }
+
+  function triggerDownload(href, filename) {
+    const a = document.createElement('a');
+    a.href = href; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(href), 200);
+  }
+
+  // ── Utilities ──
+  function formatTabLabel(title) {
+    const isSelected = /✅\s*SELECTED/i.test(title);
+    const cleaned = title.replace(/✅\s*SELECTED/i, '').trim();
+    const m = cleaned.match(/Option \d+:\s*([\w\s]+?)(?:\s*—|\s*\(|$)/);
+    const label = m ? m[1].trim() : cleaned.replace(/^Option \d+:\s*/, '');
+    return isSelected ? label + ' ✅' : label;
+  }
+
   function showError(msg) {
-    const docContent = document.getElementById('doc-content');
-    docContent.style.display = 'block';
-    docContent.innerHTML = `<p style="color:#f47983;font-size:14px">Error: ${escapeHtml(msg)}</p>`;
+    const el = document.getElementById('doc-content');
+    el.style.display = 'block';
+    el.innerHTML = `<p style="color:#f47983;font-size:14px;padding:20px 0">Error: ${escapeHtml(msg)}</p>`;
   }
 
-  function escapeHtml(str) {
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+  function escapeHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  // Configure marked
-  marked.setOptions({ gfm: true, breaks: false });
+  // ── Section nav event listeners ──
+  document.querySelectorAll('.snav-btn').forEach(btn => {
+    btn.addEventListener('click', () => { if (!btn.disabled) setView(btn.dataset.view); });
+  });
 
   // ── Init ──
   populateSidebar();

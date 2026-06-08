@@ -5,261 +5,269 @@ description: This skill should be used when the user asks to "design an architec
 
 # Design Architecture
 
-Produce a comprehensive software architecture proposal presenting three options — **Low Risk**, **Medium Risk**, and **High Risk** — each with detailed technology choices (including appropriate non-relational databases), thorough rationale for every decision, future impact analysis, Mermaid diagram, and risk table. Save the output as a timestamped markdown file in `docs/archimind/`.
+Act as a **Software Architect** who helps users design software architecture in a gradual, efficient, and easy-to-understand manner. Follow this workflow strictly — gather requirements first, present three options, wait for the user to select one, then write final documentation.
 
 ## Workflow
 
-### 1. Gather Requirements
+### 1. Gather Requirements (A/B/C/D Questions)
 
-Before generating options, ask clarifying questions to understand:
+Before generating any architecture options, ask structured A/B/C/D questions in batches of 3–4. Wait for the user to answer each batch before asking the next. Add an "Other" option when the user may need to provide a custom answer.
 
-- **Scope**: What does the system do? What are the core features?
-- **Scale**: Expected users (100 / 10k / 1M+)? Data volume? Read/write ratio?
-- **Team**: Team size and existing technical skills?
-- **Constraints**: Budget, time-to-market, compliance (GDPR, HIPAA)?
-- **Integrations**: Third-party services, legacy systems, APIs?
-- **Non-functionals**: Latency, uptime SLA, offline support?
+**Batch 1 — System and Scale:**
 
-Also assess the **data access pattern profile** — most backend applications need multiple database types. For each of the following, determine if it applies:
+1. What is the primary purpose of the system?
+   - A) SaaS platform (multi-tenant, web-based)
+   - B) Internal enterprise / back-office tool
+   - C) Mobile application backend
+   - D) Data processing / analytics platform
+   - Other: Describe briefly
 
-| Data need                              | Likely store needed                        |
-|----------------------------------------|--------------------------------------------|
-| Persistent entities, transactions      | Relational DB (PostgreSQL, MySQL)          |
-| Hot data, session, rate limiting       | Cache (Redis)                              |
-| Full-text or faceted search            | Search engine (Meilisearch, Elasticsearch) |
-| Analytics, reporting, aggregations     | OLAP (ClickHouse, BigQuery, TimescaleDB)   |
-| Files, images, video uploads           | Object storage (S3, MinIO, RustFS)         |
-| Async tasks, background jobs           | Message queue / Redis Streams / Kafka      |
-| Graph relationships, recommendations   | Graph DB (Neo4j) or recursive SQL          |
-| IoT data, metrics, time-ordered events | Time-series DB (TimescaleDB, InfluxDB)     |
+2. Expected user scale at launch and in 2 years?
+   - A) Small: < 1,000 users
+   - B) Medium: 1,000 – 100,000 users
+   - C) Large: 100,000 – 1M users
+   - D) Massive: 1M+ users
 
-If sufficient context has already been provided, proceed directly to generating options.
+3. Expected transaction volume (requests per second at peak)?
+   - A) Low: < 100 rps
+   - B) Moderate: 100 – 1,000 rps
+   - C) High: 1,000 – 10,000 rps
+   - D) Very high: 10,000+ rps
+
+4. Team size and technical expertise?
+   - A) Solo / tiny team (1–3), generalists
+   - B) Small team (4–10), mixed seniority
+   - C) Medium team (10–30), specialized roles
+   - D) Large engineering org (30+)
+
+**Batch 2 — Technical Requirements:**
+
+5. Database consistency requirements?
+   - A) Strong consistency required (financial, inventory, legal records)
+   - B) Eventual consistency acceptable (social feeds, analytics)
+   - C) Mixed: strong for core data, eventual for secondary
+   - D) Not sure yet
+
+6. Analytics and reporting needs?
+   - A) None / basic (simple counts and filters)
+   - B) Moderate (dashboards, periodic reports)
+   - C) Heavy (real-time analytics, large aggregations)
+   - D) Data lake / BI / data warehouse platform
+
+7. File and object storage requirements?
+   - A) None
+   - B) User uploads (images, documents — small to medium)
+   - C) Media assets (video, audio — large files, CDN delivery)
+   - D) Backups, archives, data lake, or static website assets
+
+8. Deployment preference?
+   - A) Managed cloud (AWS, GCP, Azure)
+   - B) Self-hosted / on-premise
+   - C) Hybrid (cloud + on-premise)
+   - D) Fully serverless
+
+**Batch 3 — Operational Requirements:**
+
+9. SLA / SLO expectations?
+   - A) Best effort (no formal SLA)
+   - B) Business hours (99% uptime)
+   - C) High availability (99.9%, < 8.7 hours/year downtime)
+   - D) Mission-critical (99.99%+, < 52 min/year downtime)
+
+10. Observability and monitoring requirements?
+    - A) Basic (error logs, simple uptime checks)
+    - B) Moderate (structured logging, key metrics, basic alerting)
+    - C) Full observability (metrics + logs + distributed traces, dashboards)
+    - D) SRE-grade (SLI/SLO tracking, automated alerting, on-call runbooks)
+
+11. Programming language / framework preference?
+    - A) Java / Kotlin (Spring Boot, Quarkus)
+    - B) Go (Gin, Echo, Fiber, standard library)
+    - C) Node.js / TypeScript (NestJS, Express, Fastify)
+    - D) Python (FastAPI, Django) or C# (.NET)
+    - Other: Specify language and any frameworks
+
+12. Compliance and security requirements?
+    - A) Standard web security (OWASP Top 10)
+    - B) SOC 2 Type II
+    - C) GDPR / data privacy regulations
+    - D) PCI DSS / HIPAA / financial or healthcare regulations
+
+If the user has already provided sufficient context to answer most of these, proceed directly to Step 2.
 
 ### 2. Generate Three Architecture Options
 
-Present three options as described below. Each option must contain **all required sections**. Do not skip any section.
+After collecting answers, analyze requirements and present **exactly 3 options**: Low Risk, Medium Risk, and High Risk.
+
+For each option, cover all required sections (see "Required Sections Per Option" below). Do not skip any section.
 
 #### Option 1: Low Risk
-- **Profile**: Proven, well-understood patterns. Minimal infrastructure complexity. Best for MVPs, small teams, tight deadlines.
-- **Typical patterns**: Monolith, Modular Monolith, Simple REST + Single DB.
-- **Tone**: Conservative, straightforward, quick to market.
+- Proven, well-understood patterns. Minimal infrastructure complexity.
+- Typical: Monolith, Modular Monolith, Simple REST + Single DB.
+- Best for MVPs, small teams, tight deadlines.
 
 #### Option 2: Medium Risk
-- **Profile**: Balanced between pragmatism and scalability. Some distributed elements where justified. Good for growing products.
-- **Typical patterns**: Modular Monolith with clear service boundaries, BFF + separate services for key domains.
-- **Tone**: Pragmatic, growth-oriented.
+- Balanced between pragmatism and scalability. Some distributed elements where justified.
+- Typical: Modular Monolith with service boundaries, BFF + separate services for key domains.
+- Best for growing products with 6–18 month horizon.
 
 #### Option 3: High Risk
-- **Profile**: Full distributed architecture, optimized for scale or flexibility. Requires expertise and operational maturity.
-- **Typical patterns**: Microservices, Event-Driven + CQRS, Serverless-first, Hexagonal.
-- **Tone**: Ambitious, forward-looking, higher upfront investment.
+- Full distributed architecture optimized for scale or flexibility.
+- Typical: Microservices, Event-Driven + CQRS, Serverless-first, Hexagonal.
+- Best for teams with operational maturity and long investment horizon.
 
 ### 3. Required Sections Per Option
 
-Each option must include all of these sections in order:
+Structure each option under the `## Architecture Diagram` document section using `### Option N:` subheadings. Use `####` for subsections within each option. The full blank scaffold is in `references/output-template.md`.
 
-```
-## Option N: {Risk Level} — {Architecture Name}
+Required `####` subsections for each option:
+- **Key Components** — bulleted list of main services/modules with one-line descriptions
+- **Technology Stack** — table: Layer / Recommended / Alternatives / Reason
+- **Data Layer Design** — all applicable store types; for each: what's stored, why not the primary DB, data flow. Cover: transactional store, cache, search, analytics/OLAP, message queue, object storage, graph (if core). See `references/database-selection-guide.md`.
+- **Object Storage** — only if relevant to user's answers: solution (MinIO / S3 / GCS / R2), what's stored, bucket org, access control, encryption, self-hosted vs. managed trade-offs
+- **Observability Strategy** — OTel-first; pillars: Instrumentation, Logs, Metrics, Distributed Traces, Alerting. Scale tooling to complexity. See `references/observability-guide.md`.
+- **Technology Decision Rationale** — for each major choice: why chosen, better-than-alternatives, required skills, ecosystem longevity
+- **Future Impact** — 6-month / 1-year / 3-year table + scalability ceiling, operational overhead, reversibility, vendor lock-in
+- **Deployment Strategy** — environments, CI/CD, containerization, orchestration, scaling, rollback, DR, observability deployment
+- **Risks & Mitigations** — table: Risk / Likelihood / Impact / Mitigation
+- **When to Choose This Option** — 2–3 bullets for the ideal scenario
 
-### Overview
-One paragraph describing the core approach and why it fits this project.
+Read `references/architecture-patterns.md`, `references/database-selection-guide.md`, and `references/observability-guide.md` when designing each option's respective sections.
 
-### Architecture Diagram
-Mermaid flowchart TD diagram.
+### 4. ERD Section
 
-### Key Components
-Bulleted list of main services/modules with one-line descriptions.
+After presenting all options, include a `## ERD` section with Mermaid `erDiagram` covering the primary data model (use the recommended option's schema or a composite if all options share similar entities).
 
-### Technology Stack
-| Layer           | Recommended       | Alternatives        | Reason                                     |
-|-----------------|-------------------|---------------------|--------------------------------------------|
-| Language        | ...               | ...                 | ...                                        |
-| Backend         | ...               | ...                 | ...                                        |
-| Frontend        | ...               | ...                 | ...                                        |
-| Primary DB      | ...               | ...                 | relational / document / column-family / ... |
-| Cache           | ...               | ...                 | ...                                        |
-| Search          | ...               | N/A if not needed   | ...                                        |
-| Analytics DB    | ...               | N/A if not needed   | ...                                        |
-| Message Queue   | ...               | N/A if not needed   | ...                                        |
-| Infra/Deploy    | ...               | ...                 | ...                                        |
-| Observability   | ...               | ...                 | ...                                        |
+Include table specifications for key entities (PK, columns, types, key indexes).
 
-(Omit rows that are genuinely not needed for this option.)
+### 5. Add Recommendation
 
-### Data Layer Design
+After all options, include a `## Recommendation` section: which option is recommended for the user's specific context, referencing their actual requirements (team size, timeline, scale). Keep to 4–6 sentences.
 
-**Backend applications almost always use more than one database.** A typical production backend has 3–5 different stores serving different access patterns. Do not limit the recommendation to a single DB unless it is a genuinely minimal MVP.
+### 6. Do NOT Write Final Documentation Yet
 
-For each store type below, either specify the store chosen or explicitly state "Not applicable" with a one-line reason. Do not silently omit any store type.
+**The work is not complete until the user selects one option.** After presenting options, prompt:
 
-- **Transactional store** (required for most backends): PostgreSQL / MySQL / CockroachDB.
-  Schema approach, key entities, normalization level.
-- **Cache layer** (required for any app with session or repeated reads): Redis / Memcached.
-  What is cached (sessions, query results, rate limit counters), TTL strategy.
-- **Search** (if full-text or faceted search is a feature): Meilisearch / Elasticsearch / Typesense.
-  Which fields are indexed, sync strategy from primary DB.
-- **Analytics / OLAP** (if dashboards, reports, or aggregations are needed): ClickHouse / BigQuery /
-  TimescaleDB. What events/data flow into it, frequency of ingestion.
-- **Object storage** (if user uploads, media, files): S3 / GCS / MinIO / RustFS.
-  What is stored, access pattern (public CDN vs. signed URLs).
-- **Message queue / stream** (if async processing is needed): Redis Streams / RabbitMQ / Kafka / SQS.
-  What jobs/events flow through it.
-- **Graph store** (only if graph traversal is core): Neo4j / Neptune.
-- **Why each store**: One sentence per store explaining why it cannot be handled by the primary DB.
-- **Data flow summary**: Describe how data moves between stores (e.g., primary DB → Kafka → ClickHouse for analytics pipeline).
+> "Which architecture would you like to proceed with — Option 1 (Low Risk), Option 2 (Medium Risk), or Option 3 (High Risk)? You can request modifications to any option before deciding."
 
-### Observability Strategy
+Iterate freely if the user wants adjustments (e.g., "swap MongoDB for PostgreSQL in Option 2", "add Redis to Option 1"). Do not proceed to Step 7 until the user states an explicit choice.
 
-Cover all three pillars plus alerting. Even simple architectures need at minimum structured logging + metrics.
+### 7. Save the Design Document
 
-For each pillar, specify the tool chosen, instrumentation approach, and a one-sentence justification.
-Required pillars: **Instrumentation** (OTel SDK recommended), **Logs**, **Metrics**, **Distributed Traces**, **Unified Backend**, **Alerting**.
+Once the user selects one, compute the timestamp and save:
 
-Read `references/observability-guide.md` for tool comparison, sampling strategies, and recommended stacks per architecture tier.
-
-### Technology Decision Rationale
-
-For each major technology choice in the stack, provide a detailed explanation structured as:
-
-**{Technology Name}**
-- *Why chosen for this project*: Specific technical reason tied to the project's requirements (not "it's popular")
-- *What it does better than alternatives*: Head-to-head for this specific use case
-- *Required team skills*: What knowledge is needed to operate this effectively
-- *Ecosystem & longevity*: Battle-tested? Community size? Vendor support? Risk of abandonment?
-
-Cover at minimum: the backend language/framework, primary DB, and every non-relational store recommended in the Data Layer Design.
-
-### Future Impact
-
-Describe the long-term consequences of this choice — be honest about trade-offs:
-
-| Timeframe | Impact                                                                      |
-|-----------|-----------------------------------------------------------------------------|
-| 6 months  | Team ramp-up cost, what works great immediately, first pain points likely   |
-| 1 year    | First scaling or maintenance wall, where complexity starts to compound       |
-| 3 years   | Total cost of ownership, architectural evolution required, hiring story      |
-
-Also address:
-- **Scalability ceiling**: What happens when load 10×? What breaks first?
-- **Operational overhead**: Ongoing maintenance burden (backups, migrations, monitoring)
-- **Reversibility**: How hard is it to migrate away from this stack later?
-- **Vendor lock-in**: Which components create lock-in, and what is the escape hatch?
-
-### Risks & Mitigations
-| Risk                     | Likelihood | Impact | Mitigation                      |
-|--------------------------|------------|--------|---------------------------------|
-| ...                      | Low/Med/Hi | L/M/H  | ...                             |
-
-### When to Choose This Option
-2–3 bullet points describing the ideal scenario for this option.
-```
-
-### 4. Add a Recommendation Section
-
-After presenting all three options, add:
-
-```markdown
----
-
-## Recommendation
-
-State which option is recommended for the user's specific context and why. Reference their
-actual requirements (team size, timeline, scale, data characteristics). Acknowledge the main
-trade-off of the recommended choice. Keep to 4–6 sentences.
-```
-
-### 5. Save the Document
-
-1. Compute timestamp in milliseconds via shell tool:
-   - Linux: `date +%s%3N`
-   - macOS: `node -e 'process.stdout.write(String(Date.now()))'`
-2. Create `docs/archimind/` directory if it does not exist
-3. Determine a short topic slug from the project name (e.g., `ecommerce-platform`, `iot-dashboard`)
-4. Save the full document to: `docs/archimind/{timestamp_ms}_{topic}-architecture-design.md`
+1. `node -e 'process.stdout.write(String(Date.now()))'` (macOS/Node) or `date +%s%3N` (Linux)
+2. `mkdir -p docs/archimind/architecture/`
+3. Topic slug from the project name (e.g., `payment-platform`, `iot-dashboard`)
+4. Save to: `docs/archimind/architecture/{timestamp_ms}-{topic}-design.md`
 5. Inform the user of the saved path
 
-### 6. Offer to Visualize
+The saved document must follow the **Document Structure Convention** below.
+
+### 8. Offer to Visualize
 
 After saving, ask: "Would you like to open the architecture viewer to see the diagrams rendered? Use `/archimind:visualize` to start the server."
 
-### 7. Require Architecture Selection (mandatory)
+### 9. Mark the Selected Option
 
-**The work is not complete until the user has explicitly chosen one option.** After presenting the options and offering visualization, prompt:
-
-> "Which architecture would you like to proceed with — Option 1 (Low Risk), Option 2 (Medium Risk), or Option 3 (High Risk)? Request modifications to any option before deciding if needed."
-
-Iterate freely if the user wants adjustments (e.g., "swap MongoDB for PostgreSQL in Option 2", "add Redis to Option 1"). Re-save the document after each significant change. Do not proceed to Step 8 until the user states an explicit choice.
-
-### 8. Mark the Chosen Option
-
-Once a choice is confirmed:
-
-1. Read the saved design document
-2. Insert a decision header block right after the `# Architecture Design: ...` title:
+1. Read the saved document
+2. Insert decision header after the document title:
    ```markdown
    **Selected:** Option N — {Risk Level}: {Architecture Name}
    **Decision date:** {ISO date}
    ```
-3. Append `✅ SELECTED` to the chosen option's heading so the static viewer's tab bar can highlight it:
-   ```markdown
-   ## Option 2: Medium Risk — Modular Monolith with Domain Services ✅ SELECTED
-   ```
-4. Append a brief `## Decision Notes` section at the end capturing any user-requested adjustments, prioritized next steps, or open questions to revisit during implementation.
+3. Append `✅ SELECTED` to the chosen option's `### Option N:` heading
+4. Append a `## Decision Notes` section capturing user-requested adjustments, migration timing, and next steps
 
-### 9. Stop the Viewer Server
+### 10. Write Final Documentation Sections
 
-After the choice is finalized:
+After selection is marked, append the full documentation sections to the document:
 
-1. Check if the viewer is running: `[ -f .archimind.pid ]` in the user's project root
-2. If running, ask: "Architecture finalized. Stop the diagram viewer now? (recommended)"
-3. On confirmation, run: `bash "$CLAUDE_PLUGIN_ROOT/scripts/stop-server.sh"`
-4. Report: "Decision saved to `{filepath}`. Viewer stopped." (or "Viewer was not running.")
+```markdown
+## Final Documentation
 
-This is the natural end of the workflow. The selected design document is now the source of truth for implementation.
+### Overview
+### Goals
+### Non-Goals
+### Architecture Decision
+### Technology Stack
+### Programming Languages and Frameworks
+### Database Architecture
+### Object Storage Architecture
+### Database Optimization Strategy
+### Database Migration Strategy
+### System Components
+### Data Flow
+### Security Considerations
+### Scalability Strategy
+### Deployment Strategy
+### Infrastructure Design
+### Observability
+### Monitoring and Alerting Strategy
+### Distributed Tracing Strategy
+### Trade-offs
+### Future Improvements
+```
+
+For the database migration strategy, include: schema versioning (Flyway / Liquibase / Prisma Migrate / Alembic / etc.), migration workflow, rollback strategy, zero-downtime considerations, data migration for large datasets, backward compatibility.
+
+### 11. Stop the Viewer Server
+
+After the choice is finalized, check if the viewer is running and offer to stop it:
+```bash
+[ -f .archimind.pid ]
+bash "$CLAUDE_PLUGIN_ROOT/scripts/stop-server.sh"
+```
 
 ## Document Structure Convention
 
-The static site viewer parses the document by detecting headings that match `## Option N:`. Use this exact format for headings so the tabbar renders correctly. **If this format is not used, the visualizer will not render tab navigation — all options will appear as a single scrollable document.**
+The static site viewer parses sections by these exact heading patterns:
 
 ```markdown
-## Option 1: Low Risk — Monolithic REST API
-## Option 2: Medium Risk — Modular Monolith with Domain Services
-## Option 3: High Risk — Event-Driven Microservices
+# Architecture Design: {Topic}
+
+## Architecture Diagram
+
+### Option 1: Low Risk — {Name}
+### Option 2: Medium Risk — {Name}
+### Option 3: High Risk — {Name}
+
+## ERD
+
+## Revision
+
+### Before
+### After
+
+## Recommendation
+
+## Decision Notes
+
+## Final Documentation
 ```
+
+**Critical**: Use `### Option N:` (level-3) within `## Architecture Diagram`, not `## Option N:` (level-2) at top level. The viewer's "Architecture Diagram" nav renders these as option tabs. The "ERD" nav renders `## ERD`. The "Revision" nav renders `## Revision` with Before/After tabs.
 
 ## Mermaid Diagram Guidelines
 
 - Use `flowchart TD` for system/service topology
-- Use `sequenceDiagram` only for critical flows where the before/after comparison matters
-- Use `erDiagram` only in database design (not here)
+- Use `erDiagram` in the `## ERD` section only
 - Keep diagrams focused: 8–15 nodes maximum
 - Label edges with action verbs ("calls", "publishes to", "reads from", "caches in")
-- Group related nodes with subgraphs; show non-relational stores alongside relational ones
+- Group related nodes with subgraphs
+- Show non-relational stores alongside relational ones
 
-Include diagrams in responses using mermaid fenced code blocks:
+## Token Optimization
 
-```mermaid
-flowchart TD
-  subgraph Client
-    Web[Web App]
-    Mobile[Mobile App]
-  end
-  subgraph Backend
-    API[REST API]
-    DB[(PostgreSQL)]
-    Cache[(Redis)]
-  end
-  Web -->|HTTP| API
-  Mobile -->|HTTP| API
-  API -->|SQL| DB
-  API -->|cache| Cache
-```
+- Respond concisely; avoid repeating information already established
+- If context becomes large, provide a brief summary before continuing
+- Prioritize information relevant to architectural decision-making
+- Scale observability tooling recommendations proportionally to architecture complexity
+- Do not generate final documentation until the user has explicitly selected an architecture
 
 ## Additional Resources
 
-All paths below are relative to this skill file's directory (`skills/design-architecture/`). Use the Read tool with the full resolved path when direct file access is needed.
-
-- **`references/architecture-patterns.md`** — Detailed reference for each pattern (Monolith, Microservices, Serverless, Event-Driven, CQRS, Hexagonal) including database recommendations per pattern. Read when deciding which pattern fits each risk tier.
-- **`references/database-selection-guide.md`** — Comprehensive database selection guide covering all categories: relational, document, key-value, column-family, time-series, graph, search, NewSQL, and polyglot persistence patterns. Read when choosing the data layer.
-- **`references/observability-guide.md`** — Observability stack guide covering OpenTelemetry instrumentation, logging (Loki/ELK/ClickHouse), metrics (Prometheus/VictoriaMetrics), distributed tracing (Jaeger/Tempo), and unified backends (SigNoz, Uptrace, Grafana Stack, Datadog). Read when designing the observability strategy.
-- **`references/output-template.md`** — Full blank template for the output document. Use as a scaffold when generating the design file.
+- **`references/architecture-patterns.md`** — Detailed patterns (Monolith, Microservices, Serverless, Event-Driven, CQRS, Hexagonal). Read when deciding which pattern fits each risk tier.
+- **`references/database-selection-guide.md`** — Comprehensive database selection guide (relational, document, key-value, column-family, time-series, graph, search, NewSQL, polyglot persistence). Read when choosing the data layer.
+- **`references/observability-guide.md`** — Observability stack guide (OpenTelemetry, Loki, Prometheus, Jaeger/Tempo, SigNoz, Uptrace, Grafana Stack, Datadog). Read when designing the observability strategy.
+- **`references/output-template.md`** — Full blank template for the output document.

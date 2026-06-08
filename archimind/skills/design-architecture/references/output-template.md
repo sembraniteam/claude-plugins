@@ -1,21 +1,20 @@
 # Output Document Template
 
-<!-- Save to: docs/archimind/{timestamp_ms}_{topic}-architecture-design.md -->
+<!-- Save to: docs/archimind/architecture/{timestamp_ms}-{topic}-design.md -->
 
-Use this template as a scaffold when generating the design file. Replace all placeholder text. Do not omit any section. Save to `docs/archimind/` in the user's project root.
+Use this template as a scaffold when generating the design file. Replace all placeholder text. Do not omit any section.
 
 ---
 
 ```markdown
 # Architecture Design: {Project Name}
 
-<!-- After user confirms their choice, fill in these two lines: -->
+**Generated:** {ISO date}
+**Summary:** {One-sentence description of the system}
+
+<!-- Fill in after user selects: -->
 <!-- **Selected:** Option N — {Risk Level}: {Architecture Name} -->
 <!-- **Decision date:** {ISO date} -->
-
-**Generated:** {ISO date}
-**Requested by:** User  
-**Summary:** {One-sentence description of the system}
 
 ## Project Overview
 
@@ -32,25 +31,23 @@ Use this template as a scaffold when generating the design file. Replace all pla
 
 ---
 
-## Option 1: Low Risk — {Architecture Name}
+## Architecture Diagram
 
-### Overview
+### Option 1: Low Risk — {Architecture Name}
 
 {One paragraph describing the core approach and why it is appropriate for the conservative tier.}
-
-### Architecture Diagram
 
 ```mermaid
 flowchart TD
   ...
 ```
 
-### Key Components
+#### Key Components
 
 - **{Component}**: {One-line description}
 - **{Component}**: {One-line description}
 
-### Technology Stack
+#### Technology Stack
 
 | Layer           | Recommended       | Alternatives      | Reason                                   |
 |-----------------|-------------------|-------------------|------------------------------------------|
@@ -64,24 +61,38 @@ flowchart TD
 | Infra/Deploy    |                   |                   |                                          |
 | Observability   |                   |                   |                                          |
 
-### Data Layer Design
+#### Data Layer Design
 
-- **Primary store**: {Engine} — {Category: relational / document / key-value / ...}. {Why this category for this project. What query patterns drive this choice.}
-- **Cache**: {Redis/Memcached/none} — {What is cached, why}
+- **Transactional store**: {Engine} — {category: relational / document / …}. {Why this category; what query patterns drive this choice.}
+- **Cache**: {Redis / Memcached / none} — {what is cached, TTL strategy}
 - **Search**: {Engine or "Not needed — {reason}"}
-- **Analytics**: {Engine or "Not needed — {reason}"}
-- **Why NOT alternatives**: {e.g., MongoDB not chosen because schema is stable and joins are frequent; ClickHouse not needed at current scale}
+- **Analytics / OLAP**: {Engine or "Not needed — {reason}"}
+- **Message queue**: {Engine or "Not needed — {reason}"}
+- **Object storage**: {see Object Storage section or "Not needed"}
+- **Why NOT alternatives**: {e.g., MongoDB not chosen because schema is stable and joins are frequent}
 
-### Observability Strategy
+#### Object Storage
 
-- **Instrumentation**: {OpenTelemetry SDK — specify language/framework; auto-instrumentation: yes/no}
-- **Log management**: {Loki + Promtail / ELK / ClickHouse} — {why this choice; log shipping agent}
+<!-- Omit this section if user answered "None" for file/object storage needs -->
+
+- **Solution**: {MinIO / AWS S3 / GCS / Cloudflare R2 / Azure Blob / self-hosted}
+- **What is stored**: {user uploads / media / backups / static assets / data lake}
+- **Bucket organization**: {e.g., one bucket per env, prefixed by user-id}
+- **Access control**: {signed URLs / public CDN / private IAM}
+- **Encryption**: {server-side / client-side / KMS}
+- **Lifecycle management**: {expiry rules, tiering}
+- **Self-hosted vs. managed trade-off**: {why this choice}
+
+#### Observability Strategy
+
+- **Instrumentation**: {OpenTelemetry SDK — language/framework; auto-instrumentation: yes/no}
+- **Logs**: {Loki + Promtail / ELK / ClickHouse} — {why; log shipping agent}
 - **Metrics**: {Prometheus + Grafana / VictoriaMetrics} — {key dashboards: RED per service}
 - **Distributed tracing**: {Grafana Tempo / Jaeger / N/A at this scale} — {sampling strategy}
-- **Unified backend**: {Grafana / SigNoz / Uptrace / Datadog} — {self-hosted vs. managed justification, cost estimate}
+- **Unified backend**: {Grafana Stack / SigNoz / Uptrace / Datadog} — {self-hosted vs. managed justification}
 - **Alerting**: {Alertmanager / Grafana Alerting / PagerDuty} — {minimum: error rate > 1% → Slack}
 
-### Technology Decision Rationale
+#### Technology Decision Rationale
 
 **{Backend Framework}**
 - *Why chosen*: {Specific technical reason for this project}
@@ -97,7 +108,7 @@ flowchart TD
 
 {Repeat for each major technology choice}
 
-### Future Impact
+#### Future Impact
 
 | Timeframe | Impact                                                                      |
 |-----------|-----------------------------------------------------------------------------|
@@ -110,14 +121,25 @@ flowchart TD
 - **Reversibility**: {How hard to migrate away from this stack?}
 - **Vendor lock-in**: {Which components create lock-in, escape hatch}
 
-### Risks & Mitigations
+#### Deployment Strategy
+
+- **Environments**: dev → staging → production
+- **CI/CD**: {GitHub Actions / GitLab CI / Jenkins — pipeline steps}
+- **Containerization**: {Docker — base images, multi-stage builds}
+- **Orchestration**: {Kubernetes / ECS / Nomad / Docker Compose — choice and reason}
+- **Scaling strategy**: {horizontal / vertical / auto-scaling rules}
+- **Rollback strategy**: {blue-green / canary / feature flags}
+- **Disaster recovery**: {RTO/RPO targets, backup cadence}
+- **Observability deployment**: {OTel Collector, Prometheus, Grafana — self-hosted or managed}
+- **Object storage deployment**: {self-hosted MinIO / managed S3 — ops implications}
+
+#### Risks & Mitigations
 
 | Risk                     | Likelihood | Impact | Mitigation                      |
 |--------------------------|------------|--------|---------------------------------|
 |                          | Low        | Low    |                                 |
-|                          | Medium     | Medium |                                 |
 
-### When to Choose This Option
+#### When to Choose This Option
 
 - {Bullet 1: team/timeline scenario}
 - {Bullet 2: scale/budget scenario}
@@ -125,24 +147,20 @@ flowchart TD
 
 ---
 
-## Option 2: Medium Risk — {Architecture Name}
-
-### Overview
+### Option 2: Medium Risk — {Architecture Name}
 
 {One paragraph for the balanced tier.}
-
-### Architecture Diagram
 
 ```mermaid
 flowchart TD
   ...
 ```
 
-### Key Components
+#### Key Components
 
 - **{Component}**: {One-line description}
 
-### Technology Stack
+#### Technology Stack
 
 | Layer           | Recommended       | Alternatives      | Reason                                   |
 |-----------------|-------------------|-------------------|------------------------------------------|
@@ -155,25 +173,36 @@ flowchart TD
 | Analytics DB    |                   |                   |                                          |
 | Message Queue   |                   |                   |                                          |
 | Infra/Deploy    |                   |                   |                                          |
+| Observability   |                   |                   |                                          |
 
-### Data Layer Design
+#### Data Layer Design
 
-- **Primary store**: {Engine + category + reasoning}
-- **Cache**: {Redis or other — what's cached}
-- **Search**: {Engine if added — why added at this risk tier}
-- **Analytics**: {Engine if added}
+- **Transactional store**: {Engine + category + reasoning}
+- **Cache**: {Redis — what's cached, TTL}
+- **Search**: {Engine if added — why at this tier}
+- **Analytics / OLAP**: {Engine if added}
+- **Message queue**: {Engine if added}
+- **Object storage**: {see Object Storage section or "Not needed"}
 - **Why NOT alternatives**: {Ruled-out options}
 
-### Observability Strategy
+#### Object Storage
 
-- **Instrumentation**: {OpenTelemetry SDK — language + auto-instrumentation}
-- **Log management**: {Loki / ELK — agent, why}
-- **Metrics**: {Prometheus + Grafana / VictoriaMetrics — key dashboards}
+<!-- Omit if not needed -->
+- **Solution**: ...
+- **What is stored**: ...
+- **Access control**: ...
+- **Lifecycle**: ...
+
+#### Observability Strategy
+
+- **Instrumentation**: {OTel SDK — language + auto-instrumentation}
+- **Logs**: {Loki / ELK — agent, why}
+- **Metrics**: {Prometheus + Grafana / VictoriaMetrics}
 - **Distributed tracing**: {Tempo / Jaeger — sampling strategy}
-- **Unified backend**: {SigNoz / Grafana Stack / Datadog — self-hosted vs. managed}
-- **Alerting**: {Alertmanager / Grafana — minimum error rate alert}
+- **Unified backend**: {SigNoz / Grafana Stack / Datadog}
+- **Alerting**: {Alertmanager / Grafana}
 
-### Technology Decision Rationale
+#### Technology Decision Rationale
 
 **{Technology}**
 - *Why chosen*: ...
@@ -183,49 +212,56 @@ flowchart TD
 
 {Repeat for each major technology}
 
-### Future Impact
+#### Future Impact
 
-| Timeframe | Impact                                                                      |
-|-----------|-----------------------------------------------------------------------------|
-| 6 months  | {Impact}                                                                    |
-| 1 year    | {Impact}                                                                    |
-| 3 years   | {Impact}                                                                    |
+| Timeframe | Impact |
+|-----------|--------|
+| 6 months  |        |
+| 1 year    |        |
+| 3 years   |        |
 
 - **Scalability ceiling**: ...
 - **Operational overhead**: ...
 - **Reversibility**: ...
 - **Vendor lock-in**: ...
 
-### Risks & Mitigations
+#### Deployment Strategy
 
-| Risk                     | Likelihood | Impact | Mitigation                      |
-|--------------------------|------------|--------|---------------------------------|
+- **Environments**: dev → staging → production
+- **CI/CD**: ...
+- **Containerization**: ...
+- **Orchestration**: ...
+- **Scaling strategy**: ...
+- **Rollback strategy**: ...
+- **Disaster recovery**: ...
+- **Observability deployment**: ...
 
-### When to Choose This Option
+#### Risks & Mitigations
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|------------|
+
+#### When to Choose This Option
 
 - {Bullet 1}
 - {Bullet 2}
 
 ---
 
-## Option 3: High Risk — {Architecture Name}
-
-### Overview
+### Option 3: High Risk — {Architecture Name}
 
 {One paragraph for the ambitious tier.}
-
-### Architecture Diagram
 
 ```mermaid
 flowchart TD
   ...
 ```
 
-### Key Components
+#### Key Components
 
 - **{Component}**: {One-line description}
 
-### Technology Stack
+#### Technology Stack
 
 | Layer              | Recommended       | Alternatives      | Reason                                   |
 |--------------------|-------------------|-------------------|------------------------------------------|
@@ -238,30 +274,44 @@ flowchart TD
 | Analytics DB       |                   |                   |                                          |
 | Message Broker     |                   |                   |                                          |
 | Service Mesh       |                   |                   |                                          |
+| Object Storage     |                   |                   |                                          |
 | Observability      |                   |                   |                                          |
 | Infra/Deploy       |                   |                   |                                          |
 
-### Data Layer Design
+#### Data Layer Design
 
-- **Primary store**: {Engine + category + reasoning}
+- **Transactional store**: {Engine + category + reasoning}
 - **Cache**: {Redis — scope and TTL strategy}
-- **Search**: {Search engine — why needed at this scale}
-- **Analytics**: {OLAP engine — why ClickHouse/BigQuery over a simpler approach}
-- **Other stores**: {Graph, time-series, object storage if applicable}
-- **Polyglot persistence rationale**: {Justify each additional DB — why the primary DB cannot handle this workload}
+- **Search**: {Engine — why needed at this scale}
+- **Analytics / OLAP**: {ClickHouse / BigQuery — why over simpler approach}
+- **Message queue / stream**: {Kafka / Pulsar — why at this scale}
+- **Object storage**: {see Object Storage section}
+- **Graph store**: {Neo4j / Neptune or "Not needed"}
+- **Polyglot persistence rationale**: {justify each additional DB — why the primary DB cannot handle this workload}
 - **Why NOT alternatives**: {Ruled-out options}
 
-### Observability Strategy
+#### Object Storage
 
-- **Instrumentation**: OpenTelemetry SDK + OTel Collector — {tail-based or head-based sampling, ratio}
-- **Log management**: {Loki / ELK / ClickHouse — high-volume choice, log shipping agent}
-- **Metrics**: {VictoriaMetrics / Mimir — long-term storage, multi-service dashboards, RED per service}
-- **Distributed tracing**: {Jaeger / Tempo — full trace sampling strategy for microservices}
-- **Unified backend**: {SigNoz / Grafana Stack / Datadog — full justification: self-hosted vs. managed, cost at scale}
-- **Alerting**: {Alertmanager + PagerDuty / Grafana Alerting — multi-channel incident response}
-- **Profiling** (optional): {Pyroscope / Parca for continuous CPU/memory profiling in production}
+- **Solution**: {MinIO / RustFS / Ceph / AWS S3 / GCS}
+- **What is stored**: ...
+- **Bucket organization**: ...
+- **Access control**: ...
+- **Encryption**: ...
+- **Lifecycle management**: ...
+- **Replication strategy**: ...
+- **Self-hosted vs. managed trade-off**: {total cost, ops complexity}
 
-### Technology Decision Rationale
+#### Observability Strategy
+
+- **Instrumentation**: OTel SDK + OTel Collector — {tail-based or head-based sampling, ratio}
+- **Logs**: {Loki / ELK / ClickHouse — high-volume choice, log shipping agent}
+- **Metrics**: {VictoriaMetrics / Mimir — long-term storage, multi-service dashboards}
+- **Distributed tracing**: {Jaeger / Tempo — full trace sampling for microservices}
+- **Unified backend**: {SigNoz / Grafana Stack / Datadog — self-hosted vs. managed, cost at scale}
+- **Alerting**: {Alertmanager + PagerDuty — multi-channel incident response}
+- **Profiling** (optional): {Pyroscope / Parca for continuous CPU/memory profiling}
+
+#### Technology Decision Rationale
 
 **{Technology}**
 - *Why chosen*: ...
@@ -269,48 +319,180 @@ flowchart TD
 - *Required skills*: ...
 - *Ecosystem*: ...
 
-{Repeat for EVERY major technology in the high-risk stack — this tier requires the most justification}
+{Repeat for EVERY major technology — this tier requires the most justification}
 
-### Future Impact
+#### Future Impact
 
-| Timeframe | Impact                                                                      |
-|-----------|-----------------------------------------------------------------------------|
-| 6 months  | {Impact — high upfront investment}                                          |
-| 1 year    | {First distributed systems pain points}                                     |
-| 3 years   | {ROI realized (or not), evolution needed}                                   |
+| Timeframe | Impact                                  |
+|-----------|-----------------------------------------|
+| 6 months  | {High upfront investment}               |
+| 1 year    | {First distributed systems pain points} |
+| 3 years   | {ROI realized or not, evolution needed} |
 
-- **Scalability ceiling**: {Near-infinite if designed correctly — what are the remaining limits?}
-- **Operational overhead**: {High — what team/tooling is required?}
-- **Reversibility**: {Low — outline the cost of unwinding this}
-- **Vendor lock-in**: {Multiple vendors — document each dependency and its escape hatch}
+- **Scalability ceiling**: {Near-infinite if designed correctly — remaining limits?}
+- **Operational overhead**: {High — team/tooling required?}
+- **Reversibility**: {Low — outline cost of unwinding}
+- **Vendor lock-in**: {Multiple vendors — each dependency and escape hatch}
 
-### Risks & Mitigations
+#### Deployment Strategy
 
-| Risk                     | Likelihood | Impact | Mitigation                      |
-|--------------------------|------------|--------|---------------------------------|
-|                          | High       | High   |                                 |
+- **Environments**: dev → staging → production
+- **CI/CD**: {GitOps / ArgoCD / Flux — pipeline steps}
+- **Containerization**: {Docker — multi-stage builds, image registry}
+- **Orchestration**: {Kubernetes — cluster topology, namespaces, RBAC}
+- **Scaling strategy**: {HPA / KEDA / cluster autoscaler}
+- **Rollback strategy**: {canary / blue-green, automated rollback on error SLO breach}
+- **Disaster recovery**: {multi-region, active-active / active-passive, RTO/RPO}
+- **Object storage deployment**: {MinIO operator / Ceph Rook — HA setup}
+- **Observability deployment**: {OTel Collector DaemonSet, Prometheus operator, Grafana stack}
 
-### When to Choose This Option
+#### Risks & Mitigations
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|------------|
+|      | High       | High   |            |
+
+#### When to Choose This Option
 
 - {Bullet 1}
 - {Bullet 2}
 
 ---
 
-## Recommendation
+### Recommendation
 
-{4–6 sentences stating which option is recommended, why, referencing actual requirements (team size, scale, data characteristics). Acknowledge the main trade-off of the recommended choice.}
+{4–6 sentences stating which option is recommended, why, referencing actual requirements (team size, scale, data characteristics). Acknowledge the main trade-off.}
 
-<!-- After user selects an option, append below: -->
+---
 
-<!--
-## Decision Notes
+## ERD
 
-- **Chosen option:** Option N — {Risk Level}: {Architecture Name}
-- **User-requested adjustments:** {if any, e.g., "swap MongoDB for PostgreSQL", "add Redis cache"}
-- **Prioritized next steps:** {first implementation milestones}
-- **Open questions:** {anything to revisit during implementation}
--->
+```mermaid
+erDiagram
+  ENTITY_A {
+    bigint id PK
+    varchar name
+    timestamptz created_at
+  }
+  ENTITY_B {
+    bigint id PK
+    bigint entity_a_id FK
+    text value
+  }
+  ENTITY_A ||--o{ ENTITY_B : "has"
 ```
 
-Also, when the user picks an option, append ` ✅ SELECTED` to that option's heading (e.g., `## Option 2: Medium Risk — Modular Monolith ✅ SELECTED`). The static viewer reads this marker to highlight the selected tab.
+### Table Specifications
+
+#### `{table_name}`
+
+| Column     | Type        | Constraints             | Description     |
+|------------|-------------|-------------------------|-----------------|
+| id         | BIGSERIAL   | PRIMARY KEY             | Surrogate PK    |
+| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | Creation time   |
+
+**Indexes:**
+| Name                 | Type   | Columns    | Reason                        |
+|----------------------|--------|------------|-------------------------------|
+| idx_{table}_{col}    | B-tree | {col}      | {query pattern this supports} |
+
+---
+
+## Revision
+
+<!-- For fresh designs: leave Before/After empty or omit this section. -->
+<!-- For architecture reviews: populate Before with current state, After with the selected redesign. -->
+
+### Before
+
+{Description of the current architecture (used in review workflows).}
+
+```mermaid
+flowchart TD
+  ...
+```
+
+**Identified Issues:**
+- {Issue 1}
+
+### After
+
+{Description of the proposed architecture after the user selects an option.}
+
+```mermaid
+flowchart TD
+  ...
+```
+
+**Key Improvements:**
+- {How identified issues are resolved}
+
+---
+
+## Decision Notes
+
+<!-- Fill in after user selects an option -->
+- **Chosen option:** Option N — {Risk Level}: {Architecture Name}
+- **User-requested adjustments:** {if any}
+- **Prioritized next steps:** {first implementation milestones}
+- **Open questions:** {anything to revisit during implementation}
+
+---
+
+## Final Documentation
+
+<!-- Write this section after user selects and confirms. -->
+
+### Overview
+
+### Goals
+
+### Non-Goals
+
+### Architecture Decision
+
+### Technology Stack
+
+### Programming Languages and Frameworks
+
+### Database Architecture
+
+### ERD
+
+### Object Storage Architecture
+
+### Database Optimization Strategy
+
+### Database Migration Strategy
+
+### System Components
+
+### Data Flow
+
+### Security Considerations
+
+### Scalability Strategy
+
+### Deployment Strategy
+
+### Infrastructure Design
+
+### Observability
+
+### Monitoring and Alerting Strategy
+
+### Distributed Tracing Strategy
+
+### Trade-offs
+
+### Future Improvements
+```
+
+---
+
+After the user selects an option:
+1. Fill in the `**Selected:**` and `**Decision date:**` lines in the header
+2. Append `✅ SELECTED` to the chosen option's `### Option N:` heading (e.g., `### Option 2: Medium Risk — Modular Monolith ✅ SELECTED`)
+3. Populate the `## Revision / ### After` section with the chosen architecture diagram
+4. Fill in `## Decision Notes`
+5. Write the `## Final Documentation` sections

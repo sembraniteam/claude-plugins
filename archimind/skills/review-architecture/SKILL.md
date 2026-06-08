@@ -5,7 +5,7 @@ description: This skill should be used when the user asks to "review architectur
 
 # Review Architecture
 
-Analyze an existing software architecture, identify weaknesses and opportunities for improvement, then propose three redesign options — **Conservative Refactor**, **Moderate Redesign**, and **Full Overhaul** — each with Mermaid diagrams, rationale, and migration path. Save the output as a timestamped markdown file in `docs/archimind/`.
+Analyze an existing software architecture, identify weaknesses and opportunities for improvement, then propose three redesign options — **Conservative Refactor**, **Moderate Redesign**, and **Full Overhaul** — each with Mermaid diagrams, rationale, and migration path. Save the output as a timestamped Markdown file in `docs/archimind/architecture/`.
 
 ## Workflow
 
@@ -25,117 +25,132 @@ Read any relevant files the user points to (e.g., `docker-compose.yml`, `package
 
 Evaluate the existing architecture against the checklist in `references/review-checklist.md`. Produce an **Analysis Summary** covering:
 
-- **Strengths**: What the current architecture does well (acknowledge positives)
-- **Weaknesses**: Specific identified problems (use the checklist categories: scalability, coupling, observability, data, security, operational)
-- **Anti-patterns found**: Reference `references/anti-patterns.md` for canonical names
-- **Root causes**: Why each weakness exists (technical debt, premature optimization, changing requirements)
+- **Strengths**: What the current architecture does well
+- **Weaknesses**: Specific identified problems (scalability, coupling, observability, data, security, operational)
+- **Antipatterns found**: Reference `references/anti-patterns.md` for canonical names
+- **Root causes**: Why each weakness exists
 
-Keep the analysis concise: 3–6 bullet points per category. Avoid vague statements like "poor performance" — be specific ("single DB handles both OLTP and analytics queries, causing lock contention").
+Keep the analysis concise: 3–6 bullet points per category. Be specific ("single DB handles both OLTP and analytics queries, causing lock contention"), not vague.
 
-### 3. Document the Current State
+### 3. Document the Revision in a Single Document
 
-Before generating redesign options, produce a "Current Architecture" section in the output document. This baseline must come first so options can reference it clearly.
+Save the review document with a `## Revision` section that contains both `### Before` and `### After` subsections. This is what the viewer renders as Before/After tabs.
 
-````markdown
-## Current Architecture
+**Document path**: `docs/archimind/architecture/{timestamp_ms}-{topic}-architecture-review.md`
 
-### Overview
-{analysis summary — 2–4 sentences}
+Structure:
+```markdown
+# Architecture Review: {System Name}
 
-### Current Architecture Diagram
+## Architecture Diagram
+
+### Option 1: Conservative Refactor — {Title}
+{content}
+
+### Option 2: Moderate Redesign — {Title}
+{content}
+
+### Option 3: Full Overhaul — {Title}
+{content}
+
+## ERD
+{erDiagram if applicable}
+
+## Revision
+
+### Before
+
+{2–4 sentence overview of current architecture}
+
 ```mermaid
 flowchart TD
-  ...
+  (current state topology — mark problematic nodes with ⚠)
 ```
 
-### Identified Issues
-- {Issue 1 — specific, cites anti-pattern name if applicable}
+**Identified Issues:**
+- {Issue 1 — specific, cites antipattern name if applicable}
 - {Issue 2}
-````
 
-The diagram should reflect the actual current topology (not the desired state). Use `flowchart TD`. Mark problematic components with a `[⚠ issue]` label.
+### After
+
+{Overview of the recommended redesign option and what changes}
+
+```mermaid
+flowchart TD
+  (proposed architecture topology — mark new/changed nodes with [NEW])
+```
+
+**Key Improvements:**
+- {How identified weaknesses are addressed}
+
+## Recommendation
+```
 
 ### 4. Generate Three Redesign Options
 
-Present three options based on the severity and nature of identified issues:
+Present three options within the `## Architecture Diagram` section using `### Option N:` sub-headings (the viewer renders these as tabs).
 
 #### Option 1: Conservative Refactor
-- **Profile**: Minimal structural change. Fix the most critical pain points without re-architecture. Lowest risk, quickest wins.
-- **Approach**: Refactor within existing boundaries — introduce caching, extract a service for a single overloaded component, add connection pooling, improve query performance.
-- **Migration effort**: Days to weeks.
+- Minimal structural change. Fix the most critical pain points without re-architecture.
+- Approach: Add caching, extract one overloaded component, fix query performance, improve observability.
+- Migration effort: Days to weeks.
 
 #### Option 2: Moderate Redesign
-- **Profile**: Targeted structural changes to address systemic issues. Introduce new patterns where justified.
-- **Approach**: Decompose tightly-coupled modules, introduce an event bus for async workloads, add a read replica, migrate to a better-fit database for specific use cases.
-- **Migration effort**: Weeks to months.
+- Targeted structural changes to address systemic issues.
+- Approach: Decompose tightly-coupled modules, introduce event bus for async workloads, add read replica, migrate one component to a better-fit database.
+- Migration effort: Weeks to months.
 
 #### Option 3: Full Overhaul
-- **Profile**: Re-architect the system from scratch with the lessons learned. Highest risk, highest reward.
-- **Approach**: Adopt a fundamentally different architecture (microservices, event-driven, serverless) that solves structural root causes.
-- **Migration effort**: Months to quarters. Prefer **Strangler Fig** or **parallel run** approach over big bang. See the Big Bang Migration entry in `references/anti-patterns.md` for why big bang is high-risk. Document rollback strategy at each phase boundary.
+- Re-architect the system from scratch. Highest risk, highest reward.
+- Approach: Adopt a fundamentally different architecture (microservices, event-driven, serverless).
+- Migration effort: Months to quarters. Use Strangler Fig or parallel run — not big bang. See `references/anti-patterns.md` for why.
 
 ### 5. Required Sections Per Option
 
-Each option must include all of these sections:
+Each `### Option N:` section must include:
 
 ```
-## Option N: {Label} — {Short Title}
-
 ### What Changes
 Bulleted list comparing current state vs. proposed state.
 
 ### Architecture Diagram
-Mermaid diagram of the proposed architecture (NOT the current state).
+Mermaid flowchart of the PROPOSED architecture (not current state).
+Mark changed/new components with [NEW] labels.
 
 ### Key Improvements
-How this option addresses each identified weakness from Step 2.
+How this option addresses each identified weakness.
 
 ### Technology Changes
-| Component       | Current           | Proposed          | Reason                                      |
-|-----------------|-------------------|-------------------|---------------------------------------------|
-| Primary DB      | ...               | ...               | relational / document / key-value / ...     |
-| Cache           | ...               | ...               | ...                                         |
-| Search          | ...               | ...               | ...                                         |
-| Backend         | ...               | ...               | ...                                         |
-| Infra           | ...               | ...               | ...                                         |
-
-(Include rows for all components that change. For databases, specify the category change:
-e.g., "relational → document" or "single SQL → SQL + Redis + ClickHouse".)
+| Component | Current | Proposed | Reason |
 
 ### Data Layer Changes
-Describe the data strategy changes in detail:
-- Which databases are added, removed, or replaced — and why (not just the engine name, but the category rationale)
-- Any non-relational stores introduced (cache, search, analytics, graph) and why they were not needed before
-- Schema migration approach
-- Data migration steps (if moving data between engines)
+Which databases are added, removed, or replaced — and why.
+Non-relational stores introduced (cache, search, analytics) and rationale.
+Schema migration approach and data migration steps.
+
+### Object Storage Changes (if applicable)
+Changes to file/blob storage strategy.
+
+### Observability Changes
+OpenTelemetry-based instrumentation improvements.
+New monitoring, tracing, alerting components.
 
 ### Technology Decision Rationale
-For each proposed technology change, explain:
-- *Why this specific technology replaces the current one*: Specific technical reason tied to the identified issue
-- *What the alternative would have been*: One or two other options considered and why they were ruled out
-- *Team skills required*: New knowledge the team needs to operate this
+For each proposed change: why this replaces the current, alternatives considered, team skills required.
 
 ### Future Impact
-Describe the long-term consequences of this redesign option:
-
-| Timeframe | Impact                                                                      |
-|-----------|-----------------------------------------------------------------------------|
-| 6 months  | Team ramp-up, what improves immediately, first new pain points              |
-| 1 year    | First scaling or maintenance ceiling encountered                            |
-| 3 years   | Total cost of ownership, evolution needed, hiring story                     |
-
-Also address:
-- **Scalability improvement**: How does this handle 10× the current load vs. the current system?
-- **Operational overhead change**: More or less complex than today?
-- **Reversibility**: How difficult is it to undo this change or migrate further?
+| Timeframe | Impact |
+| 6 months  | ... |
+| 1 year    | ... |
+| 3 years   | ... |
+Scalability improvement, operational overhead change, reversibility.
 
 ### Migration Path
-Step-by-step migration approach. Include rollback strategy.
-For Option 3: specify Strangler Fig, parallel run, or big bang and justify the choice.
+Step-by-step migration approach. Rollback strategy.
+For Option 3: specify Strangler Fig, parallel run, or big bang and justify.
 
 ### Risks & Mitigations
-| Risk                     | Likelihood | Impact | Mitigation              |
-|--------------------------|------------|--------|-------------------------|
+| Risk | Likelihood | Impact | Mitigation |
 
 ### When to Choose This Option
 2–3 bullets for ideal scenario.
@@ -143,76 +158,73 @@ For Option 3: specify Strangler Fig, parallel run, or big bang and justify the c
 
 ### 6. Save the Document
 
-1. Compute timestamp in milliseconds via shell tool:
-   - Linux: `date +%s%3N`
-   - macOS: `node -e 'process.stdout.write(String(Date.now()))'`
-2. Create `docs/archimind/` if needed
-3. Determine topic slug from the system name (e.g., `payment-service`, `ecommerce-api`)
-4. Save to: `docs/archimind/{timestamp_ms}_{topic}-architecture-review.md`
-5. Inform user of saved path
+1. `node -e 'process.stdout.write(String(Date.now()))'` (macOS/Node) or `date +%s%3N` (Linux)
+2. `mkdir -p docs/archimind/architecture/`
+3. Topic slug from the system name (e.g., `payment-service`, `ecommerce-api`)
+4. Save to: `docs/archimind/architecture/{timestamp_ms}-{topic}-architecture-review.md`
+5. Inform the user of the saved path
 
 ### 7. Offer to Visualize
 
-After saving, prompt: "Would you like to open the viewer to compare the redesign options? Use `/archimind:visualize` to launch the diagram server."
+Prompt: "Would you like to open the viewer to compare the redesign options? Use `/archimind:visualize` to launch the diagram server."
+
+The viewer's **Architecture Diagram** nav shows the three option tabs. The **Revision** nav shows the Before/After comparison.
 
 ### 8. Require Redesign Selection (mandatory)
 
-**The work is not complete until the user has explicitly chosen one redesign option.** After presenting the options and offering visualization, prompt:
+**The work is not complete until the user has explicitly chosen one redesign option.** After presenting options, prompt:
 
 > "Which redesign would you like to proceed with — Option 1 (Conservative Refactor), Option 2 (Moderate Redesign), or Option 3 (Full Overhaul)? Request modifications before deciding if needed."
 
-Iterate if the user wants adjustments (e.g., "Option 2 but keep MySQL", "Option 3 with a phased rollout"). Re-save the document after each significant change. Do not proceed to Step 9 until the user states an explicit choice.
+Iterate if the user wants adjustments. Do not proceed to Step 9 until the user states an explicit choice.
 
 ### 9. Mark the Chosen Option
 
-Once a choice is confirmed:
-
 1. Read the saved review document
-2. Insert a decision header block right after the title:
+2. Insert decision header after the title:
    ```markdown
    **Selected:** Option N — {Label}: {Short Title}
    **Decision date:** {ISO date}
    ```
-3. Append `✅ SELECTED` to the chosen option's heading:
-   ```markdown
-   ## Option 2: Moderate Redesign — Extract Analytics Service + Read Replicas ✅ SELECTED
-   ```
-4. Append a brief `## Decision Notes` section capturing user-requested adjustments, migration timing, and prioritized next steps.
+3. Append `✅ SELECTED` to the chosen option's `### Option N:` heading
+4. Update the `### After` section in `## Revision` to show the selected option's proposed architecture (if not already there)
+5. Append a `## Decision Notes` section with user-requested adjustments, migration timing, and next steps
 
 ### 10. Stop the Viewer Server
 
-After the choice is finalized:
-
-1. Check if the viewer is running: `[ -f .archimind.pid ]` in the user's project root
-2. If running, ask: "Redesign finalized. Stop the diagram viewer now? (recommended)"
-3. On confirmation, run: `bash "$CLAUDE_PLUGIN_ROOT/scripts/stop-server.sh"`
-4. Report: "Decision saved to `{filepath}`. Viewer stopped." (or "Viewer was not running.")
-
-This is the natural end of the workflow. The selected redesign document becomes the source of truth for the migration plan.
+After the choice is finalized, offer to stop the viewer:
+```bash
+bash "$CLAUDE_PLUGIN_ROOT/scripts/stop-server.sh"
+```
 
 ## Document Structure Convention
 
-The static site viewer parses headings matching `## Option N:`. Use this exact format. **If the format is not followed, the tab navigation will not render — all options appear as a single document.**
+The viewer parses these exact heading patterns:
 
-```markdown
-## Option 1: Conservative Refactor — Add Caching Layer + Query Optimization
-## Option 2: Moderate Redesign — Extract Analytics Service + Read Replicas
-## Option 3: Full Overhaul — Event-Driven Microservices with CQRS
+- `## Architecture Diagram` + `### Option N:` subheadings → option tabs in Architecture Diagram nav
+- `## ERD` → rendered in ERD nav
+- `## Revision` + `### Before` / `### After` → Before/After tabs in Revision nav
+
+**Critical**: Use `### Option N:` (level-3) within `## Architecture Diagram`, not `## Option N:` (level-2) at top level. The viewer splits the `## Architecture Diagram` section by `### ` subheadings to create option tabs.
+
+Review document headings must follow this exact format within `## Architecture Diagram`:
+```
+### Option 1: Conservative Refactor — {Title}
+### Option 2: Moderate Redesign — {Title}
+### Option 3: Full Overhaul — {Title}
 ```
 
 ## Mermaid Diagram Guidelines
 
-- Show the **proposed** architecture in each option diagram (not current state)
-- Current state diagram goes in the "Current Architecture" section (Step 3)
-- Use `flowchart TD` for service topology
-- Mark changed components with `[NEW]` on node labels or edges
-- Use `sequenceDiagram` only when the before/after of a specific request lifecycle makes the improvement concrete (e.g., showing async vs. sync checkout flow); do not add sequence diagrams to every option
+- Current state diagram goes in `## Revision / ### Before`
+- Proposed state diagram goes in `## Revision / ### After` and within each option section
+- Use `flowchart TD` for all topology diagrams
+- Mark changed components with `[NEW]` or `[UPDATED]` node labels
+- Current state: mark problematic nodes with `⚠` in the label
 
 ## Additional Resources
 
-All paths below are relative to this skill file's directory (`skills/review-architecture/`).
-
 - **`references/review-checklist.md`** — Structured checklist (scalability, coupling, observability, data, security, operational). Read during Step 2 analysis.
-- **`references/anti-patterns.md`** — Canonical anti-pattern names and descriptions (God Service, Shared DB, Chatty Microservices, etc.). Reference when naming identified problems and when specifying Option 3 migration approach.
-- **`../design-architecture/references/database-selection-guide.md`** — Comprehensive database selection guide (relational, document, key-value, column-family, time-series, graph, search, NewSQL). Read when proposing database changes in any redesign option.
-- **`../design-architecture/references/observability-guide.md`** — Observability stack guide (OpenTelemetry, Loki, Prometheus, Jaeger/Tempo, SigNoz, Uptrace, Grafana Stack, Datadog). Read when proposing observability improvements in any redesign option.
+- **`references/anti-patterns.md`** — Canonical antipattern names (God Service, Shared DB, Chatty Microservices, Big Bang Migration, etc.). Read when naming identified problems and specifying Option 3 migration approach.
+- **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/database-selection-guide.md`** — Comprehensive database selection guide. Read when proposing database changes.
+- **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/observability-guide.md`** — Observability stack guide. Read when proposing observability improvements.

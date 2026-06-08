@@ -2,7 +2,7 @@
 # Starts the archimind static site viewer.
 # - Finds a free port
 # - Copies index.html to docs/archimind/
-# - Generates docs/archimind/manifest.json
+# - Generates docs/archimind/manifest.json (scans architecture/ and database/ subdirs)
 # - Starts python3 -m http.server from docs/archimind/
 # - Saves PID to .archimind.pid in the current directory
 #
@@ -44,15 +44,37 @@ cp "$INDEX_SRC" "$DOCS_DIR/index.html"
 MANIFEST_FILE="$DOCS_DIR/manifest.json"
 GENERATED=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-# Build manifest entries array then join with commas
 ENTRIES=()
+
+# Collect files from subdirectories: architecture/, database/
+for subdir in architecture database; do
+  SUBDIR_PATH="$DOCS_DIR/$subdir"
+  if [[ -d "$SUBDIR_PATH" ]]; then
+    while IFS= read -r filepath; do
+      filename=$(basename "$filepath")
+      relpath="$subdir/$filename"
+      title=$(echo "$filename" \
+        | sed 's/^[0-9]*[-_]//' \
+        | sed 's/-/ /g' \
+        | sed 's/\.md$//')
+      ENTRIES+=("    { \"path\": \"$relpath\", \"name\": \"$filename\", \"title\": \"$title\", \"category\": \"$subdir\" }")
+    done < <(find "$SUBDIR_PATH" -maxdepth 1 -name "*.md" | sort -r)
+  fi
+done
+
+# Collect flat files in docs/archimind/ (backward compatibility)
 while IFS= read -r filepath; do
   filename=$(basename "$filepath")
   title=$(echo "$filename" \
-    | sed 's/^[0-9]*_//' \
+    | sed 's/^[0-9]*[-_]//' \
     | sed 's/-/ /g' \
     | sed 's/\.md$//')
-  ENTRIES+=("    { \"name\": \"$filename\", \"title\": \"$title\" }")
+  if echo "$filename" | grep -qi "database"; then
+    category="database"
+  else
+    category="architecture"
+  fi
+  ENTRIES+=("    { \"path\": \"$filename\", \"name\": \"$filename\", \"title\": \"$title\", \"category\": \"$category\" }")
 done < <(find "$DOCS_DIR" -maxdepth 1 -name "*.md" | sort -r)
 
 {

@@ -34,7 +34,7 @@ From the user's requirements:
 
 #### Apply Normal Forms
 
-Design directly to at least **3NF** (Third Normal Form). Apply BCNF where applicable. Do not over-normalize into 4NF/5NF unless there is a clear reason (multi-valued dependencies, explicit analytics use case). Refer to `references/normalization-guide.md` for rules and examples.
+Design directly to at least **3NF** (Third Normal Form). Apply BCNF where applicable. Do not over-normalize into 4NF/5NF unless there is a clear reason (multivalued dependencies, explicit analytics use case). Refer to `references/normalization-guide.md` for rules and examples.
 
 #### Choose Data Types
 
@@ -162,9 +162,9 @@ For each table, provide a spec block:
 1. Compute timestamp in milliseconds via shell tool:
    - Linux: `date +%s%3N`
    - macOS: `node -e 'process.stdout.write(String(Date.now()))'`
-2. Create `docs/archimind/` if needed
+2. Create `docs/archimind/database/` directory: `mkdir -p docs/archimind/database/`
 3. Determine topic slug (e.g., `ecommerce`, `user-management`)
-4. Save to: `docs/archimind/{timestamp_ms}_{topic}-database-design.md`
+4. Save to: `docs/archimind/database/{timestamp_ms}-{topic}-database-design.md`
 5. Confirm saved path to user
 
 ### 6. Offer to Visualize
@@ -178,7 +178,7 @@ Database design docs do not use the 3-option tabbar format (single design output
 ```markdown
 # Database Design: {Topic}
 
-## ER Diagram
+## ERD
 {mermaid erDiagram}
 
 ## Normalization Analysis (if normalizing existing schema)
@@ -195,8 +195,6 @@ Database design docs do not use the 3-option tabbar format (single design output
 ```
 
 ## Additional Resources
-
-Paths below are relative to this skill's directory (`skills/design-database/`). Read them using the file read tool with the full path derived from `$CLAUDE_PLUGIN_ROOT/skills/design-database/references/<filename>`.
 
 - **`references/normalization-guide.md`** — Complete 1NF → BCNF rules with SQL examples. Read when analyzing existing schemas.
 - **`references/index-guide.md`** — Index type matrix (B-tree, Hash, GiST, GIN, BRIN, Full-text) with use cases and when to avoid. Read when deciding index strategy.
