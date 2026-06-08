@@ -8,6 +8,8 @@ analyze_command: ""
 
 Copy this file to `.claude/debugging-workflow.local.md` in your project root.
 
+For the complete settings template (including `parallel-debug` options), use the template at `../../parallel-debug/examples/debugging-workflow.local.md` instead.
+
 ## Settings Reference
 
 **`lint_config_path`** (string, optional)
