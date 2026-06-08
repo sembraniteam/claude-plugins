@@ -18,7 +18,7 @@
     },
     {
       "name": "debugging-workflow",
-      "description": "Debugging workflow plugin for Claude Code by Sembrani Team",
+      "description": "Systematic debugging workflow — pre-flight checklist, context gathering, root cause analysis, fix, multi-language verification, and parallel hypothesis investigation",
       "version": "0.4.0",
       "source": "./debugging-workflow",
       "author": {
