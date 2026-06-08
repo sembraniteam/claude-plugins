@@ -23,11 +23,11 @@ Read any relevant files the user points to (e.g., `docker-compose.yml`, `package
 
 ### 2. Perform Architecture Analysis
 
-Evaluate the existing architecture against the checklist in `references/review-checklist.md`. Produce an **Analysis Summary** covering:
+Evaluate the existing architecture against the checklist in `$CLAUDE_PLUGIN_ROOT/skills/review-architecture/references/review-checklist.md`. Produce an **Analysis Summary** covering:
 
 - **Strengths**: What the current architecture does well
 - **Weaknesses**: Specific identified problems (scalability, coupling, observability, data, security, operational)
-- **Antipatterns found**: Reference `references/anti-patterns.md` for canonical names
+- **Antipatterns found**: Reference `$CLAUDE_PLUGIN_ROOT/skills/review-architecture/references/anti-patterns.md` for canonical names
 - **Root causes**: Why each weakness exists
 
 Keep the analysis concise: 3–6 bullet points per category. Be specific ("single DB handles both OLTP and analytics queries, causing lock contention"), not vague.
@@ -50,7 +50,7 @@ Present the summary in this format, then wait for confirmation:
 | Architecture style          | {monolith / modular monolith / microservices / etc.}                     |
 | Strengths                   | {1–2 key positives}                                                      |
 | Primary pain points         | {top 2–3 issues identified}                                              |
-| Antipatterns detected       | {canonical names from references/anti-patterns.md, or "None identified"} |
+| Antipatterns detected       | {canonical names from `$CLAUDE_PLUGIN_ROOT/skills/review-architecture/references/anti-patterns.md`, or "None identified"} |
 | Constraints (cannot change) | {legacy integrations, compliance, team skills, etc.}                     |
 
 **Root cause hypothesis:** {1–2 sentences on why the main issues exist — e.g., "The system evolved from a monolith without service boundaries, resulting in tight coupling that now blocks independent scaling."}
@@ -133,7 +133,7 @@ Present three options within the `## Architecture Diagram` section using `### Op
 #### Option 3: Full Overhaul
 - Re-architect the system from scratch. Highest risk, highest reward.
 - Approach: Adopt a fundamentally different architecture (microservices, event-driven, serverless).
-- Migration effort: Months to quarters. Use Strangler Fig or parallel run — not big bang. See `references/anti-patterns.md` for why.
+- Migration effort: Months to quarters. Use Strangler Fig or parallel run — not big bang. See `$CLAUDE_PLUGIN_ROOT/skills/review-architecture/references/anti-patterns.md` for why.
 
 ### 6. Required Sections Per Option
 
@@ -254,7 +254,7 @@ Review document headings must follow this exact format within `## Architecture D
 
 ## Additional Resources
 
-- **`references/review-checklist.md`** — Structured checklist (scalability, coupling, observability, data, security, operational). Read during Step 2 analysis.
-- **`references/anti-patterns.md`** — Canonical antipattern names (God Service, Shared DB, Chatty Microservices, Big Bang Migration, etc.). Read when naming identified problems and specifying Option 3 migration approach.
+- **`$CLAUDE_PLUGIN_ROOT/skills/review-architecture/references/review-checklist.md`** — Structured checklist (scalability, coupling, observability, data, security, operational). Read during Step 2 analysis.
+- **`$CLAUDE_PLUGIN_ROOT/skills/review-architecture/references/anti-patterns.md`** — Canonical antipattern names (God Service, Shared DB, Chatty Microservices, Big Bang Migration, etc.). Read when naming identified problems and specifying Option 3 migration approach.
 - **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/database-selection-guide.md`** — Comprehensive database selection guide. Read when proposing database changes.
 - **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/observability-guide.md`** — Observability stack guide. Read when proposing observability improvements.

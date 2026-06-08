@@ -152,21 +152,21 @@ For each option, cover all required sections (see "Required Sections Per Option"
 
 ### 4. Required Sections Per Option
 
-Structure each option under the `## Architecture Diagram` document section using `### Option N:` subheadings. Use `####` for subsections within each option. The full blank scaffold is in `references/output-template.md`.
+Structure each option under the `## Architecture Diagram` document section using `### Option N:` subheadings. Use `####` for subsections within each option. The full blank scaffold is in `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/output-template.md`.
 
 Required `####` subsections for each option:
 - **Key Components** — bulleted list of main services/modules with one-line descriptions
 - **Technology Stack** — table: Layer / Recommended / Alternatives / Reason
-- **Data Layer Design** — all applicable store types; for each: what's stored, why not the primary DB, data flow. Cover: transactional store, cache, search, analytics/OLAP, message queue, object storage, graph (if core). See `references/database-selection-guide.md`.
+- **Data Layer Design** — all applicable store types; for each: what's stored, why not the primary DB, data flow. Cover: transactional store, cache, search, analytics/OLAP, message queue, object storage, graph (if core). See `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/database-selection-guide.md`.
 - **Object Storage** — only if relevant to user's answers: solution (MinIO / S3 / GCS / R2), what's stored, bucket org, access control, encryption, self-hosted vs. managed trade-offs
-- **Observability Strategy** — OTel-first; pillars: Instrumentation, Logs, Metrics, Distributed Traces, Alerting. Scale tooling to complexity. See `references/observability-guide.md`.
+- **Observability Strategy** — OTel-first; pillars: Instrumentation, Logs, Metrics, Distributed Traces, Alerting. Scale tooling to complexity. See `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/observability-guide.md`.
 - **Technology Decision Rationale** — for each major choice: why chosen, better-than-alternatives, required skills, ecosystem longevity
 - **Future Impact** — 6-month / 1-year / 3-year table + scalability ceiling, operational overhead, reversibility, vendor lock-in
 - **Deployment Strategy** — environments, CI/CD, containerization, orchestration, scaling, rollback, DR, observability deployment
 - **Risks & Mitigations** — table: Risk / Likelihood / Impact / Mitigation
 - **When to Choose This Option** — 2–3 bullets for the ideal scenario
 
-Read `references/architecture-patterns.md`, `references/database-selection-guide.md`, and `references/observability-guide.md` when designing each option's respective sections.
+Read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/architecture-patterns.md`, `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/database-selection-guide.md`, and `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/observability-guide.md` when designing each option's respective sections.
 
 ### 5. ERD Section
 
@@ -300,7 +300,7 @@ The static site viewer parses sections by these exact heading patterns:
 
 ## Additional Resources
 
-- **`references/architecture-patterns.md`** — Detailed patterns (Monolith, Microservices, Serverless, Event-Driven, CQRS, Hexagonal). Read when deciding which pattern fits each risk tier.
-- **`references/database-selection-guide.md`** — Comprehensive database selection guide (relational, document, key-value, column-family, time-series, graph, search, NewSQL, polyglot persistence). Read when choosing the data layer.
-- **`references/observability-guide.md`** — Observability stack guide (OpenTelemetry, Loki, Prometheus, Jaeger/Tempo, SigNoz, Uptrace, Grafana Stack, Datadog). Read when designing the observability strategy.
-- **`references/output-template.md`** — Full blank template for the output document.
+- **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/architecture-patterns.md`** — Detailed patterns (Monolith, Microservices, Serverless, Event-Driven, CQRS, Hexagonal). Read when deciding which pattern fits each risk tier.
+- **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/database-selection-guide.md`** — Comprehensive database selection guide (relational, document, key-value, column-family, time-series, graph, search, NewSQL, polyglot persistence). Read when choosing the data layer.
+- **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/observability-guide.md`** — Observability stack guide (OpenTelemetry, Loki, Prometheus, Jaeger/Tempo, SigNoz, Uptrace, Grafana Stack, Datadog). Read when designing the observability strategy.
+- **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/output-template.md`** — Full blank template for the output document.

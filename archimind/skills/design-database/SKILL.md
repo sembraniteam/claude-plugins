@@ -34,7 +34,7 @@ From the user's requirements:
 
 #### Apply Normal Forms
 
-Design directly to at least **3NF** (Third Normal Form). Apply BCNF where applicable. Do not over-normalize into 4NF/5NF unless there is a clear reason (multivalued dependencies, explicit analytics use case). Refer to `references/normalization-guide.md` for rules and examples.
+Design directly to at least **3NF** (Third Normal Form). Apply BCNF where applicable. Do not over-normalize into 4NF/5NF unless there is a clear reason (multivalued dependencies, explicit analytics use case). Refer to `$CLAUDE_PLUGIN_ROOT/skills/design-database/references/normalization-guide.md` for rules and examples.
 
 #### Choose Data Types
 
@@ -47,7 +47,7 @@ For each column, choose the most appropriate data type. Key principles:
 - Use `NUMERIC(p,s)` or `DECIMAL` for money, never `FLOAT`/`DOUBLE`
 - Use `JSONB` (PostgreSQL) for semi-structured data only when querying inside the JSON
 
-Refer to `references/data-types-guide.md` for engine-specific recommendations.
+Refer to `$CLAUDE_PLUGIN_ROOT/skills/design-database/references/data-types-guide.md` for engine-specific recommendations.
 
 #### Define Indexes
 
@@ -62,7 +62,7 @@ For each index, specify:
 - Columns (single or composite — order matters for composites)
 - Justification tied to a specific query pattern
 
-Refer to `references/index-guide.md` for index type selection rules.
+Refer to `$CLAUDE_PLUGIN_ROOT/skills/design-database/references/index-guide.md` for index type selection rules.
 
 ### 2B. Normalize Existing Schema
 
@@ -70,7 +70,7 @@ Refer to `references/index-guide.md` for index type selection rules.
 
 Read the provided DDL. For each table:
 1. Identify the functional dependencies
-2. Check violation of 1NF, 2NF, 3NF, BCNF (use `references/normalization-guide.md`)
+2. Check violation of 1NF, 2NF, 3NF, BCNF (use `$CLAUDE_PLUGIN_ROOT/skills/design-database/references/normalization-guide.md`)
 3. List repeating groups, partial dependencies, transitive dependencies
 
 #### Produce Analysis Summary
@@ -196,6 +196,6 @@ Database design docs do not use the 3-option tabbar format (single design output
 
 ## Additional Resources
 
-- **`references/normalization-guide.md`** — Complete 1NF → BCNF rules with SQL examples. Read when analyzing existing schemas.
-- **`references/index-guide.md`** — Index type matrix (B-tree, Hash, GiST, GIN, BRIN, Full-text) with use cases and when to avoid. Read when deciding index strategy.
-- **`references/data-types-guide.md`** — Data type recommendations for PostgreSQL, MySQL, and SQLite. Read when choosing column types.
+- **`$CLAUDE_PLUGIN_ROOT/skills/design-database/references/normalization-guide.md`** — Complete 1NF → BCNF rules with SQL examples. Read when analyzing existing schemas.
+- **`$CLAUDE_PLUGIN_ROOT/skills/design-database/references/index-guide.md`** — Index type matrix (B-tree, Hash, GiST, GIN, BRIN, Full-text) with use cases and when to avoid. Read when deciding index strategy.
+- **`$CLAUDE_PLUGIN_ROOT/skills/design-database/references/data-types-guide.md`** — Data type recommendations for PostgreSQL, MySQL, and SQLite. Read when choosing column types.
