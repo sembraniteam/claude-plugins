@@ -359,7 +359,7 @@ flowchart TD
 
 ---
 
-### Recommendation
+## Recommendation
 
 {4–6 sentences stating which option is recommended, why, referencing actual requirements (team size, scale, data characteristics). Acknowledge the main trade-off.}
 

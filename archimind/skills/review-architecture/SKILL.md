@@ -1,5 +1,5 @@
 ---
-name: Review Architecture
+name: review-architecture
 description: This skill should be used when the user asks to "review architecture", "analyze my architecture", "audit the architecture", "review my system design", "improve my system", "refactor architecture", "redesign my system", "what's wrong with my architecture", "critique my design", "help me improve my existing system", "is my architecture good", "identify bottlenecks in my architecture", or provides an existing architecture description, diagram, or codebase structure for evaluation.
 ---
 
@@ -61,9 +61,9 @@ Present the summary in this format, then wait for confirmation:
 
 Wait for the user to confirm or correct before proceeding to Step 4. If the user provides corrections, update the summary and re-confirm.
 
-### 4. Document the Revision in a Single Document
+### 4. Scaffold the Review Document Structure
 
-Save the review document with a `## Revision` section that contains both `### Before` and `### After` subsections. This is what the viewer renders as Before/After tabs.
+Structure the review document with a `## Revision` section that contains both `### Before` and `### After` subsections. This is what the viewer renders as Before/After tabs. The actual file save happens in Step 7 after options are generated.
 
 **Document path**: `docs/archimind/architecture/{timestamp_ms}-{topic}-architecture-review.md`
 
@@ -113,6 +113,7 @@ flowchart TD
 - {How identified weaknesses are addressed}
 
 ## Recommendation
+<!-- populate this section after generating and presenting all options in Step 5 -->
 ```
 
 ### 5. Generate Three Redesign Options

@@ -1,5 +1,5 @@
 ---
-name: Visualize Architecture
+name: visualize
 description: This skill should be used when the user asks to "visualize the architecture", "open the diagram viewer", "show me the diagrams", "start the server", "stop the server", "close the viewer", "launch the architecture viewer", "render the Mermaid diagram", "open the static site", "update the diagram", "revise the diagram", "change the architecture diagram", "edit the Mermaid code", "regenerate the diagram", or wants to view, launch, stop, or update architecture and database diagrams.
 ---
 

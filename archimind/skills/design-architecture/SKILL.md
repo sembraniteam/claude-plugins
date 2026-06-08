@@ -1,5 +1,5 @@
 ---
-name: Design Architecture
+name: design-architecture
 description: This skill should be used when the user asks to "design an architecture", "design software architecture", "design system architecture", "what architecture should I use", "help me design my app", "plan the architecture for", "design a system for", "create an architecture for", "architect my project", "help me design a backend", "design a scalable system", or describes a software project they want to architect from scratch.
 ---
 
@@ -249,8 +249,7 @@ For the database migration strategy, include: schema versioning (Flyway / Liquib
 
 After the choice is finalized, check if the viewer is running and offer to stop it:
 ```bash
-[ -f .archimind.pid ]
-bash "$CLAUDE_PLUGIN_ROOT/scripts/stop-server.sh"
+[ -f .archimind.pid ] && bash "$CLAUDE_PLUGIN_ROOT/scripts/stop-server.sh"
 ```
 
 ## Document Structure Convention
