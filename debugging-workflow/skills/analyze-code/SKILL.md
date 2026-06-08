@@ -167,4 +167,4 @@ After completing analysis, display a summary block:
 
 - **`../../references/analyze-tools.md`** — Full per-language tool options, common error patterns, and best practices
 - **`references/language-detection.md`** — Canonical language detection priority table
-- **`examples/debugging-workflow.local.md`** — Ready-made settings template to copy to `.claude/debugging-workflow.local.md`
+- **`examples/debugging-workflow.local.md`** — Basic settings template (analyze-code and debug only); for the complete template including parallel-debug options, see `../parallel-debug/examples/debugging-workflow.local.md`

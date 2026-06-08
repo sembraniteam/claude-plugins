@@ -51,7 +51,11 @@ Extract from the user's report:
 
 If the description is vague, ask exactly one clarifying question before proceeding: "Which file or function is misbehaving, and what is the exact error or unexpected behavior?"
 
-Run `git diff HEAD --name-only` to identify recently changed files — hypotheses touching these files rank higher.
+Run the following to identify recently changed files — hypotheses touching these files rank higher:
+
+```bash
+git diff HEAD --name-only
+```
 
 ---
 
@@ -120,15 +124,7 @@ Spawn up to `max_parallel_agents` agents. If `hypothesis_count` < `max_parallel_
 
 ## Step 5: Collect and Rank Results
 
-After all agents complete, collect their evidence reports. Rank using the scoring in `references/report-format.md`:
-
-```
-score = (test_final_result × 100) + (confidence × 10) + evidence_count
-
-test_final_result : PASS=3, FAIL=1, ERROR=0
-confidence       : High=3, Medium=2, Low=1
-evidence_count   : 3 points=3, 2 points=2, 1 point=1
-```
+After all agents complete, collect their evidence reports. Rank using the scoring algorithm in `references/report-format.md`.
 
 Hypotheses with status `CONFIRMED` always rank above `INCONCLUSIVE`, which always rank above `UNCONFIRMED`.
 

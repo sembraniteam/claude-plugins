@@ -10,6 +10,27 @@ license: MIT
 
 A systematic debugging process that moves from symptom to root cause to verified fix.
 
+## Output Format (Strict)
+
+Perform all investigation steps silently. Do not narrate exploration, file reads, or git diff results unless the user explicitly asks. After gathering evidence, respond with exactly this structure:
+
+```
+**Root cause:** <1-2 sentences stating the hypothesized root cause>
+
+**Evidence:**
+- `path/to/file.ext:NN` — <observation>
+- `path/to/file.ext:NN` — <observation>
+- `path/to/file.ext:NN` — <observation>  ← (include a third only if needed)
+
+**Fix:**
+```diff
+- old line
++ new line
+```
+```
+
+No additional prose before or after unless the user asks a follow-up.
+
 ## Pre-Flight Checklist
 
 Upon invocation, immediately create a todo list using `TaskCreate` with these steps. If `TaskCreate` is unavailable, track steps as a numbered checklist instead.
@@ -86,14 +107,14 @@ Note which test functions cover the failing code.
 
 ## Root Cause Analysis
 
-Synthesize all gathered information into a clear diagnosis:
+Synthesize all gathered information into a clear diagnosis. Select the 2–3 most compelling pieces of evidence (file path + line number + observation). Do not output intermediate findings — hold everything until the final structured response defined in **Output Format**.
 
-- **Root cause**: One sentence describing the actual bug
-- **Why it happened**: The underlying condition that allowed the bug
-- **Affected scope**: Which files, functions, or data flows are impacted
-- **Fix strategy**: What change will resolve it without introducing regressions
+Internally confirm:
+- What is the specific bug (one sentence)?
+- What condition/change caused it?
+- Which minimal change fixes it without regressions?
 
-Do not proceed to fixing until the root cause is clearly stated.
+Do not proceed to fixing until the root cause is clearly identified.
 
 ## Fix
 
@@ -112,7 +133,7 @@ Apply a targeted fix following language-specific best practices:
 - For async code: handle futures/promises correctly; avoid fire-and-forget
 - For null safety (Dart/Kotlin/TS): use proper null checks, not `!` unless provably safe
 
-After applying the fix, briefly summarize what changed and why.
+Present the fix as a unified diff (` ```diff `) in the **Fix** block of the Output Format. Apply it to the file after presenting it — do not apply silently without showing the diff.
 
 ## Verification
 
@@ -122,20 +143,7 @@ Check for `.claude/debugging-workflow.local.md` before running tools. If it exis
 
 If no settings file exists, proceed with project defaults. To configure custom lint paths, run the `analyze-code` skill and ask to "set up debugging-workflow settings".
 
-Detect the project language and run the appropriate tool:
-
-| Detected file/config                            | Tool(s) to run                           |
-|-------------------------------------------------|------------------------------------------|
-| `pubspec.yaml` / `.dart`                        | `dart analyze` or `flutter analyze`      |
-| `Cargo.toml` / `.rs`                            | `cargo check` then `cargo clippy`        |
-| `package.json` / `.ts` / `.tsx`                 | `tsc --noEmit` then `npx eslint <file>`  |
-| `package.json` / `.js` / `.jsx`                 | `npx eslint <file>`                      |
-| `requirements.txt` / `.py`                      | `ruff check .` (or `python -m pylint .`) |
-| `go.mod` / `.go`                                | `go vet ./...`                           |
-| `pom.xml` / `build.gradle` / `build.gradle.kts` | `mvn compile -q` or `./gradlew check`    |
-| `Package.swift` / `.xcodeproj` / `.swift`       | `swiftlint lint --path <file>`           |
-| `Gemfile` / `.rb`                               | `rubocop <file>`                         |
-| `CMakeLists.txt` / `Makefile`                   | `cmake --build build/` or `make`         |
+Detect the project language and run the appropriate tool — see `../../references/analyze-tools.md` for the full language → tool mapping table.
 
 Run from the project root. If the tool reports errors:
 - Fix each reported error before proceeding
@@ -190,6 +198,7 @@ After completing all steps, display a summary block:
 
 - **`../../references/analyze-tools.md`** — Full language → tool mapping, flags, and common error patterns
 - **`references/debugging-patterns.md`** — Common root cause patterns by error category (null pointer, type mismatch, async race, import cycle, etc.)
+- **`../analyze-code/examples/debugging-workflow.local.md`** — Settings template for `.claude/debugging-workflow.local.md` (configure lint paths, skip verification, custom commands)
 
 ### Code Analyzer Agent
 
