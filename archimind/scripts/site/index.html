@@ -46,6 +46,7 @@
     #sidebar-header {
       padding: 18px 16px 12px;
       border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
     }
 
     #sidebar-header h1 {
@@ -91,48 +92,54 @@
     .file-badge.architecture { background: rgba(108,142,245,0.2); color: var(--accent); }
     .file-badge.database { background: rgba(76,217,100,0.15); color: var(--green); }
 
-    #sidebar-footer {
-      padding: 12px 16px;
-      border-top: 1px solid var(--border);
-      font-size: 11px; color: var(--text-muted);
-    }
-
-    /* ── Main ── */
-    #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
-
-    /* ── Section Nav: Architecture Diagram | ERD | Revision ── */
+    /* ── Section Nav (left sidebar) ── */
     #section-nav {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: stretch;
-      height: 46px;
       flex-shrink: 0;
-      padding: 0 16px;
-      gap: 4px;
+      border-top: 1px solid var(--border);
     }
 
     #section-nav.hidden { display: none; }
 
-    .snav-btn {
-      background: none;
-      border: none;
-      border-bottom: 3px solid transparent;
+    .section-nav-label {
+      padding: 10px 16px 4px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
       color: var(--text-muted);
-      font-size: 13px;
-      font-weight: 600;
-      padding: 0 18px;
-      cursor: pointer;
-      letter-spacing: 0.02em;
-      transition: color 0.15s, border-color 0.15s;
-      white-space: nowrap;
     }
 
-    .snav-btn:hover:not(:disabled) { color: var(--text); }
+    .snav-btn {
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: none;
+      border: none;
+      border-left: 3px solid transparent;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 10px 16px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
 
-    .snav-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .snav-btn:hover:not(:disabled) { background: var(--surface2); color: var(--text); }
+
+    .snav-btn.active { color: var(--accent); border-left-color: var(--accent); background: var(--surface2); }
 
     .snav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    #sidebar-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      font-size: 11px; color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    /* ── Main ── */
+    #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
 
     /* ── Sub-tab bar (Option tabs / Before|After tabs) ── */
     #tab-bar {
@@ -306,19 +313,21 @@
   <div id="file-list">
     <p style="padding:16px;font-size:12px;color:var(--text-muted)">Loading documents…</p>
   </div>
+
+  <!-- Section Nav moved to sidebar -->
+  <nav id="section-nav" class="hidden">
+    <div class="section-nav-label">Sections</div>
+    <button class="snav-btn active" data-view="architecture">Architecture Diagram</button>
+    <button class="snav-btn" data-view="erd">ERD</button>
+    <button class="snav-btn" data-view="revision">Revision</button>
+  </nav>
+
   <div id="sidebar-footer">
     <span id="doc-count">0 documents</span>
   </div>
 </aside>
 
 <main id="main">
-  <!-- Section Nav: Architecture Diagram | ERD | Revision -->
-  <nav id="section-nav" class="hidden">
-    <button class="snav-btn active" data-view="architecture">Architecture Diagram</button>
-    <button class="snav-btn" data-view="erd">ERD</button>
-    <button class="snav-btn" data-view="revision">Revision</button>
-  </nav>
-
   <!-- Sub-tab bar (option tabs or before/after tabs) -->
   <div id="tab-bar" class="hidden"></div>
 
@@ -358,6 +367,7 @@
   let currentView = 'architecture';
   let currentOptionIndex = 0;
   let currentRevisionTab = 'before';
+  let userHasSelectedTab = false;  // tracks if user manually picked a tab
   let parsedDoc = null;
   let optionContents = [];
   let revisionData = { before: '', after: '' };
@@ -393,7 +403,6 @@
       const filePath = f.path || f.name;
       item.dataset.path = filePath;
 
-      // Extract timestamp for display
       const tsMatch = filePath.match(/(\d{10,})[_\-]/);
       let tsLabel = '';
       if (tsMatch) {
@@ -420,21 +429,23 @@
   }
 
   // ── Document loading ──
-  async function loadDoc(filepath) {
-    currentFile = filepath;
-    document.querySelectorAll('.file-item').forEach(el => {
-      el.classList.toggle('active', el.dataset.path === filepath);
-    });
+  async function loadDoc(filepath, isRefresh = false) {
+    if (!isRefresh) {
+      currentFile = filepath;
+      document.querySelectorAll('.file-item').forEach(el => {
+        el.classList.toggle('active', el.dataset.path === filepath);
+      });
+    }
 
     try {
       const r = await fetch(filepath + '?_=' + Date.now());
       if (!r.ok) throw new Error('Could not load ' + filepath);
       const md = await r.text();
-      processDoc(md);
+      processDoc(md, isRefresh);
     } catch (e) { showError(e.message); }
 
     clearInterval(refreshTimer);
-    refreshTimer = setInterval(() => { if (currentFile) loadDoc(currentFile); }, 10000);
+    refreshTimer = setInterval(() => { if (currentFile) loadDoc(currentFile, true); }, 10000);
   }
 
   // ── Document parsing ──
@@ -442,10 +453,10 @@
     const lines = markdown.split('\n');
     const doc = {
       preamble: [],
-      archSectionLines: [],   // content of ## Architecture Diagram
-      optionSections: [],     // top-level ## Option N: sections
-      erdLines: [],           // content of ## ERD
-      revisionLines: [],      // content of ## Revision
+      archSectionLines: [],
+      optionSections: [],
+      erdLines: [],
+      revisionLines: [],
       recommendationLines: [],
       hasArchSection: false,
       hasERD: false,
@@ -492,7 +503,6 @@
     return doc;
   }
 
-  // Split architecture section by ### Option N: sub-headings
   function parseArchSubOptions(content) {
     const optRegex = /^(### (?:Option \d+:|Conservative|Moderate|Full).*)$/gm;
     const options = [];
@@ -511,7 +521,6 @@
     return options;
   }
 
-  // Split revision content by ### Before / ### After
   function parseRevisionContent(content) {
     const bI = content.search(/^### Before\b/m);
     const aI = content.search(/^### After\b/m);
@@ -525,18 +534,23 @@
     } else if (aI >= 0) {
       after = content.slice(aI).replace(/^### After\b[^\n]*\n?/, '');
     } else {
-      before = content; // show all as before if no sub-sections
+      before = content;
     }
     return { before: before.trim(), after: after.trim() };
   }
 
   // ── Main render ──
-  function processDoc(markdown) {
+  function processDoc(markdown, isRefresh = false) {
     parsedDoc = parseDocument(markdown);
-    currentView = 'architecture';
-    currentOptionIndex = 0;
-    currentRevisionTab = 'before';
     optionContents = [];
+
+    if (!isRefresh) {
+      // New document — reset all navigation state
+      currentView = 'architecture';
+      currentOptionIndex = 0;
+      currentRevisionTab = 'before';
+      userHasSelectedTab = false;
+    }
 
     const sectionNav = document.getElementById('section-nav');
     const placeholder = document.getElementById('placeholder');
@@ -544,16 +558,18 @@
 
     placeholder.style.display = 'none';
     docContent.style.display = 'block';
-
     sectionNav.classList.remove('hidden');
 
-    // Enable/disable nav buttons based on available sections
     const erdBtn = sectionNav.querySelector('[data-view="erd"]');
     const revBtn = sectionNav.querySelector('[data-view="revision"]');
     erdBtn.disabled = !parsedDoc.hasERD;
     revBtn.disabled = !parsedDoc.hasRevision;
 
-    setView('architecture');
+    // On refresh, if current view became unavailable, fall back to architecture
+    if (currentView === 'erd' && !parsedDoc.hasERD) currentView = 'architecture';
+    if (currentView === 'revision' && !parsedDoc.hasRevision) currentView = 'architecture';
+
+    setView(currentView);
   }
 
   function setView(view) {
@@ -590,8 +606,14 @@
 
     if (opts.length > 1) {
       tabBar.classList.remove('hidden');
+
+      // Auto-select the marked option only on first load (user hasn't picked a tab yet)
       const selectedIdx = opts.findIndex(o => /✅\s*SELECTED/i.test(o.title));
-      if (selectedIdx >= 0 && currentOptionIndex === 0) currentOptionIndex = selectedIdx;
+      if (selectedIdx >= 0 && !userHasSelectedTab) {
+        currentOptionIndex = selectedIdx;
+      }
+      // Guard against index out of range after document update
+      if (currentOptionIndex >= opts.length) currentOptionIndex = 0;
 
       opts.forEach((opt, i) => {
         const isSelected = /✅\s*SELECTED/i.test(opt.title);
@@ -610,6 +632,7 @@
 
   function switchOptionTab(index) {
     currentOptionIndex = index;
+    userHasSelectedTab = true;
     document.querySelectorAll('#tab-bar .tab-btn').forEach((b, i) => {
       b.classList.toggle('active', i === index);
     });
@@ -762,20 +785,31 @@
 
   function downloadPNG(svgEl, name) {
     if (!svgEl) return;
-    const data = new XMLSerializer().serializeToString(svgEl);
-    const svgBlob = new Blob([data], { type: 'image/svg+xml;charset=utf-8' });
+
+    // Clone the SVG and set explicit dimensions so the browser can rasterize it
+    const svgClone = svgEl.cloneNode(true);
+    const rect = svgEl.getBoundingClientRect();
+    const vb = svgEl.viewBox?.baseVal;
+    const w = Math.max(rect.width || 0, vb?.width || 0, 400);
+    const h = Math.max(rect.height || 0, vb?.height || 0, 300);
+    svgClone.setAttribute('width', w);
+    svgClone.setAttribute('height', h);
+
+    const xml = new XMLSerializer().serializeToString(svgClone);
+    const svgBlob = new Blob([xml], { type: 'image/svg+xml;charset=utf-8' });
     const url = URL.createObjectURL(svgBlob);
+
     const img = new Image();
     img.onload = () => {
       const scale = 2;
       const canvas = document.createElement('canvas');
-      canvas.width = (img.naturalWidth || 800) * scale;
-      canvas.height = (img.naturalHeight || 600) * scale;
+      canvas.width = w * scale;
+      canvas.height = h * scale;
       const ctx = canvas.getContext('2d');
       ctx.scale(scale, scale);
       ctx.fillStyle = '#22253a';
-      ctx.fillRect(0, 0, img.naturalWidth || 800, img.naturalHeight || 600);
-      ctx.drawImage(img, 0, 0);
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
       canvas.toBlob(blob => {
         if (blob) triggerDownload(URL.createObjectURL(blob), name + '.png');
       }, 'image/png');

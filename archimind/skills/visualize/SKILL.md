@@ -104,13 +104,14 @@ Inform the user: "Diagram updated in `{filepath}`. Refresh the browser to see th
 
 The viewer provides:
 
-- **Sidebar (left)**: Lists all `.md` files found in `docs/archimind/`, with category badges (architecture / database) and timestamps. Click to load a document.
-- **Section Nav (top)**: 3 items — **Architecture Diagram** | **ERD** | **Revision**. ERD and Revision buttons are disabled (grayed out) when those sections don't exist in the document.
-- **Architecture Diagram view**: Shows option tabs (Option 1 / Option 2 / Option 3 / Recommendation). Tabs are parsed from `### Option N:` subheadings within `## Architecture Diagram`.
-- **ERD view**: Renders the `## ERD` section.
+- **Sidebar (left)**: Two sections — a file list (all `.md` files in `docs/archimind/`, with category badges and timestamps) and a **Sections** navigation panel that appears when a document is loaded.
+- **Sections nav (sidebar bottom)**: 3 items — **Architecture Diagram** | **ERD** | **Revision**. ERD and Revision items are disabled (grayed out) when those sections don't exist in the document.
+- **Sub-tab bar (top of content area)**: Option tabs (Option 1 / Option 2 / Option 3 / Recommendation) for the Architecture Diagram view, or Before/After tabs for the Revision view.
+- **Architecture Diagram view**: Each option tab renders the full option content including Mermaid diagrams. Tabs are parsed from `### Option N:` subheadings within `## Architecture Diagram`.
+- **ERD view**: Renders the `## ERD` section with Mermaid `erDiagram`.
 - **Revision view**: Shows **Before** / **After** tabs parsed from `### Before` and `### After` within `## Revision`.
 - **Download as Image**: Every rendered Mermaid diagram has "↓ SVG" and "↓ PNG" download buttons.
-- **Auto-refresh**: Page polls for changes every 10 seconds when a document is open.
+- **Auto-refresh**: Page polls for changes every 10 seconds. The currently viewed tab and section are preserved across refreshes.
 
 For database design documents (no Architecture Diagram options), the Architecture Diagram nav shows the content as a single view without option tabs.
 
