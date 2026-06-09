@@ -16,7 +16,8 @@ At the very start, call **TaskCreate** to create one task per step:
 2. Design schema (or analyze existing schema)
 3. Produce ER diagram
 4. Produce table specifications
-5. Write content.md, open viewer, save final docs
+5. Write content.md and open viewer
+6. Save final docs and stop server
 
 Mark each task `in_progress` when starting it and `completed` when done.
 
@@ -168,7 +169,7 @@ For each table, provide a spec block:
 | idx_users_created_at        | BRIN   | created_at        | Range queries on large sequential data     |
 ```
 
-### 5. Write Content, Open Viewer, and Save Final Docs
+### 5. Write Content and Open Viewer
 
 1. Use the **Write tool** to write the full design content to `/tmp/archimind-viewer/content.md`. Follow the **Document Structure for Database Design** below.
 2. Start the viewer server and open the URL:
@@ -180,8 +181,10 @@ open "$URL"
 
 Inform the user: "The viewer is open at `$URL` — the ERD is rendered with Mermaid JS. Click **↺ Reload** in the sidebar after any changes."
 
-3. Compute timestamp: `node -e 'process.stdout.write(String(Date.now()))'` (macOS) or `date +%s%3N` (Linux). Determine topic slug (e.g., `ecommerce`, `user-management`).
-4. Save permanent technical documentation to the user's project:
+### 6. Save Final Docs and Stop Server
+
+1. Compute timestamp: `node -e 'process.stdout.write(String(Date.now()))'` (macOS) or `date +%s%3N` (Linux). Determine topic slug (e.g., `ecommerce`, `user-management`).
+2. Save permanent technical documentation to the user's project:
 
 ```bash
 mkdir -p docs/archimind/database
@@ -189,7 +192,7 @@ mkdir -p docs/archimind/database
 
 Then use the **Write tool** to write the full content to `docs/archimind/database/{timestamp_ms}-{topic}.md`. To re-visualize later: `bash "$CLAUDE_PLUGIN_ROOT/scripts/open-doc.sh" docs/archimind/database/{timestamp_ms}-{topic}.md`.
 
-5. Stop the viewer server:
+3. Stop the viewer server:
 
 ```bash
 bash "$CLAUDE_PLUGIN_ROOT/scripts/stop-server.sh"
@@ -197,7 +200,7 @@ bash "$CLAUDE_PLUGIN_ROOT/scripts/stop-server.sh"
 
 ## Document Structure for Database Design
 
-Database design docs do not use the 3-option tabbar format (single design output). The viewer renders the ERD and table specs as a single scrollable document. Structure the document clearly:
+After completing Step 5, structure the database design document as follows. Database design docs do not use the 3-option tabbar format (single design output). The viewer renders the ERD and table specs as a single scrollable document. Structure the document clearly:
 
 ```markdown
 # Database Design: {Topic}

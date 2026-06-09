@@ -164,9 +164,9 @@ Present three options within the `## Architecture Diagram` section using `### Op
 
 ### 5b. Add Recommendation
 
-After generating all three options, include a `## Recommendation` section. Structure it using the scaffold from Step 4:
+After generating all three options, write a `## Recommendation` section **with actual scores filled in** (not the blank `/10` scaffold from Step 4). This section is written to `/tmp/archimind-viewer/content.md` when the user confirms the options in AskUserQuestion.
 
-1. **Confidence Scores table** — rate each option on four dimensions (0–10). The viewer renders `X/10` table cells as visual progress bars automatically. Use this column structure:
+1. **Confidence Scores table** — rate each option on four dimensions (0–10). The viewer renders `X/10` table cells as visual progress bars automatically. Use this column structure with FILLED SCORES:
 
 ```markdown
 ### Confidence Scores
@@ -325,6 +325,16 @@ Then use the **Write tool** to write `docs/archimind/architecture/{timestamp_ms}
 
 ### After
 {Selected option's proposed architecture}
+
+## Recommendation
+
+### Confidence Scores
+
+| Option | Migration Effort | Risk Reduction | Team Fit | Cost | Overall |
+|--------|-----------------|---------------|----------|------|---------|
+| Chosen Option | /10 | /10 | /10 | /10 | **/10** |
+
+{4–6 sentences: which option was chosen and why. Cite the final scores. Acknowledge the main trade-off with unselected options.}
 
 ## Decision Notes
 ...
