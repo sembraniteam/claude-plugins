@@ -37,9 +37,24 @@ Use this template as a scaffold when generating the design file. Replace all pla
 
 {One paragraph describing the core approach and why it is appropriate for the conservative tier.}
 
+#### System Topology
+
 ```mermaid
 flowchart TD
   ...
+```
+
+#### Request Flow
+
+```mermaid
+sequenceDiagram
+  participant Client
+  participant API
+  participant DB
+  Client->>API: {Primary request, e.g. POST /orders}
+  API->>DB: {Query or write}
+  DB-->>API: {Result}
+  API-->>Client: {Response}
 ```
 
 #### Key Components
@@ -151,9 +166,24 @@ flowchart TD
 
 {One paragraph for the balanced tier.}
 
+#### System Topology
+
 ```mermaid
 flowchart TD
   ...
+```
+
+#### Request Flow
+
+```mermaid
+sequenceDiagram
+  participant Client
+  participant API
+  participant DB
+  Client->>API: {Primary request}
+  API->>DB: {Query or write}
+  DB-->>API: {Result}
+  API-->>Client: {Response}
 ```
 
 #### Key Components
@@ -252,9 +282,29 @@ flowchart TD
 
 {One paragraph for the ambitious tier.}
 
+#### System Topology
+
 ```mermaid
 flowchart TD
   ...
+```
+
+#### Request Flow
+
+```mermaid
+sequenceDiagram
+  participant Client
+  participant Gateway
+  participant ServiceA
+  participant ServiceB
+  participant DB
+  Client->>Gateway: {Primary request}
+  Gateway->>ServiceA: {Route}
+  ServiceA->>DB: {Query}
+  DB-->>ServiceA: {Result}
+  ServiceA->>ServiceB: {Async event or call}
+  ServiceA-->>Gateway: {Response}
+  Gateway-->>Client: {Response}
 ```
 
 #### Key Components
@@ -361,7 +411,15 @@ flowchart TD
 
 ## Recommendation
 
-{4–6 sentences stating which option is recommended, why, referencing actual requirements (team size, scale, data characteristics). Acknowledge the main trade-off.}
+### Confidence Scores
+
+| Option | Team Fit | Timeline | Scale | Cost | Overall |
+|--------|----------|----------|-------|------|---------|
+| Option 1 — Low Risk: {Name}    | /10 | /10 | /10 | /10 | **/10** |
+| Option 2 — Medium Risk: {Name} | /10 | /10 | /10 | /10 | **/10** |
+| Option 3 — High Risk: {Name}   | /10 | /10 | /10 | /10 | **/10** |
+
+{4–6 sentences stating which option is recommended, why, referencing actual requirements (team size, scale, data characteristics). Cite the option with the highest Overall score. Acknowledge the main trade-off.}
 
 ---
 

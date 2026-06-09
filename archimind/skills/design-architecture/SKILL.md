@@ -170,7 +170,10 @@ For each option, cover all required sections (see "Required Sections Per Option"
 
 Structure each option under the `## Architecture Diagram` document section using `### Option N:` subheadings. Use `####` for subsections within each option. The full blank scaffold is in `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/output-template.md`.
 
-Required `####` subsections for each option:
+Required `####` subsections for each option — **every option must include at least two Mermaid diagrams**:
+
+- **System Topology** (`flowchart TD`) — services, data stores, and their connections. **Required.**
+- **Request Flow** (`sequenceDiagram`) — the primary user-facing request end-to-end (e.g., "user places order", "user logs in"). **Required.** Cover: client → API → cache → DB → response. Label each arrow with the method or action.
 - **Key Components** — bulleted list of main services/modules with one-line descriptions
 - **Technology Stack** — table: Layer / Recommended / Alternatives / Reason
 - **Data Layer Design** — all applicable store types; for each: what's stored, why not the primary DB, data flow. Cover: transactional store, cache, search, analytics/OLAP, message queue, object storage, graph (if core). See `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/database-selection-guide.md`.
@@ -192,7 +195,27 @@ Include table specifications for key entities (PK, columns, types, key indexes).
 
 ### 6. Add Recommendation
 
-After all options, include a `## Recommendation` section: which option is recommended for the user's specific context, referencing their actual requirements (team size, timeline, scale). Keep to 4–6 sentences.
+After all options, include a `## Recommendation` section with:
+
+1. **Confidence Score table** — rate each option on four dimensions (0–10). The viewer automatically renders any `X/10` value in a table cell as a visual progress bar. Use this exact column structure:
+
+```markdown
+### Confidence Scores
+
+| Option | Team Fit | Timeline | Scale | Cost | Overall |
+|--------|----------|----------|-------|------|---------|
+| Option 1 — Low Risk: {Name}     | 9/10 | 9/10 | 7/10 | 8/10 | **8.3/10** |
+| Option 2 — Medium Risk: {Name}  | 7/10 | 6/10 | 8/10 | 7/10 | **7.0/10** |
+| Option 3 — High Risk: {Name}    | 4/10 | 3/10 | 10/10 | 5/10 | **5.5/10** |
+```
+
+Score criteria:
+- **Team Fit** — how well the option matches the team's current skills and size
+- **Timeline** — how achievable within the stated deadline
+- **Scale** — how well it handles the target scale (now and in 2 years)
+- **Cost** — infra + operational cost vs. stated budget/constraints
+
+2. **Narrative** — 4–6 sentences stating which option is recommended and why, referencing actual requirements (team size, timeline, scale). Cite the highest Overall score.
 
 ### 7. Write Content and Open Viewer
 
