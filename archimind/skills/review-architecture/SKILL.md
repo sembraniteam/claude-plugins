@@ -135,11 +135,11 @@ flowchart TD
 <!-- PLACEHOLDER — do not copy /10 blanks into content.md. Step 5b fills actual scores. -->
 ### Confidence Scores
 
-| Option | Migration Effort | Risk Reduction | Team Fit | Cost | Overall |
-|--------|-----------------|---------------|----------|------|---------|
-| Option 1 — Conservative Refactor | /10 | /10 | /10 | /10 | **/10** |
-| Option 2 — Moderate Redesign      | /10 | /10 | /10 | /10 | **/10** |
-| Option 3 — Full Overhaul          | /10 | /10 | /10 | /10 | **/10** |
+| Option                           | Migration Effort | Risk Reduction | Team Fit | Cost | Overall |
+|----------------------------------|------------------|----------------|----------|------|---------|
+| Option 1 — Conservative Refactor | /10              | /10            | /10      | /10  | **/10** |
+| Option 2 — Moderate Redesign     | /10              | /10            | /10      | /10  | **/10** |
+| Option 3 — Full Overhaul         | /10              | /10            | /10      | /10  | **/10** |
 
 {Narrative placeholder — filled in Step 5b.}
 ```
@@ -167,7 +167,7 @@ Present three options within the `## Architecture Diagram` section using `### Op
 
 ### 5b. Add Recommendation
 
-After generating all three options, write a `## Recommendation` section **with actual scores filled in** (not the blank `/10` scaffold from Step 4). This section is written to `/tmp/archimind-viewer/content.md` when the user confirms the options in AskUserQuestion.
+After generating all three options, write a `## Recommendation` section **with actual scores filled in** (not the blank `/10` scaffold from Step 4). This section is included in the `## Recommendation` block written to `/tmp/archimind-viewer/content.md` in Step 7 — it is written **before** the user is asked to select, so the viewer shows the Recommendation tab immediately.
 
 1. **Confidence Scores table** — rate each option on four dimensions (0–10). The viewer renders `X/10` table cells as visual progress bars automatically. Use this column structure with FILLED SCORES:
 
@@ -292,6 +292,8 @@ Iterate if the user wants adjustments. Re-present the AskUserQuestion selection 
    - Append a `## Decision Notes` section with user-requested adjustments, migration timing, and next steps
 
 ### 10. Save Final Documentation and Stop Server
+
+> **Note**: Review workflows do not produce a `## Final Documentation` section. The `## Decision Notes` block serves that purpose — it captures the rationale, adjustments, and next steps that would otherwise go in Final Documentation.
 
 After updating the content:
 

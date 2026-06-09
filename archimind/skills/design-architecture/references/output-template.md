@@ -486,6 +486,7 @@ flowchart TD
 
 ### Confidence Scores
 
+<!-- PLACEHOLDER — do not copy /10 blanks into content.md. Step 6 fills actual scores. -->
 | Option                         | Team Fit | Timeline | Scale | Cost | Overall |
 |--------------------------------|----------|----------|-------|------|---------|
 | Option 1 — Low Risk: {Name}    | /10      | /10      | /10   | /10  | **/10** |

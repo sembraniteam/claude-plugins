@@ -104,8 +104,8 @@ Present the summary in this exact format, then wait for confirmation:
 | Deployment         | {value from Q6}                | —                  |
 | Language           | {value from Q7}                | —                  |
 | Compliance         | {value from Q8}                | —                  |
-| Consistency model  | {strong / eventual / mixed}    | Q1 + Q2 (inferred) |
-| Analytics tier     | {basic / moderate / heavy}     | Q1 + Q3 (inferred) |
+| Consistency model  | {strong / eventual / mixed}    | Q1 + Q3 (inferred) |
+| Analytics tier     | {basic / moderate / heavy}     | Q1 (inferred)      |
 | SLA target         | {best-effort / 99.9% / 99.99%} | Q2 + Q3 (inferred) |
 | Observability tier | {basic / full / SRE-grade}     | Q2 + Q4 (inferred) |
 
@@ -203,7 +203,7 @@ URL=$(bash "$CLAUDE_PLUGIN_ROOT/scripts/start-server.sh")
 open "$URL"
 ```
 
-Inform the user: "The viewer is open — use the **Architecture Diagram** nav to compare each option's diagram side by side, and the **ERD** nav to view the data model. When ready, select the option you'd like to proceed with."
+Inform the user: "The viewer is open at `$URL` — use the **Architecture Diagram** nav to compare each option's diagrams side by side, and the **ERD** nav to view the data model. When ready, select the option you'd like to proceed with."
 
 ### 8. Option Selection
 
@@ -300,7 +300,7 @@ Then use the **Write tool** to write `docs/archimind/architecture/{timestamp_ms}
 
 ## Revision
 
-{For fresh designs: this section may be omitted. For review workflows: populate Before and After tabs.}
+{For review workflows: populate Before and After tabs. For fresh designs: omit this section entirely — do not write the ## Revision heading.}
 
 ## Recommendation
 
