@@ -572,51 +572,87 @@ flowchart TD
 
 ## Final Documentation
 
-<!-- Write this section after user selects and confirms. -->
-
 ### Overview
 
-### Goals
-
-### Non-Goals
+{2–4 sentences: what the system does, who uses it, and its key characteristics (scale, domain, integrations).}
 
 ### Architecture Decision
 
+**Chosen:** Option N — {Risk Level}: {Architecture Name}
+**Reason:** {2–3 sentences on why this option was selected over the alternatives, referencing actual requirements.}
+
+> See `### Option N: ✅ SELECTED` above for the full Infrastructure Layout, Request Flow, and Component Flow diagrams.
+
 ### Technology Stack
 
-### Programming Languages and Frameworks
+| Layer          | Technology | Reason |
+|----------------|------------|--------|
+| Language       |            |        |
+| Backend        |            |        |
+| Frontend       |            |        |
+| Primary DB     |            |        |
+| Cache          |            |        |
+| Message Queue  |            |        |
+| Infra / Deploy |            |        |
+| Observability  |            |        |
 
-### Database Architecture
+### Data Architecture
 
-### ERD
+{DB choices and rationale — why the primary DB was chosen, what workloads each store handles.}
 
-### Object Storage Architecture
+#### ERD
 
-### Database Optimization Strategy
+```mermaid
+erDiagram
+  {Repeat the erDiagram from the ## ERD section for standalone readability}
+```
 
-### Database Migration Strategy
+#### Migration Strategy
 
-### System Components
+- **Schema versioning tool**: {Flyway / Liquibase / Prisma Migrate / Alembic / etc.}
+- **Rollback approach**: {migration-level rollback or feature-flag toggle}
+- **Zero-downtime**: {expand-contract pattern if schema changes affect production}
 
-### Data Flow
+### Deployment
 
-### Security Considerations
-
-### Scalability Strategy
-
-### Deployment Strategy
-
-### Infrastructure Design
+- **Environments**: dev → staging → production
+- **CI/CD**: {tool + key pipeline stages}
+- **Containerization**: {Docker — multi-stage builds}
+- **Orchestration**: {Kubernetes / ECS / Compose — choice and reason}
+- **Scaling**: {horizontal / vertical / auto-scaling rule}
+- **Rollback**: {blue-green / canary / feature flags}
+- **DR**: {RTO/RPO targets, backup cadence}
 
 ### Observability
 
-### Monitoring and Alerting Strategy
+- **Logs**: {tool + shipping agent — e.g., Loki + Promtail}
+- **Metrics**: {tool + key dashboards — e.g., Prometheus + Grafana, RED metrics per service}
+- **Tracing**: {tool + sampling strategy — e.g., Tempo with 10% tail sampling}
+- **Alerting**: {tool + minimum thresholds — e.g., error rate > 1% → Slack}
 
-### Distributed Tracing Strategy
+### Security
 
-### Trade-offs
+- **Authentication**: {mechanism — e.g., JWT / OAuth2 / session}
+- **Authorization**: {model — e.g., RBAC, attribute-based}
+- **Encryption at rest**: {DB encryption, object storage SSE}
+- **Encryption in transit**: {TLS version, cert management}
+- **Secrets**: {management tool — e.g., Vault, AWS Secrets Manager, env-based}
+- **Compliance**: {OWASP Top 10 / SOC2 / GDPR / HIPAA — applicable requirements}
 
-### Future Improvements
+### Trade-offs & Next Steps
+
+**Trade-offs accepted:**
+- {Scalability ceiling: what breaks first at 10× load}
+- {Operational overhead: ongoing burden}
+- {Reversibility: cost of switching away from this stack}
+
+**First implementation milestones:**
+1. {Milestone 1 — e.g., scaffold service + CI/CD}
+2. {Milestone 2 — e.g., core data model + auth}
+3. {Milestone 3 — e.g., first production deployment}
+
+**Open questions:**
+- {Anything to revisit during implementation}
 ```
 
 ---

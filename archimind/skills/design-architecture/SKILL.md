@@ -263,35 +263,30 @@ Iterate freely if the user wants adjustments (e.g., "swap MongoDB for PostgreSQL
 
 ### 10. Write Final Documentation Sections
 
-After selection is marked, append the full documentation sections to the document:
+After selection is marked, append the final documentation using this trimmed structure. Each section should be substantive — do not leave placeholders:
 
 ```markdown
 ## Final Documentation
 
 ### Overview
-### Goals
-### Non-Goals
 ### Architecture Decision
 ### Technology Stack
-### Programming Languages and Frameworks
-### Database Architecture
-### Object Storage Architecture
-### Database Optimization Strategy
-### Database Migration Strategy
-### System Components
-### Data Flow
-### Security Considerations
-### Scalability Strategy
-### Deployment Strategy
-### Infrastructure Design
+### Data Architecture
+### Deployment
 ### Observability
-### Monitoring and Alerting Strategy
-### Distributed Tracing Strategy
-### Trade-offs
-### Future Improvements
+### Security
+### Trade-offs & Next Steps
 ```
 
-For the database migration strategy, include: schema versioning (Flyway / Liquibase / Prisma Migrate / Alembic / etc.), migration workflow, rollback strategy, zero-downtime considerations, data migration for large datasets, backward compatibility.
+Section content guide:
+- **Overview** — what the system does, who uses it, key characteristics (2–4 sentences)
+- **Architecture Decision** — which option was chosen and the core rationale; reference the diagrams already in `### Option N: ✅ SELECTED` above
+- **Technology Stack** — single table: Layer / Technology / Reason. Include language, backend, frontend, DB, cache, messaging, infra, observability
+- **Data Architecture** — DB choices and rationale; ERD (repeat the `erDiagram` from `## ERD` for standalone readability); migration strategy (schema versioning tool, rollback approach, zero-downtime considerations)
+- **Deployment** — environments, CI/CD pipeline, containerization, orchestration, scaling strategy, rollback approach, DR summary
+- **Observability** — all three pillars in one section: logs (tool + agent), metrics (tool + key dashboards), distributed tracing (tool + sampling). Alerting thresholds
+- **Security** — authentication/authorization approach, data encryption at rest/in transit, secret management, compliance considerations
+- **Trade-offs & Next Steps** — what the chosen option sacrifices (scalability ceiling, operational overhead, reversibility); first 3 implementation milestones; open questions
 
 ### 11. Save Final Documentation and Stop Server
 
