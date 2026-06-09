@@ -259,7 +259,7 @@ Iterate freely if the user wants adjustments (e.g., "swap MongoDB for PostgreSQL
    **Decision date:** {ISO date}
    ```
 3. Append `✅ SELECTED` to the chosen option's `### Option N:` heading
-4. Populate `## Revision / ### After` with the selected option's proposed architecture diagrams (copy from the selected option's content)
+4. For **review workflows only**: populate `## Revision / ### After` with the selected option's proposed architecture diagrams. For fresh designs, omit or leave the Revision section empty.
 5. Append a `## Decision Notes` section capturing user-requested adjustments, migration timing, and next steps
 
 ### 10. Write Final Documentation Sections
@@ -330,7 +330,8 @@ Then use the **Write tool** to write `docs/archimind/architecture/{timestamp_ms}
 {For fresh designs: this section may be omitted. For review workflows: populate Before and After tabs.}
 
 ## Recommendation
-...
+
+{Include the filled Confidence Scores table from Step 6 — Team Fit / Timeline / Scale / Cost / Overall — and the narrative recommendation.}
 
 ## Decision Notes
 ...

@@ -41,7 +41,7 @@ Say any of:
 - "Help me architect a real-time chat app"
 - "What architecture should I use for a SaaS multi-tenant system?"
 
-Claude will ask clarifying questions, then present three architecture options as a tabbar with diagrams and tech stack recommendations. The design is saved to `docs/archimind/`.
+Claude will ask clarifying questions, then present three architecture options as tabs with diagrams and tech stack recommendations. The design is saved to `docs/archimind/`.
 
 ### Review an existing architecture
 
@@ -137,7 +137,7 @@ archimind/
 ├── scripts/
 │   ├── find-port.sh       ← finds unused TCP port
 │   ├── start-server.sh    ← deploys viewer + starts server
-│   ├── stop-server.sh     ← stops server via .archimind.pid
+│   ├── stop-server.sh     ← stops server via /tmp/.archimind-$UID.pid
 │   └── site/
 │       └── index.html     ← Mermaid JS viewer (HTML + Vanilla JS)
 └── README.md

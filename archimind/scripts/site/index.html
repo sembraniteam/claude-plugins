@@ -579,7 +579,7 @@
   function fmtLabel(title) {
     const sel = /✅\s*SELECTED/i.test(title);
     const c = title.replace(/✅\s*SELECTED/i, '').trim();
-    const m = c.match(/Option \d+:\s*([\w\s]+?)(?:\s*—|\s*\(|$)/);
+    const m = c.match(/Option \d+:\s*([^—(\n]+?)(?:\s*—|\s*\(|$)/);
     const label = m ? m[1].trim() : c.replace(/^Option \d+:\s*/, '');
     return sel ? label + ' ✅' : label;
   }

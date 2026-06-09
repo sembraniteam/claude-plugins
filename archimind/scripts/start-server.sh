@@ -33,8 +33,8 @@ if [ ! -f "$SITE_DIR/content.md" ]; then
 EOF
 fi
 
-# Find an available port
-PORT=$(bash "$SCRIPT_DIR/find-port.sh")
+# Find an available port (exits non-zero if 3000-9000 are all taken)
+PORT=$(bash "$SCRIPT_DIR/find-port.sh") || exit 1
 
 # Start the server using --directory to avoid changing the working directory
 python3 -m http.server "$PORT" --directory "$SITE_DIR" >/dev/null 2>&1 &

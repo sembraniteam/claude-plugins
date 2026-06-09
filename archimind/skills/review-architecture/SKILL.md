@@ -132,6 +132,7 @@ flowchart TD
 
 ## Recommendation
 
+<!-- PLACEHOLDER — do not copy /10 blanks into content.md. Step 5b fills actual scores. -->
 ### Confidence Scores
 
 | Option | Migration Effort | Risk Reduction | Team Fit | Cost | Overall |
@@ -140,8 +141,10 @@ flowchart TD
 | Option 2 — Moderate Redesign      | /10 | /10 | /10 | /10 | **/10** |
 | Option 3 — Full Overhaul          | /10 | /10 | /10 | /10 | **/10** |
 
-{4–6 sentences stating which redesign is recommended, why, citing the highest Overall score and referencing the team's constraints (migration effort, skills, timeline). Acknowledge the main trade-off.}
+{Narrative placeholder — filled in Step 5b.}
 ```
+
+> **Note on columns**: review uses `Migration Effort | Risk Reduction | Team Fit | Cost | Overall` (migration-centric) vs. design-architecture which uses `Team Fit | Timeline | Scale | Cost | Overall` — intentionally different because review prioritises migration feasibility.
 
 ### 5. Generate Three Redesign Options
 
@@ -285,7 +288,7 @@ Iterate if the user wants adjustments. Re-present the AskUserQuestion selection 
      **Decision date:** {ISO date}
      ```
    - Append `✅ SELECTED` to the chosen option's `### Option N:` heading
-   - Update the `### After` section in `## Revision` to show the selected option's proposed architecture (if not already there)
+   - Replace the placeholder diagram in `### After` within `## Revision` with the selected option's Infrastructure Layout diagram
    - Append a `## Decision Notes` section with user-requested adjustments, migration timing, and next steps
 
 ### 10. Save Final Documentation and Stop Server
@@ -332,9 +335,11 @@ Then use the **Write tool** to write `docs/archimind/architecture/{timestamp_ms}
 
 | Option | Migration Effort | Risk Reduction | Team Fit | Cost | Overall |
 |--------|-----------------|---------------|----------|------|---------|
-| Chosen Option | /10 | /10 | /10 | /10 | **/10** |
+| Option 1 — Conservative Refactor | X/10 | X/10 | X/10 | X/10 | **X.X/10** |
+| Option 2 — Moderate Redesign ✅   | X/10 | X/10 | X/10 | X/10 | **X.X/10** |
+| Option 3 — Full Overhaul          | X/10 | X/10 | X/10 | X/10 | **X.X/10** |
 
-{4–6 sentences: which option was chosen and why. Cite the final scores. Acknowledge the main trade-off with unselected options.}
+{Copy filled scores from Step 5b. Mark the chosen row with ✅. 4–6 sentences: which option was chosen, why, citing the highest Overall score and the weaknesses it addresses. Acknowledge the main trade-off.}
 
 ## Decision Notes
 ...
@@ -364,8 +369,6 @@ Review option headings must follow this exact format within `## Architecture Dia
 ### Option 2: Moderate Redesign — {Title}
 ### Option 3: Full Overhaul — {Title}
 ```
-
-For the full document template, see `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/output-template.md`.
 
 ## Mermaid Diagram Guidelines
 
