@@ -170,10 +170,11 @@ For each option, cover all required sections (see "Required Sections Per Option"
 
 Structure each option under the `## Architecture Diagram` document section using `### Option N:` subheadings. Use `####` for subsections within each option. The full blank scaffold is in `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/output-template.md`.
 
-Required `####` subsections for each option — **every option must include at least two Mermaid diagrams**:
+Required `####` subsections for each option — **every option must include three Mermaid diagrams**. Read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/mermaid-guidelines.md` for syntax and per-tier guidance:
 
-- **System Topology** (`flowchart TD`) — services, data stores, and their connections. **Required.**
+- **Infrastructure Layout** (`architecture-beta`) — cloud groups, services with icons, and physical deployment topology. **Required.** Use built-in icons: `cloud`, `database`, `disk`, `internet`, `server`. Nest services inside groups. See mermaid-guidelines.md for complete syntax and per-tier service counts.
 - **Request Flow** (`sequenceDiagram`) — the primary user-facing request end-to-end (e.g., "user places order", "user logs in"). **Required.** Cover: client → API → cache → DB → response. Label each arrow with the method or action.
+- **Component Flow** (`flowchart TD`) — logical data flow between components and stores. **Required.**
 - **Key Components** — bulleted list of main services/modules with one-line descriptions
 - **Technology Stack** — table: Layer / Recommended / Alternatives / Reason
 - **Data Layer Design** — all applicable store types; for each: what's stored, why not the primary DB, data flow. Cover: transactional store, cache, search, analytics/OLAP, message queue, object storage, graph (if core). See `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/database-selection-guide.md`.

@@ -37,11 +37,23 @@ Use this template as a scaffold when generating the design file. Replace all pla
 
 {One paragraph describing the core approach and why it is appropriate for the conservative tier.}
 
-#### System Topology
+#### Infrastructure Layout
 
 ```mermaid
-flowchart TD
-  ...
+architecture-beta
+  group internet(cloud)[Public Zone]
+    service client(internet)[Client Apps] in internet
+
+  group api(server)[API Layer]
+    service gateway(server)[API Gateway] in api
+
+  group data(database)[Data Layer]
+    service db(database)[Primary DB] in data
+    service cache(database)[Cache] in data
+
+  client:R --> L:gateway
+  gateway:B --> T:db
+  gateway:B --> T:cache
 ```
 
 #### Request Flow
@@ -55,6 +67,13 @@ sequenceDiagram
   API->>DB: {Query or write}
   DB-->>API: {Result}
   API-->>Client: {Response}
+```
+
+#### Component Flow
+
+```mermaid
+flowchart TD
+  ...
 ```
 
 #### Key Components
@@ -166,11 +185,25 @@ sequenceDiagram
 
 {One paragraph for the balanced tier.}
 
-#### System Topology
+#### Infrastructure Layout
 
 ```mermaid
-flowchart TD
-  ...
+architecture-beta
+  group internet(cloud)[Public Zone]
+    service client(internet)[Client Apps] in internet
+
+  group api(server)[API Layer]
+    service gateway(server)[API Gateway] in api
+
+  group data(database)[Data Layer]
+    service db(database)[Primary DB] in data
+    service cache(database)[Cache] in data
+    service queue(server)[Message Queue] in data
+
+  client:R --> L:gateway
+  gateway:B --> T:db
+  gateway:B --> T:cache
+  gateway:R --> L:queue
 ```
 
 #### Request Flow
@@ -184,6 +217,13 @@ sequenceDiagram
   API->>DB: {Query or write}
   DB-->>API: {Result}
   API-->>Client: {Response}
+```
+
+#### Component Flow
+
+```mermaid
+flowchart TD
+  ...
 ```
 
 #### Key Components
@@ -282,11 +322,37 @@ sequenceDiagram
 
 {One paragraph for the ambitious tier.}
 
-#### System Topology
+#### Infrastructure Layout
 
 ```mermaid
-flowchart TD
-  ...
+architecture-beta
+  group internet(cloud)[Public Zone]
+    service client(internet)[Client Apps] in internet
+    service cdn(disk)[CDN] in internet
+
+  group gateway(server)[API Gateway Layer]
+    service gw(server)[API Gateway] in gateway
+    service mesh(server)[Service Mesh] in gateway
+
+  group services(server)[Microservices]
+    service svcA(server)[Service A] in services
+    service svcB(server)[Service B] in services
+    service worker(server)[Worker] in services
+
+  group data(database)[Data Layer]
+    service db(database)[Primary DB] in data
+    service cache(database)[Cache] in data
+    service queue(server)[Message Broker] in data
+    service storage(disk)[Object Storage] in data
+
+  client:R --> L:gw
+  cdn:B --> T:client
+  gw:R --> L:svcA
+  gw:R --> L:svcB
+  svcA:B --> T:db
+  svcA:B --> T:cache
+  svcA:R --> L:queue
+  queue:R --> L:worker
 ```
 
 #### Request Flow
@@ -305,6 +371,13 @@ sequenceDiagram
   ServiceA->>ServiceB: {Async event or call}
   ServiceA-->>Gateway: {Response}
   Gateway-->>Client: {Response}
+```
+
+#### Component Flow
+
+```mermaid
+flowchart TD
+  ...
 ```
 
 #### Key Components
