@@ -65,7 +65,8 @@ The viewer provides:
 - **Architecture Diagram view**: Each option tab renders the full option content with Mermaid diagrams. Options are parsed from `### Option N:` subheadings within `## Architecture Diagram`.
 - **ERD view**: Renders the `## ERD` section.
 - **Revision view**: Before/After tabs parsed from `### Before` and `### After` within `## Revision`.
-- **Download buttons**: Every rendered Mermaid diagram has **↓ SVG** and **↓ PNG** buttons.
+- **Download button**: Every rendered Mermaid diagram has a **↓ PNG** button (2× retina quality).
+- **Pan/zoom controls**: Each diagram has **−** / **+** / **⤢** (reset) buttons in its toolbar. Scroll wheel also zooms centered on the cursor. Drag to pan.
 - **↺ Reload button**: In the sidebar footer — manually re-fetches `content.md`. Use after writing changes.
 
 ## Document Structure Convention

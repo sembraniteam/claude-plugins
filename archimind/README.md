@@ -102,8 +102,9 @@ The static site viewer reads a single `content.md` file served by a local HTTP s
 - **Architecture Diagram** — Option tabs (Option 1 / Option 2 / Option 3) with full content per option including Mermaid diagrams
 - **ERD** — Dedicated view for the entity-relationship diagram
 - **Revision** — Before / After tabs for architecture review comparisons
-- **Download as Image** — Every Mermaid diagram has ↓ SVG and ↓ PNG download buttons
+- **Download as PNG** — Every Mermaid diagram has a ↓ PNG download button (2× retina quality)
 - **Mermaid rendering** — All `mermaid` code blocks rendered as interactive diagrams via CDN
+- **Pan/zoom** — Each diagram has −/+/⤢ (reset) buttons; scroll wheel zooms centered on cursor; drag to pan
 - **↺ Reload** — Manual reload button in the sidebar footer re-fetches `content.md` to reflect updates
 
 ## File Structure

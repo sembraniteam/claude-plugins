@@ -96,17 +96,30 @@
       font-style: italic; color: var(--muted); }
     #doc-content hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
 
-    /* Mermaid */
+    /* ── Mermaid diagram ── */
     .mermaid-wrap { background: var(--surface2); border: 1px solid var(--border);
       border-radius: var(--r); margin: 16px 0; overflow: hidden; }
-    .diagram-actions { display: flex; gap: 8px; padding: 6px 12px; background: var(--bg);
-      border-bottom: 1px solid var(--border); justify-content: flex-end; }
+
+    /* Toolbar: zoom controls on left, PNG button on right */
+    .diagram-actions { display: flex; align-items: center; justify-content: space-between;
+      gap: 8px; padding: 6px 12px; background: var(--bg); border-bottom: 1px solid var(--border); }
+    .diagram-controls { display: flex; gap: 4px; align-items: center; }
+    .ctrl-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+      font-size: 13px; font-weight: 600; width: 26px; height: 22px; border-radius: 4px;
+      cursor: pointer; transition: all .15s; font-family: inherit; line-height: 1;
+      display: inline-flex; align-items: center; justify-content: center; }
+    .ctrl-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
     .dl-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
       font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 4px; cursor: pointer;
       transition: all .15s; font-family: inherit; }
     .dl-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
-    .diagram-svg-container { padding: 20px; overflow-x: auto; text-align: center; }
-    .diagram-svg-container svg { max-width: 100%; }
+
+    /* Pan/zoom container */
+    .diagram-svg-container { padding: 20px; overflow: hidden; cursor: grab;
+      position: relative; user-select: none; min-height: 140px; }
+    .diagram-svg-container.grabbing { cursor: grabbing; }
+    .diagram-inner { display: inline-block; transform-origin: 0 0; will-change: transform; }
+    .diagram-inner svg { display: block; max-width: none; }
 
     /* Scrollbar */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -167,6 +180,68 @@
   let optionContents = [];
   let revisionData = { before: '', after: '' };
   let mermaidCtr = 0;
+
+  // ── Pan/zoom global drag state ──
+  let activeDrag = null; // { pz, lastX, lastY }
+
+  document.addEventListener('mousemove', e => {
+    if (!activeDrag) return;
+    const { pz } = activeDrag;
+    pz.tx += e.clientX - activeDrag.lastX;
+    pz.ty += e.clientY - activeDrag.lastY;
+    activeDrag.lastX = e.clientX;
+    activeDrag.lastY = e.clientY;
+    pz.apply();
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (activeDrag) {
+      activeDrag.pz.container.classList.remove('grabbing');
+      activeDrag = null;
+    }
+  });
+
+  function makePanZoom(container, inner, btnIn, btnOut, btnReset) {
+    const pz = {
+      container, inner,
+      tx: 0, ty: 0, scale: 1,
+      apply() {
+        inner.style.transform = `translate(${this.tx}px,${this.ty}px) scale(${this.scale})`;
+      }
+    };
+
+    container.addEventListener('wheel', e => {
+      e.preventDefault();
+      const rect = container.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+      // Zoom centered on cursor: keep content-space point under cursor fixed
+      const cx = (mx - pz.tx) / pz.scale;
+      const cy = (my - pz.ty) / pz.scale;
+      pz.scale = Math.min(Math.max(pz.scale * factor, 0.1), 10);
+      pz.tx = mx - cx * pz.scale;
+      pz.ty = my - cy * pz.scale;
+      pz.apply();
+    }, { passive: false });
+
+    container.addEventListener('mousedown', e => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      activeDrag = { pz, lastX: e.clientX, lastY: e.clientY };
+      container.classList.add('grabbing');
+    });
+
+    btnIn.addEventListener('click', () => {
+      pz.scale = Math.min(pz.scale * 1.3, 10); pz.apply();
+    });
+    btnOut.addEventListener('click', () => {
+      pz.scale = Math.max(pz.scale / 1.3, 0.1); pz.apply();
+    });
+    btnReset.addEventListener('click', () => {
+      pz.tx = 0; pz.ty = 0; pz.scale = 1; pz.apply();
+    });
+  }
 
   // ── Load content.md ──
   async function loadContent() {
@@ -237,6 +312,7 @@
 
   // ── Main render ──
   function processDoc(markdown) {
+    activeDrag = null;
     parsedDoc = parseDocument(markdown);
     currentView = 'architecture';
     currentOptionIdx = 0;
@@ -371,20 +447,41 @@
       wrap.className = 'mermaid-wrap';
       try {
         const { svg } = await mermaid.render(id, code.textContent);
+
+        // ── Toolbar ──
         const actions = document.createElement('div');
         actions.className = 'diagram-actions';
-        const svgBtn = document.createElement('button');
-        svgBtn.className = 'dl-btn'; svgBtn.textContent = '↓ SVG';
+
+        // Left: zoom controls
+        const controls = document.createElement('div');
+        controls.className = 'diagram-controls';
+        const btnOut   = makeCtrl('−', 'Zoom out');
+        const btnIn    = makeCtrl('+', 'Zoom in');
+        const btnReset = makeCtrl('⤢', 'Reset view');
+        controls.append(btnOut, btnIn, btnReset);
+
+        // Right: PNG download
         const pngBtn = document.createElement('button');
-        pngBtn.className = 'dl-btn'; pngBtn.textContent = '↓ PNG';
-        actions.appendChild(svgBtn); actions.appendChild(pngBtn);
-        const svgWrap = document.createElement('div');
-        svgWrap.className = 'diagram-svg-container'; svgWrap.innerHTML = svg;
-        const svgEl = svgWrap.querySelector('svg');
+        pngBtn.className = 'dl-btn';
+        pngBtn.textContent = '↓ PNG';
+
+        actions.append(controls, pngBtn);
+
+        // ── SVG pan/zoom container ──
+        const svgContainer = document.createElement('div');
+        svgContainer.className = 'diagram-svg-container';
+        const svgInner = document.createElement('div');
+        svgInner.className = 'diagram-inner';
+        svgInner.innerHTML = svg;
+        svgContainer.appendChild(svgInner);
+
+        const svgEl = svgInner.querySelector('svg');
         const name = 'diagram-' + mermaidCtr;
-        svgBtn.addEventListener('click', () => dlSVG(svgEl, name));
+
         pngBtn.addEventListener('click', () => dlPNG(svgEl, name));
-        wrap.appendChild(actions); wrap.appendChild(svgWrap);
+        makePanZoom(svgContainer, svgInner, btnIn, btnOut, btnReset);
+
+        wrap.append(actions, svgContainer);
       } catch (err) {
         wrap.innerHTML = `<pre style="color:#f47983;padding:16px">Mermaid error:\n${esc(err.message)}</pre>`;
       }
@@ -392,37 +489,66 @@
     }
   }
 
-  // ── Download helpers ──
-  function dlSVG(el, name) {
-    if (!el) return;
-    trigger(URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(el)], { type: 'image/svg+xml;charset=utf-8' })), name + '.svg');
+  function makeCtrl(text, title) {
+    const btn = document.createElement('button');
+    btn.className = 'ctrl-btn';
+    btn.textContent = text;
+    btn.title = title;
+    return btn;
   }
 
+  // ── PNG download ──
   function dlPNG(el, name) {
     if (!el) return;
+
+    // Resolve dimensions: viewBox → getBoundingClientRect → attributes
+    const vb = el.viewBox?.baseVal;
+    const rect = el.getBoundingClientRect();
+    let w, h;
+    if (vb && vb.width > 0 && vb.height > 0) {
+      w = vb.width; h = vb.height;
+    } else if (rect.width > 0) {
+      w = rect.width; h = rect.height;
+    } else {
+      w = parseFloat(el.getAttribute('width')) || 800;
+      h = parseFloat(el.getAttribute('height')) || 600;
+    }
+
+    // Clone, set explicit size and xmlns for serialization
     const clone = el.cloneNode(true);
-    const r = el.getBoundingClientRect(), vb = el.viewBox?.baseVal;
-    const w = Math.max(r.width || 0, vb?.width || 0, 400);
-    const h = Math.max(r.height || 0, vb?.height || 0, 300);
-    clone.setAttribute('width', w); clone.setAttribute('height', h);
-    const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(clone)], { type: 'image/svg+xml;charset=utf-8' }));
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    clone.setAttribute('width', w);
+    clone.setAttribute('height', h);
+    clone.removeAttribute('style'); // strip any transform from pan/zoom
+
+    const serialized = new XMLSerializer().serializeToString(clone);
+    // Use base64 data URL — avoids cross-origin Blob URL restrictions in some browsers
+    const b64 = btoa(unescape(encodeURIComponent(serialized)));
+    const dataUrl = 'data:image/svg+xml;base64,' + b64;
+
+    const SCALE = 2; // 2× for retina quality
     const img = new Image();
     img.onload = () => {
       const c = document.createElement('canvas');
-      c.width = w * 2; c.height = h * 2;
+      c.width = w * SCALE; c.height = h * SCALE;
       const ctx = c.getContext('2d');
-      ctx.scale(2, 2); ctx.fillStyle = '#22253a'; ctx.fillRect(0, 0, w, h); ctx.drawImage(img, 0, 0, w, h);
+      ctx.fillStyle = '#22253a';
+      ctx.fillRect(0, 0, c.width, c.height);
+      ctx.drawImage(img, 0, 0, c.width, c.height);
       c.toBlob(b => { if (b) trigger(URL.createObjectURL(b), name + '.png'); }, 'image/png');
-      URL.revokeObjectURL(url);
     };
-    img.src = url;
+    img.onerror = () => {
+      // Fallback: serve raw SVG renamed as .png (better than nothing)
+      trigger(dataUrl, name + '.png');
+    };
+    img.src = dataUrl;
   }
 
   function trigger(href, filename) {
     const a = document.createElement('a');
     a.href = href; a.download = filename;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(href), 200);
+    if (href.startsWith('blob:')) setTimeout(() => URL.revokeObjectURL(href), 200);
   }
 
   // ── Utilities ──
