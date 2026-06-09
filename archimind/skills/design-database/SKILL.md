@@ -187,7 +187,7 @@ Inform the user: "The viewer is open at `$URL` — the ERD is rendered with Merm
 mkdir -p docs/archimind/database
 ```
 
-Then use the **Write tool** to write the full content to `docs/archimind/database/{timestamp_ms}-{topic}.md`.
+Then use the **Write tool** to write the full content to `docs/archimind/database/{timestamp_ms}-{topic}.md`. To re-visualize later: `bash "$CLAUDE_PLUGIN_ROOT/scripts/open-doc.sh" docs/archimind/database/{timestamp_ms}-{topic}.md`.
 
 5. Stop the viewer server:
 

@@ -1,6 +1,6 @@
 ---
 name: visualize
-description: This skill should be used when the user asks to "visualize the architecture", "open the diagram viewer", "show me the diagrams", "open the viewer", "start the viewer", "update the diagram", "revise the diagram", "change the architecture diagram", "edit the Mermaid code", or "regenerate the diagram", or when the user wants to view, update, or regenerate architecture or database diagrams in the browser.
+description: This skill should be used when the user asks to "visualize the architecture", "open the diagram viewer", "show me the diagrams", "open the viewer", "start the viewer", "reopen this document", "re-visualize", "open this design in the viewer", "update the diagram", "revise the diagram", "change the architecture diagram", "edit the Mermaid code", or "regenerate the diagram", or when the user wants to view, update, or regenerate architecture or database diagrams in the browser, including previously saved docs/archimind/ documents.
 ---
 
 # Visualize Architecture
@@ -32,6 +32,24 @@ Open the viewer **before asking the user to select** an option:
 2. After completing a database design (design-database skill) — open so the user can inspect the ERD
 3. After drafting architecture review options (review-architecture skill) — open so the user can compare options and the Before/After revision
 4. When the user explicitly asks to view or reopen the diagrams
+
+## Re-opening a Saved Document
+
+Previously saved documents in `docs/archimind/` contain only the selected option (single-option view — no option tabs). To re-visualize one:
+
+```bash
+bash "$CLAUDE_PLUGIN_ROOT/scripts/open-doc.sh" docs/archimind/architecture/{filename}.md
+# or
+bash "$CLAUDE_PLUGIN_ROOT/scripts/open-doc.sh" docs/archimind/database/{filename}.md
+```
+
+`open-doc.sh` copies the file to `/tmp/archimind-viewer/content.md`, restarts the server, and opens the browser. The viewer renders the saved document with its ERD, Revision (Before/After), and the single selected architecture option.
+
+To list available saved documents:
+
+```bash
+find docs/archimind -name "*.md" | sort
+```
 
 ## Updating a Diagram
 

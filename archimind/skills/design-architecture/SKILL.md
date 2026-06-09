@@ -281,7 +281,44 @@ After marking the selection and appending final documentation:
 mkdir -p docs/archimind/architecture
 ```
 
-Then use the **Write tool** to write the full content to `docs/archimind/architecture/{timestamp_ms}-{topic}.md`.
+Then use the **Write tool** to write `docs/archimind/architecture/{timestamp_ms}-{topic}.md`. **This file must contain only the selected option** — not all three. Structure it as:
+
+```markdown
+# Architecture Design: {Topic}
+
+**Generated:** {ISO date}
+**Selected:** Option N — {Risk Level}: {Architecture Name}
+**Decision date:** {ISO date}
+
+## Project Overview
+...
+
+## Requirements Gathered
+...
+
+## Architecture Diagram
+
+### Option N: {Risk Level} — {Architecture Name} ✅ SELECTED
+
+{Selected option's full content — all #### subsections}
+
+## ERD
+...
+
+## Revision
+...
+
+## Recommendation
+...
+
+## Decision Notes
+...
+
+## Final Documentation
+...
+```
+
+Omit Option 1, 2, and 3 sections that were not selected. The viewer re-opens this doc as a single-option view (no option tabs). To re-visualize later: `bash "$CLAUDE_PLUGIN_ROOT/scripts/open-doc.sh" docs/archimind/architecture/{timestamp_ms}-{topic}.md`.
 
 4. Stop the viewer server:
 

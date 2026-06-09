@@ -260,7 +260,37 @@ After updating the content:
 mkdir -p docs/archimind/architecture
 ```
 
-Then use the **Write tool** to write the full content to `docs/archimind/architecture/{timestamp_ms}-{topic}-review.md`.
+Then use the **Write tool** to write `docs/archimind/architecture/{timestamp_ms}-{topic}-review.md`. **This file must contain only the chosen redesign option** — not all three. Structure it as:
+
+```markdown
+# Architecture Review: {System Name}
+
+**Generated:** {ISO date}
+**Selected:** Option N — {Label}: {Short Title}
+**Decision date:** {ISO date}
+
+## Architecture Diagram
+
+### Option N: {Label} — {Short Title} ✅ SELECTED
+
+{Selected option's full content — all subsections}
+
+## ERD
+...
+
+## Revision
+
+### Before
+...
+
+### After
+{Selected option's proposed architecture}
+
+## Decision Notes
+...
+```
+
+Omit the two options that were not selected. To re-visualize later: `bash "$CLAUDE_PLUGIN_ROOT/scripts/open-doc.sh" docs/archimind/architecture/{timestamp_ms}-{topic}-review.md`.
 
 4. Stop the viewer server:
 
