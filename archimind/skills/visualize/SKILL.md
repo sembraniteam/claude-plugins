@@ -103,7 +103,7 @@ For the full document template, see `$CLAUDE_PLUGIN_ROOT/skills/design-architect
 
 ## Troubleshooting
 
-**Server not starting**: Verify `start-server.sh` is executable (`chmod +x scripts/start-server.sh scripts/find-port.sh`). Python 3 must be installed. (`find-port.sh` is called internally by `start-server.sh`.)
+**Server not starting**: Python 3 must be installed. All scripts ship with execute permissions — if they are missing, the plugin installation may be corrupted. Reinstall with `cc plugin install archimind` (or re-add via `--plugin-dir` for local installs). (`find-port.sh` is called internally by `start-server.sh`.)
 
 **Browser shows old content**: Click **↺ Reload** in the sidebar. This re-fetches `content.md` without a full page reload.
 

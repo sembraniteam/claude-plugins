@@ -1,4 +1,6 @@
 .claude/*.local.md
 .archimind.pid
+/tmp/.archimind-*.pid
+scripts/site/content.md
 docs/archimind/manifest.json
 docs/archimind/index.html

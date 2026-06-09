@@ -6,7 +6,7 @@
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SITE_DIR="/tmp/archimind-viewer"
-PID_FILE="/tmp/.archimind.pid"
+PID_FILE="/tmp/.archimind-${UID}.pid"
 
 # Stop any existing instance
 if [ -f "$PID_FILE" ]; then
@@ -36,9 +36,8 @@ fi
 # Find an available port
 PORT=$(bash "$SCRIPT_DIR/find-port.sh")
 
-# Start the server
-cd "$SITE_DIR"
-python3 -m http.server "$PORT" >/dev/null 2>&1 &
+# Start the server using --directory to avoid changing the working directory
+python3 -m http.server "$PORT" --directory "$SITE_DIR" >/dev/null 2>&1 &
 echo $! > "$PID_FILE"
 
 echo "http://localhost:$PORT"

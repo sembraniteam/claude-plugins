@@ -80,10 +80,10 @@ architecture-beta
 
 ### Per-Risk-Tier Guidance
 
-| Tier | Typical groups | Typical services |
-|------|---------------|-----------------|
-| Low Risk (Monolith) | 2–3 groups: Client, App, Data | 3–5 services; no internal fan-out |
-| Medium Risk (Modular) | 3–4 groups; split App by domain | 5–8 services; one async worker |
+| Tier                      | Typical groups                   | Typical services                     |
+|---------------------------|----------------------------------|--------------------------------------|
+| Low Risk (Monolith)       | 2–3 groups: Client, App, Data    | 3–5 services; no internal fan-out    |
+| Medium Risk (Modular)     | 3–4 groups; split App by domain  | 5–8 services; one async worker       |
 | High Risk (Microservices) | 5+ groups; separate mesh/gateway | 8–15 services; message queue visible |
 
 ---

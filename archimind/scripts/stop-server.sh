@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Stops the running archimind viewer server.
-PID_FILE="/tmp/.archimind.pid"
+PID_FILE="/tmp/.archimind-${UID}.pid"
 
 if [ -f "$PID_FILE" ]; then
   PID=$(cat "$PID_FILE")

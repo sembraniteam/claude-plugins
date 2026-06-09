@@ -131,7 +131,16 @@ flowchart TD
 - {How identified weaknesses are addressed}
 
 ## Recommendation
-<!-- populate this section after generating and presenting all options in Step 5 -->
+
+### Confidence Scores
+
+| Option | Migration Effort | Risk Reduction | Team Fit | Cost | Overall |
+|--------|-----------------|---------------|----------|------|---------|
+| Option 1 — Conservative Refactor | /10 | /10 | /10 | /10 | **/10** |
+| Option 2 — Moderate Redesign      | /10 | /10 | /10 | /10 | **/10** |
+| Option 3 — Full Overhaul          | /10 | /10 | /10 | /10 | **/10** |
+
+{4–6 sentences stating which redesign is recommended, why, citing the highest Overall score and referencing the team's constraints (migration effort, skills, timeline). Acknowledge the main trade-off.}
 ```
 
 ### 5. Generate Three Redesign Options
@@ -153,17 +162,48 @@ Present three options within the `## Architecture Diagram` section using `### Op
 - Approach: Adopt a fundamentally different architecture (microservices, event-driven, serverless).
 - Migration effort: Months to quarters. Use Strangler Fig or parallel run — not big bang. See `$CLAUDE_PLUGIN_ROOT/skills/review-architecture/references/anti-patterns.md` for why.
 
+### 5b. Add Recommendation
+
+After generating all three options, include a `## Recommendation` section. Structure it using the scaffold from Step 4:
+
+1. **Confidence Scores table** — rate each option on four dimensions (0–10). The viewer renders `X/10` table cells as visual progress bars automatically. Use this column structure:
+
+```markdown
+### Confidence Scores
+
+| Option | Migration Effort | Risk Reduction | Team Fit | Cost | Overall |
+|--------|-----------------|---------------|----------|------|---------|
+| Option 1 — Conservative Refactor | 9/10 | 6/10 | 9/10 | 8/10 | **8.0/10** |
+| Option 2 — Moderate Redesign      | 6/10 | 8/10 | 7/10 | 7/10 | **7.0/10** |
+| Option 3 — Full Overhaul          | 3/10 | 9/10 | 5/10 | 5/10 | **5.5/10** |
+```
+
+Score criteria for review context:
+- **Migration Effort** — how achievable the migration is (10 = easiest/lowest risk)
+- **Risk Reduction** — how much this option addresses the identified weaknesses
+- **Team Fit** — how well it matches the team's current skills and constraints
+- **Cost** — relative infra + operational cost change vs. current state
+
+2. **Narrative** — 4–6 sentences stating which redesign is recommended, why, citing the highest Overall score and referencing the specific weaknesses it addresses.
+
 ### 6. Required Sections Per Option
 
-Each `### Option N:` section must include:
+Each `### Option N:` section must include **three Mermaid diagrams** and the sections below. Read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/mermaid-guidelines.md` for review-specific diagram conventions (mark changed nodes with `[NEW]`, problematic nodes with `⚠`).
 
 ```
+### Infrastructure Layout (architecture-beta)
+PROPOSED infrastructure topology with icons.
+Mark new/added services clearly.
+
+### Request Flow (sequenceDiagram)
+Primary user request through the PROPOSED architecture.
+
+### Component Flow (flowchart TD)
+Logical data flow between proposed components.
+Mark changed/new components with [NEW] labels.
+
 ### What Changes
 Bulleted list comparing current state vs. proposed state.
-
-### Architecture Diagram
-Mermaid flowchart of the PROPOSED architecture (not current state).
-Mark changed/new components with [NEW] labels.
 
 ### Key Improvements
 How this option addresses each identified weakness.

@@ -266,28 +266,21 @@
   function parseDocument(markdown) {
     const lines = markdown.split('\n');
     const doc = {
-      preamble: [], arch: [], erd: [], revision: [], recommendation: [], top_options: [],
+      preamble: [], arch: [], erd: [], revision: [], recommendation: [],
       has_arch: false, has_erd: false, has_revision: false, title: ''
     };
-    let mode = 'preamble', opt_t = '', opt_l = [];
-
-    function flush() {
-      if (opt_t) { doc.top_options.push({ title: opt_t, content: opt_l.join('\n') }); }
-      opt_t = ''; opt_l = [];
-    }
+    let mode = 'preamble';
 
     for (const line of lines) {
       if (!doc.title && line.startsWith('# ')) doc.title = line.slice(2).trim();
-      if (/^## Architecture Diagram\b/.test(line)) { flush(); mode = 'arch'; doc.has_arch = true; continue; }
-      if (/^## ERD\b/.test(line)) { flush(); mode = 'erd'; doc.has_erd = true; doc.erd.push(line); continue; }
-      if (/^## Revision\b/.test(line)) { flush(); mode = 'revision'; doc.has_revision = true; doc.revision.push(line); continue; }
-      if (/^## Recommendation\b/.test(line)) { flush(); mode = 'rec'; doc.recommendation.push(line); continue; }
-      if (/^## Option \d+:/.test(line)) { flush(); mode = 'opt'; opt_t = line.slice(3); opt_l = [line]; continue; }
-      if (/^## /.test(line) && mode !== 'preamble') { flush(); mode = 'skip'; continue; }
-      const targets = { preamble: doc.preamble, arch: doc.arch, erd: doc.erd, revision: doc.revision, rec: doc.recommendation, opt: opt_l };
+      if (/^## Architecture Diagram\b/.test(line)) { mode = 'arch'; doc.has_arch = true; continue; }
+      if (/^## ERD\b/.test(line)) { mode = 'erd'; doc.has_erd = true; doc.erd.push(line); continue; }
+      if (/^## Revision\b/.test(line)) { mode = 'revision'; doc.has_revision = true; doc.revision.push(line); continue; }
+      if (/^## Recommendation\b/.test(line)) { mode = 'rec'; doc.recommendation.push(line); continue; }
+      if (/^## /.test(line) && mode !== 'preamble') { mode = 'skip'; continue; }
+      const targets = { preamble: doc.preamble, arch: doc.arch, erd: doc.erd, revision: doc.revision, rec: doc.recommendation };
       if (targets[mode]) targets[mode].push(line);
     }
-    flush();
     return doc;
   }
 
@@ -354,7 +347,7 @@
       const sub = parseSubOptions(doc.arch.join('\n'));
       opts = sub.length > 0 ? sub : [{ title: 'Overview', content: doc.arch.join('\n') }];
     } else {
-      opts = doc.top_options.map(o => ({ title: o.title, content: o.content }));
+      opts = [{ title: 'Overview', content: parsedDoc.preamble.join('\n') }];
     }
     if (doc.recommendation.length > 0) opts.push({ title: 'Recommendation', content: doc.recommendation.join('\n') });
     optionContents = opts;

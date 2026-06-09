@@ -486,11 +486,11 @@ flowchart TD
 
 ### Confidence Scores
 
-| Option | Team Fit | Timeline | Scale | Cost | Overall |
-|--------|----------|----------|-------|------|---------|
-| Option 1 — Low Risk: {Name}    | /10 | /10 | /10 | /10 | **/10** |
-| Option 2 — Medium Risk: {Name} | /10 | /10 | /10 | /10 | **/10** |
-| Option 3 — High Risk: {Name}   | /10 | /10 | /10 | /10 | **/10** |
+| Option                         | Team Fit | Timeline | Scale | Cost | Overall |
+|--------------------------------|----------|----------|-------|------|---------|
+| Option 1 — Low Risk: {Name}    | /10      | /10      | /10   | /10  | **/10** |
+| Option 2 — Medium Risk: {Name} | /10      | /10      | /10   | /10  | **/10** |
+| Option 3 — High Risk: {Name}   | /10      | /10      | /10   | /10  | **/10** |
 
 {4–6 sentences stating which option is recommended, why, referencing actual requirements (team size, scale, data characteristics). Cite the option with the highest Overall score. Acknowledge the main trade-off.}
 
