@@ -10,11 +10,10 @@ Open a static website viewer that renders architecture options, ERDs, and Before
 ## How It Works
 
 1. Write the design content as markdown to `/tmp/archimind-viewer/content.md`
-2. Start the local server (finds a free port, serves `scripts/site/`):
+2. Start the local server (finds a free port, serves `scripts/site/`) and open the browser — **run as a single command**:
 
 ```bash
-URL=$(bash "$CLAUDE_PLUGIN_ROOT/scripts/start-server.sh")
-open "$URL"
+open "$(bash "$CLAUDE_PLUGIN_ROOT/scripts/start-server.sh")"
 ```
 
 3. The browser loads `index.html`, which fetches `content.md` and renders it client-side with Mermaid JS.
@@ -67,12 +66,8 @@ Based on the user's instruction. Read `$CLAUDE_PLUGIN_ROOT/skills/design-archite
 
 Use the **Edit tool** to update the Mermaid block in `/tmp/archimind-viewer/content.md`, then instruct the user to click **↺ Reload** in the viewer sidebar to see the change.
 
-If the server is not running, start it first:
-
-```bash
-URL=$(bash "$CLAUDE_PLUGIN_ROOT/scripts/start-server.sh")
-open "$URL"
-```
+If the server is not running, start it first using the same single command from "How It Works":
+`open "$(bash "$CLAUDE_PLUGIN_ROOT/scripts/start-server.sh")"`
 
 ## Viewer UI Overview
 

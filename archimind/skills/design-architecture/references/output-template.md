@@ -1,6 +1,11 @@
 # Output Document Template
 
-<!-- Viewer: /tmp/archimind-viewer/content.md | Final docs: docs/archimind/architecture/{timestamp_ms}-{topic}.md -->
+> **READ-ONLY REFERENCE — NEVER WRITE TO THIS FILE.**
+> Output destinations:
+> - Viewer draft → `/tmp/archimind-viewer/content.md`
+> - Final saved doc → `docs/archimind/architecture/{timestamp_ms}-{topic}.md`
+>
+> Use this file only to read the scaffold structure. All writes go to the destinations above.
 
 Use this template as a scaffold when generating the design file. Replace all placeholder text. Do not omit any section.
 
@@ -56,6 +61,8 @@ architecture-beta
   gateway:B --> T:cache
 ```
 
+> {1–2 sentences: describe the zones, traffic entry point, and key data stores shown in this diagram.}
+
 #### Request Flow
 
 ```mermaid
@@ -69,12 +76,16 @@ sequenceDiagram
   API-->>Client: {Response}
 ```
 
+> {1–2 sentences: describe the happy-path request traced here and any notable steps such as cache checks or async branches.}
+
 #### Component Flow
 
 ```mermaid
 flowchart TD
   ...
 ```
+
+> {1–2 sentences: describe the main data paths and how components hand off to each other.}
 
 #### Key Components
 
@@ -155,18 +166,6 @@ flowchart TD
 - **Reversibility**: {How hard to migrate away from this stack?}
 - **Vendor lock-in**: {Which components create lock-in, escape hatch}
 
-#### Deployment Strategy
-
-- **Environments**: dev → staging → production
-- **CI/CD**: {GitHub Actions / GitLab CI / Jenkins — pipeline steps}
-- **Containerization**: {Docker — base images, multi-stage builds}
-- **Orchestration**: {Kubernetes / ECS / Nomad / Docker Compose — choice and reason}
-- **Scaling strategy**: {horizontal / vertical / auto-scaling rules}
-- **Rollback strategy**: {blue-green / canary / feature flags}
-- **Disaster recovery**: {RTO/RPO targets, backup cadence}
-- **Observability deployment**: {OTel Collector, Prometheus, Grafana — self-hosted or managed}
-- **Object storage deployment**: {self-hosted MinIO / managed S3 — ops implications}
-
 #### Risks & Mitigations
 
 | Risk                     | Likelihood | Impact | Mitigation                      |
@@ -206,6 +205,8 @@ architecture-beta
   gateway:R --> L:queue
 ```
 
+> {1–2 sentences: describe the zones, traffic entry point, and key data stores shown in this diagram.}
+
 #### Request Flow
 
 ```mermaid
@@ -219,12 +220,16 @@ sequenceDiagram
   API-->>Client: {Response}
 ```
 
+> {1–2 sentences: describe the happy-path request traced here and any notable steps such as cache checks or async branches.}
+
 #### Component Flow
 
 ```mermaid
 flowchart TD
   ...
 ```
+
+> {1–2 sentences: describe the main data paths and how components hand off to each other.}
 
 #### Key Components
 
@@ -295,17 +300,6 @@ flowchart TD
 - **Reversibility**: ...
 - **Vendor lock-in**: ...
 
-#### Deployment Strategy
-
-- **Environments**: dev → staging → production
-- **CI/CD**: ...
-- **Containerization**: ...
-- **Orchestration**: ...
-- **Scaling strategy**: ...
-- **Rollback strategy**: ...
-- **Disaster recovery**: ...
-- **Observability deployment**: ...
-
 #### Risks & Mitigations
 
 | Risk | Likelihood | Impact | Mitigation |
@@ -355,6 +349,8 @@ architecture-beta
   queue:R --> L:worker
 ```
 
+> {1–2 sentences: describe the zones, traffic entry point, and key data stores shown in this diagram.}
+
 #### Request Flow
 
 ```mermaid
@@ -373,12 +369,16 @@ sequenceDiagram
   Gateway-->>Client: {Response}
 ```
 
+> {1–2 sentences: describe the happy-path request traced here and any notable steps such as cache checks or async branches.}
+
 #### Component Flow
 
 ```mermaid
 flowchart TD
   ...
 ```
+
+> {1–2 sentences: describe the main data paths and how components hand off to each other.}
 
 #### Key Components
 
@@ -456,18 +456,6 @@ flowchart TD
 - **Operational overhead**: {High — team/tooling required?}
 - **Reversibility**: {Low — outline cost of unwinding}
 - **Vendor lock-in**: {Multiple vendors — each dependency and escape hatch}
-
-#### Deployment Strategy
-
-- **Environments**: dev → staging → production
-- **CI/CD**: {GitOps / ArgoCD / Flux — pipeline steps}
-- **Containerization**: {Docker — multi-stage builds, image registry}
-- **Orchestration**: {Kubernetes — cluster topology, namespaces, RBAC}
-- **Scaling strategy**: {HPA / KEDA / cluster autoscaler}
-- **Rollback strategy**: {canary / blue-green, automated rollback on error SLO breach}
-- **Disaster recovery**: {multi-region, active-active / active-passive, RTO/RPO}
-- **Object storage deployment**: {MinIO operator / Ceph Rook — HA setup}
-- **Observability deployment**: {OTel Collector DaemonSet, Prometheus operator, Grafana stack}
 
 #### Risks & Mitigations
 
@@ -582,7 +570,7 @@ flowchart TD
 **Chosen:** Option N — {Risk Level}: {Architecture Name}
 **Reason:** {2–3 sentences on why this option was selected over the alternatives, referencing actual requirements.}
 
-> See `### Option N: ✅ SELECTED` above for the full Infrastructure Layout, Request Flow, and Component Flow diagrams.
+> See the selected `### Option N:` heading above for the full Infrastructure Layout, Request Flow, and Component Flow diagrams.
 
 ### Technology Stack
 
@@ -613,16 +601,6 @@ erDiagram
 - **Schema versioning tool**: {Flyway / Liquibase / Prisma Migrate / Alembic / etc.}
 - **Rollback approach**: {migration-level rollback or feature-flag toggle}
 - **Zero-downtime**: {expand-contract pattern if schema changes affect production}
-
-### Deployment
-
-- **Environments**: dev → staging → production
-- **CI/CD**: {tool + key pipeline stages}
-- **Containerization**: {Docker — multi-stage builds}
-- **Orchestration**: {Kubernetes / ECS / Compose — choice and reason}
-- **Scaling**: {horizontal / vertical / auto-scaling rule}
-- **Rollback**: {blue-green / canary / feature flags}
-- **DR**: {RTO/RPO targets, backup cadence}
 
 ### Observability
 
@@ -660,7 +638,6 @@ erDiagram
 
 After the user selects an option:
 1. Fill in the `**Selected:**` and `**Decision date:**` lines in the header
-2. Append `✅ SELECTED` to the chosen option's `### Option N:` heading (e.g., `### Option 2: Medium Risk — Modular Monolith ✅ SELECTED`)
-3. Populate the `## Revision / ### After` section with the chosen architecture diagram
-4. Fill in `## Decision Notes`
-5. Write the `## Final Documentation` sections
+2. Populate the `## Revision / ### After` section with the chosen architecture diagram
+3. Fill in `## Decision Notes`
+4. Write the `## Final Documentation` sections

@@ -33,11 +33,14 @@ if [ ! -f "$SITE_DIR/content.md" ]; then
 EOF
 fi
 
-# Find an available port (exits non-zero if 3000-9000 are all taken)
+# Find an available port (exits non-zero if 3000-3099 are all taken)
 PORT=$(bash "$SCRIPT_DIR/find-port.sh") || exit 1
 
 # Start the server using --directory to avoid changing the working directory
 python3 -m http.server "$PORT" --directory "$SITE_DIR" >/dev/null 2>&1 &
 echo $! > "$PID_FILE"
+
+# Wait until the server socket is ready before printing the URL
+while ! lsof -i tcp:"$PORT" &>/dev/null; do sleep 0.05; done
 
 echo "http://localhost:$PORT"

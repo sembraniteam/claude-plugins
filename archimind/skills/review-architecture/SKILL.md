@@ -15,11 +15,13 @@ At the very start, call **TaskCreate** to create one task per step:
 1. Collect existing architecture information
 2. Perform architecture analysis
 3. Confirm analysis summary
-4. Generate three redesign options
-5. Write content.md and start viewer server
-6. User selects option
-7. Mark selection and write decision notes
-8. Save final docs and stop server
+4. Scaffold review document structure
+5. Generate three redesign options
+6. Add Recommendation section
+7. Write content.md and start viewer server
+8. User selects option
+9. Mark the chosen option and write decision notes
+10. Save final docs and stop server
 
 Mark each task `in_progress` when starting it and `completed` when done.
 
@@ -132,7 +134,7 @@ flowchart TD
 
 ## Recommendation
 
-<!-- PLACEHOLDER — do not copy /10 blanks into content.md. Step 5b fills actual scores. -->
+<!-- PLACEHOLDER — do not copy /10 blanks into content.md. Step 6 fills actual scores. -->
 ### Confidence Scores
 
 | Option                           | Migration Effort | Risk Reduction | Team Fit | Cost | Overall |
@@ -165,7 +167,7 @@ Present three options within the `## Architecture Diagram` section using `### Op
 - Approach: Adopt a fundamentally different architecture (microservices, event-driven, serverless).
 - Migration effort: Months to quarters. Use Strangler Fig or parallel run — not big bang. See `$CLAUDE_PLUGIN_ROOT/skills/review-architecture/references/anti-patterns.md` for why.
 
-### 5b. Add Recommendation
+### 6. Add Recommendation
 
 After generating all three options, write a `## Recommendation` section **with actual scores filled in** (not the blank `/10` scaffold from Step 4). This section is included in the `## Recommendation` block written to `/tmp/archimind-viewer/content.md` in Step 7 — it is written **before** the user is asked to select, so the viewer shows the Recommendation tab immediately.
 
@@ -189,7 +191,7 @@ Score criteria for review context:
 
 2. **Narrative** — 4–6 sentences stating which redesign is recommended, why, citing the highest Overall score and referencing the specific weaknesses it addresses.
 
-### 6. Required Sections Per Option
+#### Required Sections Per Option
 
 Each `### Option N:` section must include **three Mermaid diagrams** and the sections below. Read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/mermaid-guidelines.md` for review-specific diagram conventions (mark changed nodes with `[NEW]`, problematic nodes with `⚠`).
 
@@ -252,14 +254,13 @@ For Option 3: specify Strangler Fig, parallel run, or big bang and justify.
 Write the draft and immediately open the viewer so the user can compare all three redesign options with their diagrams **before selecting**:
 
 1. Use the **Write tool** to save the draft to `/tmp/archimind-viewer/content.md`.
-2. Start the viewer server and open the URL:
+2. Start the viewer server and open the browser — **run as a single command**:
 
 ```bash
-URL=$(bash "$CLAUDE_PLUGIN_ROOT/scripts/start-server.sh")
-open "$URL"
+open "$(bash "$CLAUDE_PLUGIN_ROOT/scripts/start-server.sh")"
 ```
 
-Inform the user: "The viewer is open — use the **Architecture Diagram** nav to compare each redesign option's diagram, and the **Revision** nav to see the Before/After comparison. When ready, choose the option you'd like to proceed with."
+Inform the user the viewer is open — use the **Architecture Diagram** nav to compare each redesign option's diagram, and the **Revision** nav to see the Before/After comparison. When ready, choose the option they'd like to proceed with.
 
 ### 8. Require Redesign Selection (mandatory)
 
@@ -287,7 +288,6 @@ Iterate if the user wants adjustments. Re-present the AskUserQuestion selection 
      **Selected:** Option N — {Label}: {Short Title}
      **Decision date:** {ISO date}
      ```
-   - Append `✅ SELECTED` to the chosen option's `### Option N:` heading
    - Replace the placeholder diagram in `### After` within `## Revision` with the selected option's Infrastructure Layout diagram
    - Append a `## Decision Notes` section with user-requested adjustments, migration timing, and next steps
 
@@ -316,7 +316,7 @@ Then use the **Write tool** to write `docs/archimind/architecture/{timestamp_ms}
 
 ## Architecture Diagram
 
-### Option N: {Label} — {Short Title} ✅ SELECTED
+### Option N: {Label} — {Short Title}
 
 {Selected option's full content — all subsections}
 
@@ -338,10 +338,10 @@ Then use the **Write tool** to write `docs/archimind/architecture/{timestamp_ms}
 | Option | Migration Effort | Risk Reduction | Team Fit | Cost | Overall |
 |--------|-----------------|---------------|----------|------|---------|
 | Option 1 — Conservative Refactor | X/10 | X/10 | X/10 | X/10 | **X.X/10** |
-| Option 2 — Moderate Redesign ✅   | X/10 | X/10 | X/10 | X/10 | **X.X/10** |
+| Option 2 — Moderate Redesign      | X/10 | X/10 | X/10 | X/10 | **X.X/10** |
 | Option 3 — Full Overhaul          | X/10 | X/10 | X/10 | X/10 | **X.X/10** |
 
-{Copy filled scores from Step 5b. Mark the chosen row with ✅. 4–6 sentences: which option was chosen, why, citing the highest Overall score and the weaknesses it addresses. Acknowledge the main trade-off.}
+{Copy filled scores from Step 6. 4–6 sentences: which option was chosen, why, citing the highest Overall score and the weaknesses it addresses. Acknowledge the main trade-off.}
 
 ## Decision Notes
 ...

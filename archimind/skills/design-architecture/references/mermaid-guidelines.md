@@ -86,6 +86,45 @@ architecture-beta
 | Medium Risk (Modular)     | 3–4 groups; split App by domain  | 5–8 services; one async worker       |
 | High Risk (Microservices) | 5+ groups; separate mesh/gateway | 8–15 services; message queue visible |
 
+### Infrastructure Mapping from Requirements
+
+Derive service names and zone topology directly from the gathered requirements — do not use generic placeholder labels.
+
+#### Deployment Preference (Q6) → Service Names
+
+| Preference               | API / Compute                          | Database                                 | Cache                 | Object Storage | Load Balancer / Ingress                           |
+|--------------------------|----------------------------------------|------------------------------------------|-----------------------|----------------|---------------------------------------------------|
+| AWS                      | EC2 / EKS / Lambda                     | RDS (PostgreSQL/MySQL)                   | ElastiCache Redis     | S3             | ALB / CloudFront                                  |
+| GCP                      | GCE / GKE / Cloud Run                  | Cloud SQL / Spanner                      | Memorystore Redis     | GCS            | Cloud Load Balancing / CDN                        |
+| Azure                    | VM / AKS / Azure Functions             | Azure SQL / Cosmos DB                    | Azure Cache Redis     | Blob Storage   | Application Gateway / Azure CDN                   |
+| Self-hosted / On-premise | Bare-metal / KVM VMs                   | PostgreSQL / MySQL (self-managed)        | Redis (self-managed)  | MinIO / Ceph   | NGINX / HAProxy                                   |
+| Hybrid                   | Mix on-premise + cloud tier            | Primary on-premise, replica in cloud     | Redis in cloud        | Cloud provider | Cloud provider ingress + on-premise reverse proxy |
+| Serverless               | API Gateway + Lambda / Cloud Functions | DynamoDB / Firestore / Aurora Serverless | ElastiCache / Momento | S3 / GCS       | API Gateway / CloudFront                          |
+
+Use the exact product names from the matching row as service labels in the diagram.
+
+#### Scale (Q2 + Q3) → Zone Topology
+
+| Scale                   | Zones / Regions                              | Redundancy additions                                        |
+|-------------------------|----------------------------------------------|-------------------------------------------------------------|
+| Small / Low rps         | Single region, 1 AZ                          | None — keep topology minimal                                |
+| Medium / Moderate rps   | Single region, 2 AZs                         | Read replica, CDN for static assets                         |
+| Large / High rps        | Single region, multi-AZ + edge CDN           | Read replicas, cache cluster, async worker pool             |
+| Massive / Very high rps | Multi-region active-active or active-passive | Global CDN, regional caches, database sharding / federation |
+
+Add the matching zones as separate groups in the `architecture-beta` diagram.
+
+#### Compliance (Q8) → Mandatory Extra Components
+
+| Requirement     | Add to diagram                                                                       |
+|-----------------|--------------------------------------------------------------------------------------|
+| OWASP Top 10    | WAF group (in front of load balancer); HTTPS on all client-facing edges              |
+| SOC 2 Type II   | Audit log service, secrets manager (Vault / AWS Secrets Manager), monitoring cluster |
+| GDPR            | Single-region data residency label on database group; encryption-at-rest annotation  |
+| PCI DSS / HIPAA | Private subnet group (isolate DB), bastion/jump host, HSM / KMS service, WAF         |
+
+Include compliance components for the tier where they are relevant — all options should meet OWASP Top 10 minimum; higher-compliance requirements appear in Medium and High Risk tiers unless the user indicated they apply at all tiers.
+
 ---
 
 ## `sequenceDiagram` — Request Flow

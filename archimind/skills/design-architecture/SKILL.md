@@ -15,7 +15,7 @@ At the very start, call **TaskCreate** to create one task per step:
 1. Gather requirements — Batch 1 (System & Scale)
 2. Gather requirements — Batch 2 (Technical & Operational)
 3. Confirm requirements summary
-4. Generate architecture options (3 options + ERD)
+4. Generate architecture options (3 options), ERD, and Recommendation
 5. Write content.md and start viewer server
 6. User selects option
 7. Mark the selected option
@@ -141,13 +141,13 @@ For each option, cover all required sections (see "Required Sections Per Option"
 
 ### 4. Required Sections Per Option
 
-Structure each option under the `## Architecture Diagram` document section using `### Option N:` subheadings. Use `####` for subsections within each option. The full blank scaffold is in `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/output-template.md`.
+Structure each option under the `## Architecture Diagram` document section using `### Option N:` subheadings. Use `####` for subsections within each option. The full blank scaffold is in `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/output-template.md` — **read it for structure only; never write to it**.
 
 Required `####` subsections for each option — **every option must include three Mermaid diagrams**. Read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/mermaid-guidelines.md` for syntax and per-tier guidance:
 
-- **Infrastructure Layout** (`architecture-beta`) — cloud groups, services with icons, and physical deployment topology. **Required.** Use built-in icons: `cloud`, `database`, `disk`, `internet`, `server`. Nest services inside groups. See mermaid-guidelines.md for complete syntax and per-tier service counts.
-- **Request Flow** (`sequenceDiagram`) — the primary user-facing request end-to-end (e.g., "user places order", "user logs in"). **Required.** Cover: client → API → cache → DB → response. Label each arrow with the method or action.
-- **Component Flow** (`flowchart TD`) — logical data flow between components and stores. **Required.**
+- **Infrastructure Layout** (`architecture-beta`) — cloud groups, services with icons, and physical deployment topology. **Required.** Derive service names and zone topology from the gathered requirements: use the **Infrastructure Mapping** section of `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/mermaid-guidelines.md` to map Q6 (deployment preference) → concrete service names (e.g., EKS, RDS, S3 for AWS), Q2–Q3 (scale) → zone/region count, and Q8 (compliance) → mandatory extra components (WAF, private subnets, HSM). Do not use generic placeholders like "Primary DB" — use the actual product name. **Follow each diagram with a 1–2 sentence description** of what it shows (key zones, traffic entry point, and data stores).
+- **Request Flow** (`sequenceDiagram`) — the primary user-facing request end-to-end (e.g., "user places order", "user logs in"). **Required.** Cover: client → API → cache → DB → response. Label each arrow with the method or action. **Follow each diagram with a 1–2 sentence description** of the happy-path flow and any notable steps (cache hits, async branches).
+- **Component Flow** (`flowchart TD`) — logical data flow between components and stores. **Required.** **Follow each diagram with a 1–2 sentence description** of the main data paths and how components hand off to each other.
 - **Key Components** — bulleted list of main services/modules with one-line descriptions
 - **Technology Stack** — table: Layer / Recommended / Alternatives / Reason
 - **Data Layer Design** — all applicable store types; for each: what's stored, why not the primary DB, data flow. Cover: transactional store, cache, search, analytics/OLAP, message queue, object storage, graph (if core). See `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/database-selection-guide.md`.
@@ -155,7 +155,6 @@ Required `####` subsections for each option — **every option must include thre
 - **Observability Strategy** — OTel-first; pillars: Instrumentation, Logs, Metrics, Distributed Traces, Alerting. Scale tooling to complexity. See `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/observability-guide.md`.
 - **Technology Decision Rationale** — for each major choice: why chosen, better-than-alternatives, required skills, ecosystem longevity
 - **Future Impact** — 6-month / 1-year / 3-year table + scalability ceiling, operational overhead, reversibility, vendor lock-in
-- **Deployment Strategy** — environments, CI/CD, containerization, orchestration, scaling, rollback, DR, observability deployment
 - **Risks & Mitigations** — table: Risk / Likelihood / Impact / Mitigation
 - **When to Choose This Option** — 2–3 bullets for the ideal scenario
 
@@ -195,15 +194,14 @@ Score criteria:
 
 After presenting all 3 options, the ERD, and the Recommendation — **before asking the user to choose** — write the content and open the viewer so the user can compare options with rendered Mermaid diagrams:
 
-1. Use the **Write tool** to save the full draft to `/tmp/archimind-viewer/content.md`. Follow the **Document Structure Convention** below. Do NOT include `✅ SELECTED` or `## Final Documentation` at this stage.
-2. Start the viewer server and open the URL:
+1. Use the **Write tool** to save the full draft to `/tmp/archimind-viewer/content.md`. Follow the **Document Structure Convention** below. Do NOT include `## Final Documentation` at this stage.
+2. Start the viewer server and open the browser — **run as a single command**:
 
 ```bash
-URL=$(bash "$CLAUDE_PLUGIN_ROOT/scripts/start-server.sh")
-open "$URL"
+open "$(bash "$CLAUDE_PLUGIN_ROOT/scripts/start-server.sh")"
 ```
 
-Inform the user: "The viewer is open at `$URL` — use the **Architecture Diagram** nav to compare each option's diagrams side by side, and the **ERD** nav to view the data model. When ready, select the option you'd like to proceed with."
+Inform the user the viewer is open — use the **Architecture Diagram** nav to compare each option's diagrams side by side, and the **ERD** nav to view the data model. When ready, select the option they'd like to proceed with.
 
 ### 8. Option Selection
 
@@ -231,9 +229,8 @@ Iterate freely if the user wants adjustments (e.g., "swap MongoDB for PostgreSQL
    **Selected:** Option N — {Risk Level}: {Architecture Name}
    **Decision date:** {ISO date}
    ```
-3. Append `✅ SELECTED` to the chosen option's `### Option N:` heading
-4. For **review workflows only**: populate `## Revision / ### After` with the selected option's proposed architecture diagrams. For fresh designs, omit or leave the Revision section empty.
-5. Append a `## Decision Notes` section capturing user-requested adjustments, migration timing, and next steps
+3. For **review workflows only**: populate `## Revision / ### After` with the selected option's proposed architecture diagrams. For fresh designs, omit or leave the Revision section empty.
+4. Append a `## Decision Notes` section capturing user-requested adjustments, migration timing, and next steps
 
 ### 10. Write Final Documentation Sections
 
@@ -246,7 +243,6 @@ After selection is marked, append the final documentation using this trimmed str
 ### Architecture Decision
 ### Technology Stack
 ### Data Architecture
-### Deployment
 ### Observability
 ### Security
 ### Trade-offs & Next Steps
@@ -254,10 +250,9 @@ After selection is marked, append the final documentation using this trimmed str
 
 Section content guide:
 - **Overview** — what the system does, who uses it, key characteristics (2–4 sentences)
-- **Architecture Decision** — which option was chosen and the core rationale; reference the diagrams already in `### Option N: ✅ SELECTED` above
+- **Architecture Decision** — which option was chosen and the core rationale; reference the diagrams already in the selected `### Option N:` heading above
 - **Technology Stack** — single table: Layer / Technology / Reason. Include language, backend, frontend, DB, cache, messaging, infra, observability
 - **Data Architecture** — DB choices and rationale; ERD (repeat the `erDiagram` from `## ERD` for standalone readability); migration strategy (schema versioning tool, rollback approach, zero-downtime considerations)
-- **Deployment** — environments, CI/CD pipeline, containerization, orchestration, scaling strategy, rollback approach, DR summary
 - **Observability** — all three pillars in one section: logs (tool + agent), metrics (tool + key dashboards), distributed tracing (tool + sampling). Alerting thresholds
 - **Security** — authentication/authorization approach, data encryption at rest/in transit, secret management, compliance considerations
 - **Trade-offs & Next Steps** — what the chosen option sacrifices (scalability ceiling, operational overhead, reversibility); first 3 implementation milestones; open questions
@@ -266,7 +261,7 @@ Section content guide:
 
 After marking the selection and appending final documentation:
 
-1. Update `/tmp/archimind-viewer/content.md` with the Write tool (now includes `✅ SELECTED` and `## Final Documentation`). Inform the user: "The viewer is updated — click **↺ Reload** in the sidebar to see the final state."
+1. Update `/tmp/archimind-viewer/content.md` with the Write tool (now includes `## Final Documentation`). Inform the user: "The viewer is updated — click **↺ Reload** in the sidebar to see the final state."
 2. Compute timestamp: `node -e 'process.stdout.write(String(Date.now()))'` (macOS) or `date +%s%3N` (Linux). Derive topic slug from the project name (e.g., `payment-platform`, `iot-dashboard`).
 3. Save permanent technical documentation to the user's project:
 
@@ -291,7 +286,7 @@ Then use the **Write tool** to write `docs/archimind/architecture/{timestamp_ms}
 
 ## Architecture Diagram
 
-### Option N: {Risk Level} — {Architecture Name} ✅ SELECTED
+### Option N: {Risk Level} — {Architecture Name}
 
 {Selected option's full content — all #### subsections}
 
@@ -331,7 +326,7 @@ The viewer parses these heading patterns from `content.md`:
 
 **Critical**: Use `### Option N:` (level-3) within `## Architecture Diagram`, not `## Option N:` (level-2). The viewer splits on level-3 headings to create option tabs.
 
-For the full document template (all required sections, headings, placeholder text), see `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/output-template.md`.
+For the full document template (all required sections, headings, placeholder text), see `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/output-template.md` — **read-only; never write to it**.
 
 ## Mermaid Diagram Guidelines
 
@@ -350,5 +345,5 @@ Read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/mermaid-guidelin
 - **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/architecture-patterns.md`** — Detailed patterns (Monolith, Microservices, Serverless, Event-Driven, CQRS, Hexagonal). Read when deciding which pattern fits each risk tier.
 - **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/database-selection-guide.md`** — Comprehensive database selection guide (relational, document, key-value, column-family, time-series, graph, search, NewSQL, polyglot persistence). Read when choosing the data layer.
 - **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/observability-guide.md`** — Observability stack guide (OpenTelemetry, Loki, Prometheus, Jaeger/Tempo, SigNoz, Uptrace, Grafana Stack, Datadog). Read when designing the observability strategy.
-- **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/output-template.md`** — Full blank template for the output document.
+- **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/output-template.md`** — Full blank template for the output document. **Read-only — never write to this file.** Output always goes to `/tmp/archimind-viewer/content.md` (viewer) or `docs/archimind/architecture/{timestamp_ms}-{topic}.md` (final docs).
 - **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/mermaid-guidelines.md`** — Diagram type selection, node limits, edge labeling, subgraph conventions, and syntax examples.

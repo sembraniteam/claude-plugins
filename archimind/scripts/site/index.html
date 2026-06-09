@@ -4,15 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Archimind Viewer</title>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@14/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
       --bg: #0f1117; --surface: #1a1d27; --surface2: #22253a;
       --border: #2e3250; --accent: #6c8ef5; --text: #e2e4f0;
-      --muted: #7a7f9e; --code: #c9d1f5; --green: #4cd964;
+      --muted: #7a7f9e; --code: #c9d1f5;
       --sidebar-w: 240px; --r: 8px;
     }
 
@@ -59,8 +59,6 @@
       transition: color .15s, background .15s; border-bottom: 2px solid transparent; }
     .tab-btn:hover { color: var(--text); background: var(--surface2); }
     .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-    .tab-btn.selected { background: rgba(76,217,100,.08); color: var(--green); }
-    .tab-btn.selected.active { color: var(--green); border-bottom-color: var(--green); }
 
     /* Content */
     #content-wrap { flex: 1; overflow-y: auto; padding: 32px 48px; }
@@ -116,7 +114,7 @@
 
     /* Pan/zoom container */
     .diagram-svg-container { padding: 20px; overflow: hidden; cursor: grab;
-      position: relative; user-select: none; min-height: 140px; }
+      position: relative; user-select: none; min-height: 182px; }
     .diagram-svg-container.grabbing { cursor: grabbing; }
     .diagram-inner { display: inline-block; transform-origin: 0 0; will-change: transform; }
     .diagram-inner svg { display: block; max-width: none; }
@@ -211,7 +209,7 @@
   function makePanZoom(container, inner, btnIn, btnOut, btnReset) {
     const pz = {
       container, inner,
-      tx: 0, ty: 0, scale: 1,
+      tx: 0, ty: 0, scale: 1, initTx: 0,
       apply() {
         inner.style.transform = `translate(${this.tx}px,${this.ty}px) scale(${this.scale})`;
       }
@@ -246,8 +244,9 @@
       pz.scale = Math.max(pz.scale / 1.3, 0.1); pz.apply();
     });
     btnReset.addEventListener('click', () => {
-      pz.tx = 0; pz.ty = 0; pz.scale = 1; pz.apply();
+      pz.tx = pz.initTx; pz.ty = 0; pz.scale = 1; pz.apply();
     });
+    return pz;
   }
 
   // ── Load content.md ──
@@ -356,13 +355,10 @@
     tb.innerHTML = '';
     if (opts.length > 1) {
       tb.classList.remove('hidden');
-      const selIdx = opts.findIndex(o => /✅\s*SELECTED/i.test(o.title));
-      if (selIdx >= 0 && !userHasSelectedTab) currentOptionIdx = selIdx;
       if (currentOptionIdx >= opts.length) currentOptionIdx = 0;
       opts.forEach((opt, i) => {
-        const isSel = /✅\s*SELECTED/i.test(opt.title);
         const btn = document.createElement('button');
-        btn.className = 'tab-btn' + (isSel ? ' selected' : '') + (i === currentOptionIdx ? ' active' : '');
+        btn.className = 'tab-btn' + (i === currentOptionIdx ? ' active' : '');
         btn.textContent = fmtLabel(opt.title);
         btn.addEventListener('click', () => switchOptTab(i));
         tb.appendChild(btn);
@@ -469,6 +465,7 @@
       const id = 'mmd-' + (++mermaidCtr) + '-' + (idx++);
       const wrap = document.createElement('div');
       wrap.className = 'mermaid-wrap';
+      let pz = null, svgContainer = null, svgInner = null;
       try {
         const { svg } = await mermaid.render(id, code.textContent);
 
@@ -492,9 +489,9 @@
         actions.append(controls, pngBtn);
 
         // ── SVG pan/zoom container ──
-        const svgContainer = document.createElement('div');
+        svgContainer = document.createElement('div');
         svgContainer.className = 'diagram-svg-container';
-        const svgInner = document.createElement('div');
+        svgInner = document.createElement('div');
         svgInner.className = 'diagram-inner';
         svgInner.innerHTML = svg;
         svgContainer.appendChild(svgInner);
@@ -503,13 +500,25 @@
         const name = 'diagram-' + mermaidCtr;
 
         pngBtn.addEventListener('click', () => dlPNG(svgEl, name));
-        makePanZoom(svgContainer, svgInner, btnIn, btnOut, btnReset);
+        pz = makePanZoom(svgContainer, svgInner, btnIn, btnOut, btnReset);
 
         wrap.append(actions, svgContainer);
       } catch (err) {
         wrap.innerHTML = `<pre style="color:#f47983;padding:16px">Mermaid error:\n${esc(err.message)}</pre>`;
       }
       pre.parentNode.replaceChild(wrap, pre);
+
+      // Center diagram horizontally after DOM insert
+      if (pz && svgContainer && svgInner) {
+        const containerW = svgContainer.offsetWidth;
+        const innerW = svgInner.offsetWidth;
+        if (innerW > 0 && innerW < containerW) {
+          const initTx = Math.floor((containerW - innerW) / 2);
+          pz.initTx = initTx;
+          pz.tx = initTx;
+          pz.apply();
+        }
+      }
     }
   }
 
@@ -577,11 +586,8 @@
 
   // ── Utilities ──
   function fmtLabel(title) {
-    const sel = /✅\s*SELECTED/i.test(title);
-    const c = title.replace(/✅\s*SELECTED/i, '').trim();
-    const m = c.match(/Option \d+:\s*([^—(\n]+?)(?:\s*—|\s*\(|$)/);
-    const label = m ? m[1].trim() : c.replace(/^Option \d+:\s*/, '');
-    return sel ? label + ' ✅' : label;
+    const m = title.match(/Option \d+:\s*([^—(\n]+?)(?:\s*—|\s*\(|$)/);
+    return m ? m[1].trim() : title.replace(/^Option \d+:\s*/, '');
   }
 
   function showError(msg) {
