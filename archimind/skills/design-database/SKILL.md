@@ -170,7 +170,7 @@ For each table, provide a spec block:
 
 ### 5. Write Content, Open Viewer, and Save Final Docs
 
-1. Use the **Write tool** to write the full design content to `$CLAUDE_PLUGIN_ROOT/scripts/site/content.md`. Follow the **Document Structure for Database Design** below.
+1. Use the **Write tool** to write the full design content to `/tmp/archimind-viewer/content.md`. Follow the **Document Structure for Database Design** below.
 2. Start the viewer server and open the URL:
 
 ```bash

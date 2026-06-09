@@ -83,7 +83,7 @@ Wait for the user to confirm or correct before proceeding to Step 4. If the user
 
 Structure the review document with a `## Revision` section that contains both `### Before` and `### After` subsections. This is what the viewer renders as Before/After tabs. The temp file is written in Step 7 after options are generated.
 
-**Viewer content path**: `$CLAUDE_PLUGIN_ROOT/scripts/site/content.md`
+**Viewer content path**: `/tmp/archimind-viewer/content.md`
 
 Structure:
 ```markdown
@@ -208,7 +208,7 @@ For Option 3: specify Strangler Fig, parallel run, or big bang and justify.
 
 Write the draft and immediately open the viewer so the user can compare all three redesign options with their diagrams **before selecting**:
 
-1. Use the **Write tool** to save the draft to `$CLAUDE_PLUGIN_ROOT/scripts/site/content.md`.
+1. Use the **Write tool** to save the draft to `/tmp/archimind-viewer/content.md`.
 2. Start the viewer server and open the URL:
 
 ```bash
@@ -238,7 +238,7 @@ Iterate if the user wants adjustments. Re-present the AskUserQuestion selection 
 
 ### 9. Mark the Chosen Option
 
-1. Update `$CLAUDE_PLUGIN_ROOT/scripts/site/content.md` (use the Write tool to overwrite):
+1. Update `/tmp/archimind-viewer/content.md` (use the Write tool to overwrite):
    - Insert decision header after the title:
      ```markdown
      **Selected:** Option N — {Label}: {Short Title}

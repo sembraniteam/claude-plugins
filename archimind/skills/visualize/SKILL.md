@@ -9,7 +9,7 @@ Open a static website viewer that renders architecture options, ERDs, and Before
 
 ## How It Works
 
-1. Write the design content as markdown to `$CLAUDE_PLUGIN_ROOT/scripts/site/content.md`
+1. Write the design content as markdown to `/tmp/archimind-viewer/content.md`
 2. Start the local server (finds a free port, serves `scripts/site/`):
 
 ```bash
@@ -39,7 +39,7 @@ When the user asks to update, revise, or edit a Mermaid diagram:
 
 ### Step 1: Read the current content
 
-Read `$CLAUDE_PLUGIN_ROOT/scripts/site/content.md` and locate the `mermaid` code block to change.
+Read `/tmp/archimind-viewer/content.md` and locate the `mermaid` code block to change.
 
 ### Step 2: Produce the revised Mermaid code
 
@@ -47,7 +47,7 @@ Based on the user's instruction. Read `$CLAUDE_PLUGIN_ROOT/skills/design-archite
 
 ### Step 3: Update content.md
 
-Use the **Edit tool** to update the Mermaid block in `$CLAUDE_PLUGIN_ROOT/scripts/site/content.md`, then instruct the user to click **↺ Reload** in the viewer sidebar to see the change.
+Use the **Edit tool** to update the Mermaid block in `/tmp/archimind-viewer/content.md`, then instruct the user to click **↺ Reload** in the viewer sidebar to see the change.
 
 If the server is not running, start it first:
 

@@ -198,7 +198,7 @@ After all options, include a `## Recommendation` section: which option is recomm
 
 After presenting all 3 options, the ERD, and the Recommendation — **before asking the user to choose** — write the content and open the viewer so the user can compare options with rendered Mermaid diagrams:
 
-1. Use the **Write tool** to save the full draft to `$CLAUDE_PLUGIN_ROOT/scripts/site/content.md`. Follow the **Document Structure Convention** below. Do NOT include `✅ SELECTED` or `## Final Documentation` at this stage.
+1. Use the **Write tool** to save the full draft to `/tmp/archimind-viewer/content.md`. Follow the **Document Structure Convention** below. Do NOT include `✅ SELECTED` or `## Final Documentation` at this stage.
 2. Start the viewer server and open the URL:
 
 ```bash
@@ -224,7 +224,7 @@ options:
     description: <one-line summary of Option 3 name/pattern>
 ```
 
-Iterate freely if the user wants adjustments (e.g., "swap MongoDB for PostgreSQL in Option 2"). After each adjustment, update `$CLAUDE_PLUGIN_ROOT/scripts/site/content.md` with the Write tool and re-present AskUserQuestion. The user can click **↺ Reload** in the viewer sidebar to see updated content. Do not proceed to Step 9 until the user makes an explicit choice.
+Iterate freely if the user wants adjustments (e.g., "swap MongoDB for PostgreSQL in Option 2"). After each adjustment, update `/tmp/archimind-viewer/content.md` with the Write tool and re-present AskUserQuestion. The user can click **↺ Reload** in the viewer sidebar to see updated content. Do not proceed to Step 9 until the user makes an explicit choice.
 
 ### 9. Mark the Selected Option
 
@@ -273,7 +273,7 @@ For the database migration strategy, include: schema versioning (Flyway / Liquib
 
 After marking the selection and appending final documentation:
 
-1. Update `$CLAUDE_PLUGIN_ROOT/scripts/site/content.md` with the Write tool (now includes `✅ SELECTED` and `## Final Documentation`). Inform the user: "The viewer is updated — click **↺ Reload** in the sidebar to see the final state."
+1. Update `/tmp/archimind-viewer/content.md` with the Write tool (now includes `✅ SELECTED` and `## Final Documentation`). Inform the user: "The viewer is updated — click **↺ Reload** in the sidebar to see the final state."
 2. Compute timestamp: `node -e 'process.stdout.write(String(Date.now()))'` (macOS) or `date +%s%3N` (Linux). Derive topic slug from the project name (e.g., `payment-platform`, `iot-dashboard`).
 3. Save permanent technical documentation to the user's project:
 

@@ -1,6 +1,6 @@
 # Output Document Template
 
-<!-- Viewer: $CLAUDE_PLUGIN_ROOT/scripts/site/content.md | Final docs: docs/archimind/architecture/{timestamp_ms}-{topic}.md -->
+<!-- Viewer: /tmp/archimind-viewer/content.md | Final docs: docs/archimind/architecture/{timestamp_ms}-{topic}.md -->
 
 Use this template as a scaffold when generating the design file. Replace all placeholder text. Do not omit any section.
 
