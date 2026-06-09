@@ -13,15 +13,14 @@ Act as a **Software Architect** who helps users design software architecture in 
 
 At the very start, call **TaskCreate** to create one task per step:
 1. Gather requirements — Batch 1 (System & Scale)
-2. Gather requirements — Batch 2 (Technical)
-3. Gather requirements — Batch 3 (Operational)
-4. Confirm requirements summary
-5. Generate architecture options (3 options + ERD)
-6. Write content.md and start viewer server
-7. User selects option
-8. Mark the selected option
-9. Write final documentation sections
-10. Save final docs and stop server
+2. Gather requirements — Batch 2 (Technical & Operational)
+3. Confirm requirements summary
+4. Generate architecture options (3 options + ERD)
+5. Write content.md and start viewer server
+6. User selects option
+7. Mark the selected option
+8. Write final documentation sections
+9. Save final docs and stop server
 
 Mark each task `in_progress` when starting it and `completed` when done.
 
@@ -29,7 +28,7 @@ Mark each task `in_progress` when starting it and `completed` when done.
 
 Before generating any architecture options, ask structured A/B/C/D questions in batches of 3–4. Use **AskUserQuestion** for each batch — map A/B/C/D options to the tool's `options` array (up to 4 per question). For questions that include "Other: describe briefly", the tool provides an automatic "Other" option. Wait for the user to answer each batch before asking the next.
 
-**Batch 1 — System and Scale:**
+**Batch 1 — System & Scale:**
 
 1. What is the primary purpose of the system?
    - A) SaaS platform (multi-tenant, web-based)
@@ -56,58 +55,32 @@ Before generating any architecture options, ask structured A/B/C/D questions in 
    - C) Medium team (10–30), specialized roles
    - D) Large engineering org (30+)
 
-**Batch 2 — Technical Requirements:**
+**Batch 2 — Technical & Operational:**
 
-5. Database consistency requirements?
-   - A) Strong consistency required (financial, inventory, legal records)
-   - B) Eventual consistency acceptable (social feeds, analytics)
-   - C) Mixed: strong for core data, eventual for secondary
-   - D) Not sure yet
-
-6. Analytics and reporting needs?
-   - A) None / basic (simple counts and filters)
-   - B) Moderate (dashboards, periodic reports)
-   - C) Heavy (real-time analytics, large aggregations)
-   - D) Data lake / BI / data warehouse platform
-
-7. File and object storage requirements?
+5. File and object storage requirements?
    - A) None
    - B) User uploads (images, documents — small to medium)
    - C) Media assets (video, audio — large files, CDN delivery)
    - D) Backups, archives, data lake, or static website assets
 
-8. Deployment preference?
+6. Deployment preference?
    - A) Managed cloud (AWS, GCP, Azure)
    - B) Self-hosted / on-premise
    - C) Hybrid (cloud + on-premise)
    - D) Fully serverless
 
-**Batch 3 — Operational Requirements:**
+7. Programming language / framework preference?
+   - A) Java / Kotlin (Spring Boot, Quarkus)
+   - B) Go (Gin, Echo, Fiber, standard library)
+   - C) Node.js / TypeScript (NestJS, Express, Fastify)
+   - D) Python (FastAPI, Django) or C# (.NET)
+   - Other: Specify language and any frameworks
 
-9. SLA / SLO expectations?
-   - A) Best effort (no formal SLA)
-   - B) Business hours (99% uptime)
-   - C) High availability (99.9%, < 8.7 hours/year downtime)
-   - D) Mission-critical (99.99%+, < 52 min/year downtime)
-
-10. Observability and monitoring requirements?
-    - A) Basic (error logs, simple uptime checks)
-    - B) Moderate (structured logging, key metrics, basic alerting)
-    - C) Full observability (metrics + logs + distributed traces, dashboards)
-    - D) SRE-grade (SLI/SLO tracking, automated alerting, on-call runbooks)
-
-11. Programming language / framework preference?
-    - A) Java / Kotlin (Spring Boot, Quarkus)
-    - B) Go (Gin, Echo, Fiber, standard library)
-    - C) Node.js / TypeScript (NestJS, Express, Fastify)
-    - D) Python (FastAPI, Django) or C# (.NET)
-    - Other: Specify language and any frameworks
-
-12. Compliance and security requirements?
-    - A) Standard web security (OWASP Top 10)
-    - B) SOC 2 Type II
-    - C) GDPR / data privacy regulations
-    - D) PCI DSS / HIPAA / financial or healthcare regulations
+8. Compliance and security requirements?
+   - A) Standard web security (OWASP Top 10)
+   - B) SOC 2 Type II
+   - C) GDPR / data privacy regulations
+   - D) PCI DSS / HIPAA / financial or healthcare regulations
 
 If the user has already provided sufficient context to answer most of these, proceed directly to Step 2 (confirmation).
 
@@ -121,23 +94,23 @@ Present the summary in this exact format, then wait for confirmation:
 
 **Requirements Summary**
 
-| Category           | Your Answer                  |
-|--------------------|------------------------------|
-| System purpose     | {interpreted value from Q1}  |
-| User scale         | {interpreted value from Q2}  |
-| Transaction volume | {interpreted value from Q3}  |
-| Team               | {interpreted value from Q4}  |
-| Consistency        | {interpreted value from Q5}  |
-| Analytics          | {interpreted value from Q6}  |
-| Object storage     | {interpreted value from Q7}  |
-| Deployment         | {interpreted value from Q8}  |
-| SLA / SLO          | {interpreted value from Q9}  |
-| Observability      | {interpreted value from Q10} |
-| Language           | {interpreted value from Q11} |
-| Compliance         | {interpreted value from Q12} |
+| Category           | Your Answer                    | Inferred from      |
+|--------------------|--------------------------------|--------------------|
+| System purpose     | {value from Q1}                | —                  |
+| User scale         | {value from Q2}                | —                  |
+| Transaction volume | {value from Q3}                | —                  |
+| Team               | {value from Q4}                | —                  |
+| Object storage     | {value from Q5}                | —                  |
+| Deployment         | {value from Q6}                | —                  |
+| Language           | {value from Q7}                | —                  |
+| Compliance         | {value from Q8}                | —                  |
+| Consistency model  | {strong / eventual / mixed}    | Q1 + Q2 (inferred) |
+| Analytics tier     | {basic / moderate / heavy}     | Q1 + Q3 (inferred) |
+| SLA target         | {best-effort / 99.9% / 99.99%} | Q2 + Q3 (inferred) |
+| Observability tier | {basic / full / SRE-grade}     | Q2 + Q4 (inferred) |
 
 **Key inferences:**
-- {1–3 bullets summarizing constraints or priorities inferred from the combination of answers — e.g., "High volume + strong consistency → replication and connection pooling will be required", "Small team + tight deadline → Low Risk option will likely be the recommendation"}
+- {1–3 bullets summarizing constraints inferred from the combination of answers — e.g., "High volume + small team → Low Risk is the safest starting point", "SaaS + massive scale → strong consistency for transactions, eventual for feeds"}
 
 > Does this accurately capture your requirements? Reply with any corrections, or say **"Yes, proceed"** to generate the architecture options.
 
