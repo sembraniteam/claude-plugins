@@ -19,8 +19,9 @@ At the very start, call **TaskCreate** to create one task per step:
 5. Generate architecture options (3 options + ERD)
 6. Write content.md and start viewer server
 7. User selects option
-8. Mark selection and write final documentation
-9. Save final docs and stop server
+8. Mark the selected option
+9. Write final documentation sections
+10. Save final docs and stop server
 
 Mark each task `in_progress` when starting it and `completed` when done.
 
@@ -290,41 +291,19 @@ bash "$CLAUDE_PLUGIN_ROOT/scripts/stop-server.sh"
 
 ## Document Structure Convention
 
-The static site viewer parses sections by these exact heading patterns:
+The viewer parses these heading patterns from `content.md`:
 
-```markdown
-# Architecture Design: {Topic}
+- `## Architecture Diagram` + `### Option N:` subheadings → option tabs
+- `## ERD` → ERD nav view
+- `## Revision` + `### Before` / `### After` → Before/After tabs
 
-## Architecture Diagram
+**Critical**: Use `### Option N:` (level-3) within `## Architecture Diagram`, not `## Option N:` (level-2). The viewer splits on level-3 headings to create option tabs.
 
-### Option 1: Low Risk — {Name}
-### Option 2: Medium Risk — {Name}
-### Option 3: High Risk — {Name}
-
-## ERD
-
-## Revision
-
-### Before
-### After
-
-## Recommendation
-
-## Decision Notes
-
-## Final Documentation
-```
-
-**Critical**: Use `### Option N:` (level-3) within `## Architecture Diagram`, not `## Option N:` (level-2) at top level. The viewer's "Architecture Diagram" nav renders these as option tabs. The "ERD" nav renders `## ERD`. The "Revision" nav renders `## Revision` with Before/After tabs.
+For the full document template (all required sections, headings, placeholder text), see `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/output-template.md`.
 
 ## Mermaid Diagram Guidelines
 
-- Use `flowchart TD` for system/service topology
-- Use `erDiagram` in the `## ERD` section only
-- Keep diagrams focused: 8–15 nodes maximum
-- Label edges with action verbs ("calls", "publishes to", "reads from", "caches in")
-- Group related nodes with subgraphs
-- Show non-relational stores alongside relational ones
+Read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/mermaid-guidelines.md` for diagram type selection, node limits, edge labeling, subgraph conventions, and syntax examples.
 
 ## Token Optimization
 
@@ -340,3 +319,4 @@ The static site viewer parses sections by these exact heading patterns:
 - **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/database-selection-guide.md`** — Comprehensive database selection guide (relational, document, key-value, column-family, time-series, graph, search, NewSQL, polyglot persistence). Read when choosing the data layer.
 - **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/observability-guide.md`** — Observability stack guide (OpenTelemetry, Loki, Prometheus, Jaeger/Tempo, SigNoz, Uptrace, Grafana Stack, Datadog). Read when designing the observability strategy.
 - **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/output-template.md`** — Full blank template for the output document.
+- **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/mermaid-guidelines.md`** — Diagram type selection, node limits, edge labeling, subgraph conventions, and syntax examples.

@@ -270,28 +270,31 @@ bash "$CLAUDE_PLUGIN_ROOT/scripts/stop-server.sh"
 
 ## Document Structure Convention
 
-The viewer parses these exact heading patterns:
+The viewer parses these heading patterns from `content.md`:
 
-- `## Architecture Diagram` + `### Option N:` subheadings → option tabs in Architecture Diagram nav
-- `## ERD` → rendered in ERD nav
-- `## Revision` + `### Before` / `### After` → Before/After tabs in Revision nav
+- `## Architecture Diagram` + `### Option N:` subheadings → option tabs
+- `## ERD` → ERD nav view
+- `## Revision` + `### Before` / `### After` → Before/After tabs
 
-**Critical**: Use `### Option N:` (level-3) within `## Architecture Diagram`, not `## Option N:` (level-2) at top level. The viewer splits the `## Architecture Diagram` section by `### ` subheadings to create option tabs.
+**Critical**: Use `### Option N:` (level-3) within `## Architecture Diagram`, not `## Option N:` (level-2). The viewer splits on level-3 headings to create option tabs.
 
-Review document headings must follow this exact format within `## Architecture Diagram`:
+Review option headings must follow this exact format within `## Architecture Diagram`:
 ```
 ### Option 1: Conservative Refactor — {Title}
 ### Option 2: Moderate Redesign — {Title}
 ### Option 3: Full Overhaul — {Title}
 ```
 
+For the full document template, see `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/output-template.md`.
+
 ## Mermaid Diagram Guidelines
+
+Read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/mermaid-guidelines.md` for common diagram rules. Review-specific conventions:
 
 - Current state diagram goes in `## Revision / ### Before`
 - Proposed state diagram goes in `## Revision / ### After` and within each option section
-- Use `flowchart TD` for all topology diagrams
-- Mark changed components with `[NEW]` or `[UPDATED]` node labels
-- Current state: mark problematic nodes with `⚠` in the label
+- Mark changed/new components with `[NEW]` or `[UPDATED]` node labels
+- Mark problematic current-state nodes with `⚠` in the label (Before diagram only)
 
 ## Additional Resources
 
@@ -299,3 +302,4 @@ Review document headings must follow this exact format within `## Architecture D
 - **`$CLAUDE_PLUGIN_ROOT/skills/review-architecture/references/anti-patterns.md`** — Canonical antipattern names (God Service, Shared DB, Chatty Microservices, Big Bang Migration, etc.). Read when naming identified problems and specifying Option 3 migration approach.
 - **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/database-selection-guide.md`** — Comprehensive database selection guide. Read when proposing database changes.
 - **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/observability-guide.md`** — Observability stack guide. Read when proposing observability improvements.
+- **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/mermaid-guidelines.md`** — Diagram type selection, node limits, edge labeling, and review-specific node labeling conventions.

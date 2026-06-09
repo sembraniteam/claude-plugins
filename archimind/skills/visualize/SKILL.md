@@ -1,6 +1,6 @@
 ---
 name: visualize
-description: This skill should be used when the user asks to "visualize the architecture", "open the diagram viewer", "show me the diagrams", "open the viewer", "start the viewer", "update the diagram", "revise the diagram", "change the architecture diagram", "edit the Mermaid code", or "regenerate the diagram". Triggered when the user wants to view, update, or regenerate architecture or database diagrams in the browser.
+description: This skill should be used when the user asks to "visualize the architecture", "open the diagram viewer", "show me the diagrams", "open the viewer", "start the viewer", "update the diagram", "revise the diagram", "change the architecture diagram", "edit the Mermaid code", or "regenerate the diagram", or when the user wants to view, update, or regenerate architecture or database diagrams in the browser.
 ---
 
 # Visualize Architecture
@@ -43,14 +43,7 @@ Read `$CLAUDE_PLUGIN_ROOT/scripts/site/content.md` and locate the `mermaid` code
 
 ### Step 2: Produce the revised Mermaid code
 
-Based on the user's instruction:
-
-- `flowchart TD` for service topology diagrams
-- `erDiagram` for database ERDs
-- `sequenceDiagram` for request/event flows
-- Keep diagrams focused: 8–15 nodes
-- Label all edges with action verbs ("calls", "publishes to", "reads from")
-- Use subgraphs to group related nodes
+Based on the user's instruction. Read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/mermaid-guidelines.md` for diagram type selection, node limits, edge labeling, and subgraph conventions.
 
 ### Step 3: Update content.md
 
@@ -77,51 +70,21 @@ The viewer provides:
 
 ## Document Structure Convention
 
-The viewer parses sections by these exact heading patterns:
+The viewer parses these heading patterns from `content.md`:
 
-```markdown
-# {Title}
+- `## Architecture Diagram` + `### Option N:` subheadings → option tabs
+- `## ERD` → ERD nav view
+- `## Revision` + `### Before` / `### After` → Before/After tabs
 
-## Architecture Diagram
+**Critical**: Use `### Option N:` (level-3) within `## Architecture Diagram`, not `## Option N:` (level-2). The viewer splits on level-3 headings to render option tabs.
 
-### Option 1: Low Risk — {Name}
-### Option 2: Medium Risk — {Name}
-### Option 3: High Risk — {Name}
+For database design documents (no option tabs), the Architecture Diagram view renders as a single scrollable view.
 
-## ERD
-
-## Revision
-
-### Before
-### After
-
-## Recommendation
-
-## Decision Notes
-
-## Final Documentation
-```
-
-**Critical**: Use `### Option N:` (level-3) within `## Architecture Diagram`, not `## Option N:` (level-2) at the top level. The viewer splits the `## Architecture Diagram` section by `### ` subheadings to render option tabs.
-
-For database design documents (single output, no option tabs), the Architecture Diagram view shows a single scrollable view. Structure those documents as:
-
-```markdown
-# Database Design: {Topic}
-
-## ERD
-{mermaid erDiagram}
-
-## Normalization Analysis (if applicable)
-...
-
-## Table Specifications
-...
-```
+For the full document template, see `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/output-template.md`.
 
 ## Troubleshooting
 
-**Server not starting**: Verify `find-port.sh` and `start-server.sh` are executable (`chmod +x`). Python 3 must be installed.
+**Server not starting**: Verify `start-server.sh` is executable (`chmod +x scripts/start-server.sh scripts/find-port.sh`). Python 3 must be installed. (`find-port.sh` is called internally by `start-server.sh`.)
 
 **Browser shows old content**: Click **↺ Reload** in the sidebar. This re-fetches `content.md` without a full page reload.
 

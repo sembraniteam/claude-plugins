@@ -7,7 +7,7 @@ AI-powered software architecture and database designer for Claude Code. Designs 
 - **Design Architecture** — Present three options (Low / Medium / High risk) with Mermaid diagrams, tech stack recommendations, database suggestions, and risk analysis.
 - **Review Architecture** — Audit an existing system, identify antipatterns, and propose three redesign options with migration paths.
 - **Design Database** — Design new schemas or normalize existing SQL DDL. Includes ER diagrams, data type recommendations, index strategy, and normalization analysis.
-- **Visualize** — Run a local static site viewer with Mermaid JS rendering, sidebar document list, and tabbar navigation between architecture options.
+- **Visualize** — Run a local static site viewer with Mermaid JS rendering, left sidebar section nav, and tab navigation between architecture options, ERD, and Before/After revision.
 
 ## Requirements
 
@@ -81,31 +81,30 @@ bash "$CLAUDE_PLUGIN_ROOT/scripts/stop-server.sh"
 
 ## Output Files
 
-All design documents are saved to `docs/archimind/` in your project directory:
+All design documents are saved to `docs/archimind/` in your project directory after the user selects an option:
 
 ```
 docs/archimind/
 ├── architecture/
-│   ├── {timestamp_ms}-{topic}-design.md           ← new architecture design
-│   └── {timestamp_ms}-{topic}-architecture-review.md  ← existing system review
+│   ├── {timestamp_ms}-{topic}.md           ← new architecture design
+│   └── {timestamp_ms}-{topic}-review.md    ← existing system review
 └── database/
-    └── {timestamp_ms}-{topic}-database-design.md  ← database schema design
+    └── {timestamp_ms}-{topic}.md           ← database schema design
 ```
 
-The timestamp prefix (Unix milliseconds) ensures newest files sort to the top in the viewer sidebar.
+The timestamp prefix (Unix milliseconds) makes files sort by creation time.
 
 ## Viewer Usage
 
-The static site viewer provides:
+The static site viewer reads a single `content.md` file served by a local HTTP server:
 
-- **Sidebar** — Lists all design documents (architecture + database) sorted by newest first, with category badges
-- **Section nav** — Three items: **Architecture Diagram** | **ERD** | **Revision**
-- **Architecture Diagram** — Option tabs (Low Risk / Medium Risk / High Risk / Recommendation) with full content
-- **ERD** — Dedicated view for entity-relationship diagrams
+- **Sidebar section nav** — Three items: **Architecture Diagram** | **ERD** | **Revision** (disabled when section is absent)
+- **Architecture Diagram** — Option tabs (Option 1 / Option 2 / Option 3) with full content per option including Mermaid diagrams
+- **ERD** — Dedicated view for the entity-relationship diagram
 - **Revision** — Before / After tabs for architecture review comparisons
 - **Download as Image** — Every Mermaid diagram has ↓ SVG and ↓ PNG download buttons
-- **Mermaid rendering** — All `mermaid` code blocks rendered as interactive diagrams
-- **Auto-refresh** — Reloads the document every 10 seconds to show diagram updates
+- **Mermaid rendering** — All `mermaid` code blocks rendered as interactive diagrams via CDN
+- **↺ Reload** — Manual reload button in the sidebar footer re-fetches `content.md` to reflect updates
 
 ## File Structure
 
