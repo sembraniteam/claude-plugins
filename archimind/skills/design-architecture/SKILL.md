@@ -9,9 +9,24 @@ Act as a **Software Architect** who helps users design software architecture in 
 
 ## Workflow
 
+**Tools — create tasks and use structured questions throughout:**
+
+At the very start, call **TaskCreate** to create one task per step:
+1. Gather requirements — Batch 1 (System & Scale)
+2. Gather requirements — Batch 2 (Technical)
+3. Gather requirements — Batch 3 (Operational)
+4. Confirm requirements summary
+5. Generate architecture options (3 options + ERD)
+6. Write content.md and start viewer server
+7. User selects option
+8. Mark selection and write final documentation
+9. Save final docs and stop server
+
+Mark each task `in_progress` when starting it and `completed` when done.
+
 ### 1. Gather Requirements (A/B/C/D Questions)
 
-Before generating any architecture options, ask structured A/B/C/D questions in batches of 3–4. Wait for the user to answer each batch before asking the next. Add an "Other" option when the user may need to provide a custom answer.
+Before generating any architecture options, ask structured A/B/C/D questions in batches of 3–4. Use **AskUserQuestion** for each batch — map A/B/C/D options to the tool's `options` array (up to 4 per question). For questions that include "Other: describe briefly", the tool provides an automatic "Other" option. Wait for the user to answer each batch before asking the next.
 
 **Batch 1 — System and Scale:**
 
@@ -178,31 +193,39 @@ Include table specifications for key entities (PK, columns, types, key indexes).
 
 After all options, include a `## Recommendation` section: which option is recommended for the user's specific context, referencing their actual requirements (team size, timeline, scale). Keep to 4–6 sentences.
 
-### 7. Do NOT Write Final Documentation Yet
+### 7. Write Content and Open Viewer
 
-**The work is not complete until the user selects one option.** After presenting options, prompt:
+After presenting all 3 options, the ERD, and the Recommendation — **before asking the user to choose** — write the content and open the viewer so the user can compare options with rendered Mermaid diagrams:
 
-> "Which architecture would you like to proceed with — Option 1 (Low Risk), Option 2 (Medium Risk), or Option 3 (High Risk)? You can request modifications to any option before deciding."
+1. Use the **Write tool** to save the full draft to `$CLAUDE_PLUGIN_ROOT/scripts/site/content.md`. Follow the **Document Structure Convention** below. Do NOT include `✅ SELECTED` or `## Final Documentation` at this stage.
+2. Start the viewer server and open the URL:
 
-Iterate freely if the user wants adjustments (e.g., "swap MongoDB for PostgreSQL in Option 2", "add Redis to Option 1"). Do not proceed to Step 8 until the user states an explicit choice.
+```bash
+URL=$(bash "$CLAUDE_PLUGIN_ROOT/scripts/start-server.sh")
+open "$URL"
+```
 
-### 8. Save the Design Document
+Inform the user: "The viewer is open — use the **Architecture Diagram** nav to compare each option's diagram side by side, and the **ERD** nav to view the data model. When ready, select the option you'd like to proceed with."
 
-Once the user selects one, compute the timestamp and save:
+### 8. Option Selection
 
-1. `node -e 'process.stdout.write(String(Date.now()))'` (macOS/Node) or `date +%s%3N` (Linux)
-2. `mkdir -p docs/archimind/architecture/`
-3. Topic slug from the project name (e.g., `payment-platform`, `iot-dashboard`)
-4. Save to: `docs/archimind/architecture/{timestamp_ms}-{topic}-design.md`
-5. Inform the user of the saved path
+Use **AskUserQuestion** to ask the user to choose:
 
-The saved document must follow the **Document Structure Convention** below.
+```
+question: "Which architecture would you like to proceed with?"
+header: "Select Option"
+options:
+  - label: "Option 1 — Low Risk"
+    description: <one-line summary of Option 1 name/pattern>
+  - label: "Option 2 — Medium Risk"
+    description: <one-line summary of Option 2 name/pattern>
+  - label: "Option 3 — High Risk"
+    description: <one-line summary of Option 3 name/pattern>
+```
 
-### 9. Offer to Visualize
+Iterate freely if the user wants adjustments (e.g., "swap MongoDB for PostgreSQL in Option 2"). After each adjustment, update `$CLAUDE_PLUGIN_ROOT/scripts/site/content.md` with the Write tool and re-present AskUserQuestion. The user can click **↺ Reload** in the viewer sidebar to see updated content. Do not proceed to Step 9 until the user makes an explicit choice.
 
-After saving, ask: "Would you like to open the architecture viewer to see the diagrams rendered? Use `/archimind:visualize` to start the server."
-
-### 10. Mark the Selected Option
+### 9. Mark the Selected Option
 
 1. Read the saved document
 2. Insert decision header after the document title:
@@ -213,7 +236,7 @@ After saving, ask: "Would you like to open the architecture viewer to see the di
 3. Append `✅ SELECTED` to the chosen option's `### Option N:` heading
 4. Append a `## Decision Notes` section capturing user-requested adjustments, migration timing, and next steps
 
-### 11. Write Final Documentation Sections
+### 10. Write Final Documentation Sections
 
 After selection is marked, append the full documentation sections to the document:
 
@@ -245,11 +268,24 @@ After selection is marked, append the full documentation sections to the documen
 
 For the database migration strategy, include: schema versioning (Flyway / Liquibase / Prisma Migrate / Alembic / etc.), migration workflow, rollback strategy, zero-downtime considerations, data migration for large datasets, backward compatibility.
 
-### 12. Stop the Viewer Server
+### 11. Save Final Documentation and Stop Server
 
-After the choice is finalized, check if the viewer is running and offer to stop it:
+After marking the selection and appending final documentation:
+
+1. Update `$CLAUDE_PLUGIN_ROOT/scripts/site/content.md` with the Write tool (now includes `✅ SELECTED` and `## Final Documentation`). Inform the user: "The viewer is updated — click **↺ Reload** in the sidebar to see the final state."
+2. Compute timestamp: `node -e 'process.stdout.write(String(Date.now()))'` (macOS) or `date +%s%3N` (Linux). Derive topic slug from the project name (e.g., `payment-platform`, `iot-dashboard`).
+3. Save permanent technical documentation to the user's project:
+
 ```bash
-[ -f .archimind.pid ] && bash "$CLAUDE_PLUGIN_ROOT/scripts/stop-server.sh"
+mkdir -p docs/archimind/architecture
+```
+
+Then use the **Write tool** to write the full content to `docs/archimind/architecture/{timestamp_ms}-{topic}.md`.
+
+4. Stop the viewer server:
+
+```bash
+bash "$CLAUDE_PLUGIN_ROOT/scripts/stop-server.sh"
 ```
 
 ## Document Structure Convention

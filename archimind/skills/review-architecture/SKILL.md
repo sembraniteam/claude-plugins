@@ -5,19 +5,37 @@ description: This skill should be used when the user asks to "review architectur
 
 # Review Architecture
 
-Analyze an existing software architecture, identify weaknesses and opportunities for improvement, then propose three redesign options — **Conservative Refactor**, **Moderate Redesign**, and **Full Overhaul** — each with Mermaid diagrams, rationale, and migration path. Save the output as a timestamped Markdown file in `docs/archimind/architecture/`.
+Analyze an existing software architecture, identify weaknesses and opportunities for improvement, then propose three redesign options — **Conservative Refactor**, **Moderate Redesign**, and **Full Overhaul** — each with Mermaid diagrams, rationale, and migration path. Open a static HTML viewer so the user can compare options before selecting.
 
 ## Workflow
 
+**Tools — create tasks and use structured questions throughout:**
+
+At the very start, call **TaskCreate** to create one task per step:
+1. Collect existing architecture information
+2. Perform architecture analysis
+3. Confirm analysis summary
+4. Generate three redesign options
+5. Write content.md and start viewer server
+6. User selects option
+7. Mark selection and write decision notes
+8. Save final docs and stop server
+
+Mark each task `in_progress` when starting it and `completed` when done.
+
 ### 1. Collect Existing Architecture Information
 
-Ask the user to provide one or more of the following:
+Use **AskUserQuestion** to gather context before the user provides free-form details. Ask up to 4 questions at once to understand:
+- What type of system is it? (web app, backend API, data pipeline, mobile backend, etc.)
+- What are the primary pain points that prompted this review?
+- What constraints exist that cannot change? (legacy integrations, compliance, team skills)
+- How is the system currently deployed? (cloud/on-premise, containerized, serverless, etc.)
+
+Then ask the user to provide any relevant artefacts:
 
 - **Description**: What the system does, how it's structured today
 - **Tech stack**: Languages, frameworks, databases, infra currently used
 - **Architecture diagram** or a textual description of services/components
-- **Pain points**: What specific problems prompted this review (performance, scalability, maintainability, cost, team friction)?
-- **Constraints**: What cannot change (legacy integrations, compliance, team skills)?
 
 Read any relevant files the user points to (e.g., `docker-compose.yml`, `package.json`, database migration files, service directories).
 
@@ -44,14 +62,14 @@ Present the summary in this format, then wait for confirmation:
 
 **Current Architecture:** {1–2 sentence description of what was understood}
 
-| Category                    | Finding                                                                  |
-|-----------------------------|--------------------------------------------------------------------------|
-| Tech stack                  | {languages, frameworks, databases identified}                            |
-| Architecture style          | {monolith / modular monolith / microservices / etc.}                     |
-| Strengths                   | {1–2 key positives}                                                      |
-| Primary pain points         | {top 2–3 issues identified}                                              |
+| Category                    | Finding                                                                                                                   |
+|-----------------------------|---------------------------------------------------------------------------------------------------------------------------|
+| Tech stack                  | {languages, frameworks, databases identified}                                                                             |
+| Architecture style          | {monolith / modular monolith / microservices / etc.}                                                                      |
+| Strengths                   | {1–2 key positives}                                                                                                       |
+| Primary pain points         | {top 2–3 issues identified}                                                                                               |
 | Antipatterns detected       | {canonical names from `$CLAUDE_PLUGIN_ROOT/skills/review-architecture/references/anti-patterns.md`, or "None identified"} |
-| Constraints (cannot change) | {legacy integrations, compliance, team skills, etc.}                     |
+| Constraints (cannot change) | {legacy integrations, compliance, team skills, etc.}                                                                      |
 
 **Root cause hypothesis:** {1–2 sentences on why the main issues exist — e.g., "The system evolved from a monolith without service boundaries, resulting in tight coupling that now blocks independent scaling."}
 
@@ -63,9 +81,9 @@ Wait for the user to confirm or correct before proceeding to Step 4. If the user
 
 ### 4. Scaffold the Review Document Structure
 
-Structure the review document with a `## Revision` section that contains both `### Before` and `### After` subsections. This is what the viewer renders as Before/After tabs. The actual file save happens in Step 7 after options are generated.
+Structure the review document with a `## Revision` section that contains both `### Before` and `### After` subsections. This is what the viewer renders as Before/After tabs. The temp file is written in Step 7 after options are generated.
 
-**Document path**: `docs/archimind/architecture/{timestamp_ms}-{topic}-architecture-review.md`
+**Viewer content path**: `$CLAUDE_PLUGIN_ROOT/scripts/site/content.md`
 
 Structure:
 ```markdown
@@ -186,43 +204,66 @@ For Option 3: specify Strangler Fig, parallel run, or big bang and justify.
 2–3 bullets for ideal scenario.
 ```
 
-### 7. Save the Document
+### 7. Write Content and Open Viewer for Comparison
 
-1. `node -e 'process.stdout.write(String(Date.now()))'` (macOS/Node) or `date +%s%3N` (Linux)
-2. `mkdir -p docs/archimind/architecture/`
-3. Topic slug from the system name (e.g., `payment-service`, `ecommerce-api`)
-4. Save to: `docs/archimind/architecture/{timestamp_ms}-{topic}-architecture-review.md`
-5. Inform the user of the saved path
+Write the draft and immediately open the viewer so the user can compare all three redesign options with their diagrams **before selecting**:
 
-### 8. Offer to Visualize
+1. Use the **Write tool** to save the draft to `$CLAUDE_PLUGIN_ROOT/scripts/site/content.md`.
+2. Start the viewer server and open the URL:
 
-Prompt: "Would you like to open the viewer to compare the redesign options? Use `/archimind:visualize` to launch the diagram server."
+```bash
+URL=$(bash "$CLAUDE_PLUGIN_ROOT/scripts/start-server.sh")
+open "$URL"
+```
 
-The viewer's **Architecture Diagram** nav shows the three option tabs. The **Revision** nav shows the Before/After comparison.
+Inform the user: "The viewer is open — use the **Architecture Diagram** nav to compare each redesign option's diagram, and the **Revision** nav to see the Before/After comparison. When ready, choose the option you'd like to proceed with."
 
-### 9. Require Redesign Selection (mandatory)
+### 8. Require Redesign Selection (mandatory)
 
-**The work is not complete until the user has explicitly chosen one redesign option.** After presenting options, prompt:
+**The work is not complete until the user has explicitly chosen one redesign option.** Use **AskUserQuestion** to present the selection:
 
-> "Which redesign would you like to proceed with — Option 1 (Conservative Refactor), Option 2 (Moderate Redesign), or Option 3 (Full Overhaul)? Request modifications before deciding if needed."
+```
+question: "Which redesign would you like to proceed with?"
+header: "Select Option"
+options:
+  - label: "Option 1 — Conservative Refactor"
+    description: <one-line summary of what this option changes>
+  - label: "Option 2 — Moderate Redesign"
+    description: <one-line summary of what this option changes>
+  - label: "Option 3 — Full Overhaul"
+    description: <one-line summary of what this option changes>
+```
 
-Iterate if the user wants adjustments. Do not proceed to Step 10 until the user states an explicit choice.
+Iterate if the user wants adjustments. Re-present the AskUserQuestion selection after adjustments. Do not proceed to Step 9 until the user states an explicit choice.
 
-### 10. Mark the Chosen Option
+### 9. Mark the Chosen Option
 
-1. Read the saved review document
-2. Insert decision header after the title:
-   ```markdown
-   **Selected:** Option N — {Label}: {Short Title}
-   **Decision date:** {ISO date}
-   ```
-3. Append `✅ SELECTED` to the chosen option's `### Option N:` heading
-4. Update the `### After` section in `## Revision` to show the selected option's proposed architecture (if not already there)
-5. Append a `## Decision Notes` section with user-requested adjustments, migration timing, and next steps
+1. Update `$CLAUDE_PLUGIN_ROOT/scripts/site/content.md` (use the Write tool to overwrite):
+   - Insert decision header after the title:
+     ```markdown
+     **Selected:** Option N — {Label}: {Short Title}
+     **Decision date:** {ISO date}
+     ```
+   - Append `✅ SELECTED` to the chosen option's `### Option N:` heading
+   - Update the `### After` section in `## Revision` to show the selected option's proposed architecture (if not already there)
+   - Append a `## Decision Notes` section with user-requested adjustments, migration timing, and next steps
 
-### 11. Stop the Viewer Server
+### 10. Save Final Documentation and Stop Server
 
-After the choice is finalized, offer to stop the viewer:
+After updating the content:
+
+1. Inform the user: "The viewer is updated — click **↺ Reload** in the sidebar to see the final state."
+2. Compute timestamp: `node -e 'process.stdout.write(String(Date.now()))'` (macOS) or `date +%s%3N` (Linux). Derive topic slug from the system name (e.g., `payment-service`, `ecommerce-api`).
+3. Save permanent technical documentation to the user's project:
+
+```bash
+mkdir -p docs/archimind/architecture
+```
+
+Then use the **Write tool** to write the full content to `docs/archimind/architecture/{timestamp_ms}-{topic}-review.md`.
+
+4. Stop the viewer server:
+
 ```bash
 bash "$CLAUDE_PLUGIN_ROOT/scripts/stop-server.sh"
 ```

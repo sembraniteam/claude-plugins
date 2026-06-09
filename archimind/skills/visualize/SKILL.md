@@ -1,154 +1,130 @@
 ---
 name: visualize
-description: This skill should be used when the user asks to "visualize the architecture", "open the diagram viewer", "show me the diagrams", "start the server", "stop the server", "close the viewer", "launch the architecture viewer", "render the Mermaid diagram", "open the static site", "update the diagram", "revise the diagram", "change the architecture diagram", "edit the Mermaid code", "regenerate the diagram", or wants to view, launch, stop, or update architecture and database diagrams.
+description: This skill should be used when the user asks to "visualize the architecture", "open the diagram viewer", "show me the diagrams", "open the viewer", "start the viewer", "update the diagram", "revise the diagram", "change the architecture diagram", "edit the Mermaid code", or "regenerate the diagram". Triggered when the user wants to view, update, or regenerate architecture or database diagrams in the browser.
 ---
 
 # Visualize Architecture
 
-Manage the Mermaid JS diagram viewer. Three responsibilities:
-1. **Start** the local static site server to render architecture/database design documents
-2. **Stop** the server when done
-3. **Update** Mermaid diagrams inline within saved design documents
+Open a static website viewer that renders architecture options, ERDs, and Before/After revisions with Mermaid JS. The viewer serves a single `content.md` file from a local HTTP server.
 
-## Scripts
+## How It Works
 
-All scripts are at `$CLAUDE_PLUGIN_ROOT/scripts/`:
-
-| Script            | Purpose                                                                                            |
-|-------------------|----------------------------------------------------------------------------------------------------|
-| `find-port.sh`    | Returns the first available TCP port ≥ 3000 (called internally by `start-server.sh`, not directly) |
-| `start-server.sh` | Deploys viewer, generates manifest, starts server                                                  |
-| `stop-server.sh`  | Stops the running server via saved PID                                                             |
-
-## Starting the Viewer
-
-When the user asks to open, launch, or start the viewer:
-
-### Step 1: Verify docs exist
-
-Check that `docs/archimind/` or its subdirectories contain at least one `.md` file:
+1. Write the design content as markdown to `$CLAUDE_PLUGIN_ROOT/scripts/site/content.md`
+2. Start the local server (finds a free port, serves `scripts/site/`):
 
 ```bash
-find docs/archimind -name "*.md" 2>/dev/null | head -5
+URL=$(bash "$CLAUDE_PLUGIN_ROOT/scripts/start-server.sh")
+open "$URL"
 ```
 
-If no docs found, report: "No architecture or database designs found. Generate a design first using `/archimind:design-architecture` or `/archimind:design-database`."
-
-### Step 2: Start the server
-
-```bash
-bash "$CLAUDE_PLUGIN_ROOT/scripts/start-server.sh"
-```
-
-The script will:
-1. Find a free port using `find-port.sh`
-2. Copy `index.html` to `docs/archimind/`
-3. Generate `docs/archimind/manifest.json` scanning both `architecture/` and `database/` subdirectories and flat files
-4. Start `python3 -m http.server` from `docs/archimind/`
-5. Print the URL and save the PID
-
-### Step 3: Report to user
-
-After the server starts, report:
-- The URL (e.g., `http://localhost:3421`)
-- What the viewer shows: sidebar with document list, 3-item section navigation
-- How to stop it: "Say 'stop the server' or 'close the viewer' to shut it down"
-
-## Stopping the Viewer
-
-When the user says "stop the server", "close the viewer", "stop archimind server" — or when an architecture decision has been finalized — run:
+3. The browser loads `index.html`, which fetches `content.md` and renders it client-side with Mermaid JS.
+4. To stop the server when done:
 
 ```bash
 bash "$CLAUDE_PLUGIN_ROOT/scripts/stop-server.sh"
 ```
 
-Report: "Server stopped." If the PID file doesn't exist, report: "No running server found."
+## When to Open the Viewer
 
-**Auto-stop trigger**: After the user selects one architecture option (and the document is updated with `✅ SELECTED`), proactively offer to stop the viewer.
+Open the viewer **before asking the user to select** an option:
+
+1. After drafting architecture options (design-architecture skill) — open so the user can compare all three options with rendered Mermaid diagrams
+2. After completing a database design (design-database skill) — open so the user can inspect the ERD
+3. After drafting architecture review options (review-architecture skill) — open so the user can compare options and the Before/After revision
+4. When the user explicitly asks to view or reopen the diagrams
 
 ## Updating a Diagram
 
-When the user asks to update, revise, or regenerate a Mermaid diagram in an existing design document:
+When the user asks to update, revise, or edit a Mermaid diagram:
 
-### Step 1: Identify the document
+### Step 1: Read the current content
 
-List available documents:
-```bash
-find docs/archimind -name "*.md" | sort
-```
+Read `$CLAUDE_PLUGIN_ROOT/scripts/site/content.md` and locate the `mermaid` code block to change.
 
-### Step 2: Read the document
+### Step 2: Produce the revised Mermaid code
 
-Read the target file and locate the Mermaid code block(s).
+Based on the user's instruction:
 
-### Step 3: Generate the revised diagram
-
-Based on the user's instruction, produce the updated Mermaid code:
-
-- `flowchart TD` for service topology
-- `erDiagram` for database diagrams
-- `sequenceDiagram` for flows
+- `flowchart TD` for service topology diagrams
+- `erDiagram` for database ERDs
+- `sequenceDiagram` for request/event flows
 - Keep diagrams focused: 8–15 nodes
-- Label all edges with action verbs
+- Label all edges with action verbs ("calls", "publishes to", "reads from")
 - Use subgraphs to group related nodes
 
-### Step 4: Apply the update
+### Step 3: Update content.md
 
-Replace the old Mermaid block in the file with the new one. Preserve all surrounding Markdown content.
+Use the **Edit tool** to update the Mermaid block in `$CLAUDE_PLUGIN_ROOT/scripts/site/content.md`, then instruct the user to click **↺ Reload** in the viewer sidebar to see the change.
 
-### Step 5: Confirm
+If the server is not running, start it first:
 
-Inform the user: "Diagram updated in `{filepath}`. Refresh the browser to see the changes (auto-refresh every 10 seconds)."
+```bash
+URL=$(bash "$CLAUDE_PLUGIN_ROOT/scripts/start-server.sh")
+open "$URL"
+```
 
 ## Viewer UI Overview
 
 The viewer provides:
 
-- **Sidebar (left)**: Two sections — a file list (all `.md` files in `docs/archimind/`, with category badges and timestamps) and a **Sections** navigation panel that appears when a document is loaded.
-- **Sections nav (sidebar bottom)**: 3 items — **Architecture Diagram** | **ERD** | **Revision**. ERD and Revision items are disabled (grayed out) when those sections don't exist in the document.
-- **Sub-tab bar (top of content area)**: Option tabs (Option 1 / Option 2 / Option 3 / Recommendation) for the Architecture Diagram view, or Before/After tabs for the Revision view.
-- **Architecture Diagram view**: Each option tab renders the full option content including Mermaid diagrams. Tabs are parsed from `### Option N:` subheadings within `## Architecture Diagram`.
-- **ERD view**: Renders the `## ERD` section with Mermaid `erDiagram`.
-- **Revision view**: Shows **Before** / **After** tabs parsed from `### Before` and `### After` within `## Revision`.
-- **Download as Image**: Every rendered Mermaid diagram has "↓ SVG" and "↓ PNG" download buttons.
-- **Auto-refresh**: Page polls for changes every 10 seconds. The currently viewed tab and section are preserved across refreshes.
+- **Sidebar (left)**: Document title header + **Sections** navigation (Architecture Diagram, ERD, Revision). ERD and Revision nav items are disabled when those sections are absent from the document.
+- **Content area**: Option tabs (Option 1 / Option 2 / Option 3) for the Architecture Diagram section, or Before/After tabs for the Revision section.
+- **Architecture Diagram view**: Each option tab renders the full option content with Mermaid diagrams. Options are parsed from `### Option N:` subheadings within `## Architecture Diagram`.
+- **ERD view**: Renders the `## ERD` section.
+- **Revision view**: Before/After tabs parsed from `### Before` and `### After` within `## Revision`.
+- **Download buttons**: Every rendered Mermaid diagram has **↓ SVG** and **↓ PNG** buttons.
+- **↺ Reload button**: In the sidebar footer — manually re-fetches `content.md`. Use after writing changes.
 
-For database design documents (no Architecture Diagram options), the Architecture Diagram nav shows the content as a single view without option tabs.
+## Document Structure Convention
 
-## Manifest Format
+The viewer parses sections by these exact heading patterns:
 
-`docs/archimind/manifest.json` is auto-generated by `start-server.sh`. Format:
+```markdown
+# {Title}
 
-```json
-{
-  "files": [
-    {
-      "path": "architecture/1735689600000-payment-platform-design.md",
-      "name": "1735689600000-payment-platform-design.md",
-      "title": "payment platform design",
-      "category": "architecture"
-    },
-    {
-      "path": "database/1735689600000-order-management-design.md",
-      "name": "1735689600000-order-management-design.md",
-      "title": "order management design",
-      "category": "database"
-    }
-  ],
-  "generated": "2025-06-08T10:00:00Z"
-}
+## Architecture Diagram
+
+### Option 1: Low Risk — {Name}
+### Option 2: Medium Risk — {Name}
+### Option 3: High Risk — {Name}
+
+## ERD
+
+## Revision
+
+### Before
+### After
+
+## Recommendation
+
+## Decision Notes
+
+## Final Documentation
+```
+
+**Critical**: Use `### Option N:` (level-3) within `## Architecture Diagram`, not `## Option N:` (level-2) at the top level. The viewer splits the `## Architecture Diagram` section by `### ` subheadings to render option tabs.
+
+For database design documents (single output, no option tabs), the Architecture Diagram view shows a single scrollable view. Structure those documents as:
+
+```markdown
+# Database Design: {Topic}
+
+## ERD
+{mermaid erDiagram}
+
+## Normalization Analysis (if applicable)
+...
+
+## Table Specifications
+...
 ```
 
 ## Troubleshooting
 
-**"Address already in use"**: Run stop-server.sh first, then start again.
+**Server not starting**: Verify `find-port.sh` and `start-server.sh` are executable (`chmod +x`). Python 3 must be installed.
 
-**"python3 not found"**: Inform user: "Python 3 is required to run the viewer. Install it or use your system package manager."
+**Browser shows old content**: Click **↺ Reload** in the sidebar. This re-fetches `content.md` without a full page reload.
 
-**Diagrams not rendering**: Verify the Mermaid code block uses triple backticks with `mermaid` tag. Check browser console for Mermaid syntax errors.
+**Diagrams not rendering**: Requires an internet connection to load Mermaid JS from CDN. Check browser console for Mermaid syntax errors. Verify code blocks use triple backticks with the `mermaid` tag.
 
-**Browser doesn't open automatically**: Provide the URL manually: "Open `http://localhost:{port}` in your browser."
-
-**Sidebar shows no files**: The `manifest.json` may be stale. Stop the server and restart — `start-server.sh` regenerates `manifest.json` on each start.
-
-**ERD or Revision nav is disabled**: The loaded document doesn't contain a `## ERD` or `## Revision` section. Add one using the appropriate skill or manually.
+**Port already in use**: `start-server.sh` stops any previous archimind server instance before starting. If a port conflict persists, run `bash "$CLAUDE_PLUGIN_ROOT/scripts/stop-server.sh"` then retry.

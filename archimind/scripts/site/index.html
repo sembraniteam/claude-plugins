@@ -10,297 +10,109 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #0f1117;
-      --surface: #1a1d27;
-      --surface2: #22253a;
-      --border: #2e3250;
-      --accent: #6c8ef5;
-      --text: #e2e4f0;
-      --text-muted: #7a7f9e;
-      --text-code: #c9d1f5;
-      --green: #4cd964;
-      --sidebar-w: 280px;
-      --radius: 8px;
+      --bg: #0f1117; --surface: #1a1d27; --surface2: #22253a;
+      --border: #2e3250; --accent: #6c8ef5; --text: #e2e4f0;
+      --muted: #7a7f9e; --code: #c9d1f5; --green: #4cd964;
+      --sidebar-w: 240px; --r: 8px;
     }
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      display: flex;
-      height: 100vh;
-      overflow: hidden;
-    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
 
     /* ── Sidebar ── */
-    #sidebar {
-      width: var(--sidebar-w);
-      min-width: var(--sidebar-w);
-      background: var(--surface);
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
+    #sidebar { width: var(--sidebar-w); min-width: var(--sidebar-w); background: var(--surface);
+      border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
 
-    #sidebar-header {
-      padding: 18px 16px 12px;
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-    }
+    #sidebar-header { padding: 18px 16px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    #sidebar-header h1 { font-size: 14px; font-weight: 700; color: var(--accent);
+      letter-spacing: .05em; text-transform: uppercase; }
+    #doc-title { font-size: 12px; color: var(--muted); margin-top: 4px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: capitalize; }
 
-    #sidebar-header h1 {
-      font-size: 15px; font-weight: 700; color: var(--accent);
-      letter-spacing: 0.04em; text-transform: uppercase;
-    }
-
-    #sidebar-header p { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
-
-    #file-list { flex: 1; overflow-y: auto; padding: 8px 0; }
-
-    .file-item {
-      padding: 10px 16px;
-      cursor: pointer;
-      border-left: 3px solid transparent;
-      transition: background 0.15s, border-color 0.15s;
-    }
-
-    .file-item:hover { background: var(--surface2); }
-
-    .file-item.active {
-      background: var(--surface2);
-      border-left-color: var(--accent);
-    }
-
-    .file-item .file-title {
-      font-size: 13px; font-weight: 500; color: var(--text);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      text-transform: capitalize;
-    }
-
-    .file-item .file-meta {
-      font-size: 10px; color: var(--text-muted);
-      margin-top: 3px; display: flex; gap: 8px; align-items: center;
-    }
-
-    .file-badge {
-      padding: 1px 5px; border-radius: 3px;
-      font-size: 9px; font-weight: 600;
-      text-transform: uppercase; letter-spacing: 0.05em;
-    }
-
-    .file-badge.architecture { background: rgba(108,142,245,0.2); color: var(--accent); }
-    .file-badge.database { background: rgba(76,217,100,0.15); color: var(--green); }
-
-    /* ── Section Nav (left sidebar) ── */
-    #section-nav {
-      flex-shrink: 0;
-      border-top: 1px solid var(--border);
-    }
-
-    #section-nav.hidden { display: none; }
-
-    .section-nav-label {
-      padding: 10px 16px 4px;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--text-muted);
-    }
-
-    .snav-btn {
-      display: block;
-      width: 100%;
-      text-align: left;
-      background: none;
-      border: none;
-      border-left: 3px solid transparent;
-      color: var(--text-muted);
-      font-size: 13px;
-      font-weight: 500;
-      padding: 10px 16px;
-      cursor: pointer;
-      font-family: inherit;
-      transition: background 0.15s, color 0.15s, border-color 0.15s;
-    }
-
+    /* Section nav */
+    #section-nav { flex: 1; display: flex; flex-direction: column; padding: 12px 0; }
+    .nav-label { padding: 6px 16px 4px; font-size: 10px; font-weight: 700;
+      letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+    .snav-btn { display: block; width: 100%; text-align: left; background: none;
+      border: none; border-left: 3px solid transparent; color: var(--muted);
+      font-size: 13px; font-weight: 500; padding: 10px 16px; cursor: pointer;
+      font-family: inherit; transition: background .15s, color .15s, border-color .15s; }
     .snav-btn:hover:not(:disabled) { background: var(--surface2); color: var(--text); }
-
     .snav-btn.active { color: var(--accent); border-left-color: var(--accent); background: var(--surface2); }
+    .snav-btn:disabled { opacity: .3; cursor: not-allowed; }
 
-    .snav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-
-    #sidebar-footer {
-      padding: 12px 16px;
-      border-top: 1px solid var(--border);
-      font-size: 11px; color: var(--text-muted);
-      flex-shrink: 0;
-    }
+    #sidebar-footer { padding: 10px 16px; border-top: 1px solid var(--border); flex-shrink: 0; }
+    #reload-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+      font-size: 11px; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-family: inherit;
+      transition: all .15s; width: 100%; }
+    #reload-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
 
     /* ── Main ── */
     #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
 
-    /* ── Sub-tab bar (Option tabs / Before|After tabs) ── */
-    #tab-bar {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 2px;
-      padding: 0 16px;
-      height: 40px;
-      flex-shrink: 0;
-    }
-
+    /* Tab bar */
+    #tab-bar { background: var(--surface); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 2px; padding: 0 16px; height: 40px; flex-shrink: 0; }
     #tab-bar.hidden { display: none; }
-
-    .tab-btn {
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      font-size: 12px;
-      font-weight: 500;
-      padding: 5px 14px;
-      border-radius: var(--radius) var(--radius) 0 0;
-      cursor: pointer;
-      transition: color 0.15s, background 0.15s;
-      border-bottom: 2px solid transparent;
-    }
-
+    .tab-btn { background: none; border: none; color: var(--muted); font-size: 12px; font-weight: 500;
+      padding: 5px 14px; border-radius: var(--r) var(--r) 0 0; cursor: pointer;
+      transition: color .15s, background .15s; border-bottom: 2px solid transparent; }
     .tab-btn:hover { color: var(--text); background: var(--surface2); }
-
     .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-
-    .tab-btn.selected { background: rgba(76,217,100,0.08); color: var(--green); }
-
+    .tab-btn.selected { background: rgba(76,217,100,.08); color: var(--green); }
     .tab-btn.selected.active { color: var(--green); border-bottom-color: var(--green); }
 
-    /* ── Content ── */
+    /* Content */
     #content-wrap { flex: 1; overflow-y: auto; padding: 32px 48px; }
-
-    #placeholder {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
-      color: var(--text-muted);
-      gap: 12px;
-    }
-
-    #placeholder svg { opacity: 0.3; }
+    #placeholder { display: flex; flex-direction: column; align-items: center;
+      justify-content: center; height: 100%; color: var(--muted); gap: 12px; }
+    #placeholder svg { opacity: .3; }
     #placeholder p { font-size: 14px; }
+    #doc-content { display: none; }
 
-    /* ── Markdown ── */
-    #doc-content h1 {
-      font-size: 24px; font-weight: 700; color: var(--text);
-      margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 10px;
-    }
-
-    #doc-content h2 {
-      font-size: 18px; font-weight: 700; color: var(--accent); margin: 32px 0 12px;
-    }
-
-    #doc-content h3 {
-      font-size: 15px; font-weight: 600; color: var(--text); margin: 20px 0 8px;
-    }
-
-    #doc-content h4 {
-      font-size: 13px; font-weight: 600; color: var(--text-muted);
-      margin: 16px 0 6px; text-transform: uppercase; letter-spacing: 0.06em;
-    }
-
+    /* Markdown */
+    #doc-content h1 { font-size: 22px; font-weight: 700; color: var(--text);
+      margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+    #doc-content h2 { font-size: 17px; font-weight: 700; color: var(--accent); margin: 28px 0 10px; }
+    #doc-content h3 { font-size: 14px; font-weight: 600; color: var(--text); margin: 18px 0 7px; }
+    #doc-content h4 { font-size: 12px; font-weight: 600; color: var(--muted);
+      margin: 14px 0 5px; text-transform: uppercase; letter-spacing: .06em; }
     #doc-content p { line-height: 1.7; margin-bottom: 12px; font-size: 14px; color: var(--text); }
-
     #doc-content ul, #doc-content ol { padding-left: 20px; margin-bottom: 12px; }
-
-    #doc-content li { font-size: 14px; line-height: 1.7; color: var(--text); margin-bottom: 4px; }
-
+    #doc-content li { font-size: 14px; line-height: 1.7; color: var(--text); margin-bottom: 3px; }
     #doc-content strong { color: var(--text); font-weight: 600; }
-
-    #doc-content code {
-      background: var(--surface2);
-      color: var(--text-code);
-      padding: 1px 6px;
-      border-radius: 4px;
-      font-size: 12px;
-      font-family: 'Fira Code', 'JetBrains Mono', Menlo, monospace;
-    }
-
-    #doc-content pre {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 16px;
-      overflow-x: auto;
-      margin-bottom: 16px;
-    }
-
-    #doc-content pre code { background: none; padding: 0; font-size: 13px; color: var(--text-code); }
-
+    #doc-content code { background: var(--surface2); color: var(--code); padding: 1px 6px;
+      border-radius: 4px; font-size: 12px; font-family: 'Fira Code', Menlo, monospace; }
+    #doc-content pre { background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--r); padding: 16px; overflow-x: auto; margin-bottom: 16px; }
+    #doc-content pre code { background: none; padding: 0; font-size: 13px; color: var(--code); }
     #doc-content table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 13px; }
-
-    #doc-content th {
-      background: var(--surface2); padding: 8px 12px;
-      text-align: left; font-weight: 600; color: var(--text); border: 1px solid var(--border);
-    }
-
+    #doc-content th { background: var(--surface2); padding: 8px 12px; text-align: left;
+      font-weight: 600; color: var(--text); border: 1px solid var(--border); }
     #doc-content td { padding: 7px 12px; color: var(--text); border: 1px solid var(--border); }
-
-    #doc-content tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
-
-    #doc-content blockquote {
-      border-left: 3px solid var(--accent);
-      padding: 8px 16px; margin-bottom: 16px;
-      background: var(--surface2); border-radius: 0 var(--radius) var(--radius) 0;
-      font-style: italic; color: var(--text-muted);
-    }
-
+    #doc-content tr:nth-child(even) td { background: rgba(255,255,255,.02); }
+    #doc-content blockquote { border-left: 3px solid var(--accent); padding: 8px 16px;
+      margin-bottom: 16px; background: var(--surface2); border-radius: 0 var(--r) var(--r) 0;
+      font-style: italic; color: var(--muted); }
     #doc-content hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
 
-    /* ── Mermaid ── */
-    .mermaid-wrap {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      margin: 16px 0;
-      overflow: hidden;
-    }
-
-    .diagram-actions {
-      display: flex;
-      gap: 8px;
-      padding: 6px 12px;
-      background: var(--bg);
-      border-bottom: 1px solid var(--border);
-      justify-content: flex-end;
-    }
-
-    .dl-btn {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      color: var(--text-muted);
-      font-size: 11px;
-      font-weight: 500;
-      padding: 3px 10px;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: all 0.15s;
-      font-family: inherit;
-    }
-
-    .dl-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
-
+    /* Mermaid */
+    .mermaid-wrap { background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--r); margin: 16px 0; overflow: hidden; }
+    .diagram-actions { display: flex; gap: 8px; padding: 6px 12px; background: var(--bg);
+      border-bottom: 1px solid var(--border); justify-content: flex-end; }
+    .dl-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+      font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 4px; cursor: pointer;
+      transition: all .15s; font-family: inherit; }
+    .dl-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
     .diagram-svg-container { padding: 20px; overflow-x: auto; text-align: center; }
-
     .diagram-svg-container svg { max-width: 100%; }
 
     /* Scrollbar */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: var(--bg); }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
   </style>
 </head>
 <body>
@@ -308,276 +120,144 @@
 <aside id="sidebar">
   <div id="sidebar-header">
     <h1>Archimind</h1>
-    <p>Design Viewer</p>
+    <p id="doc-title">Loading…</p>
   </div>
-  <div id="file-list">
-    <p style="padding:16px;font-size:12px;color:var(--text-muted)">Loading documents…</p>
-  </div>
-
-  <!-- Section Nav moved to sidebar -->
-  <nav id="section-nav" class="hidden">
-    <div class="section-nav-label">Sections</div>
+  <nav id="section-nav">
+    <div class="nav-label">Sections</div>
     <button class="snav-btn active" data-view="architecture">Architecture Diagram</button>
-    <button class="snav-btn" data-view="erd">ERD</button>
-    <button class="snav-btn" data-view="revision">Revision</button>
+    <button class="snav-btn" data-view="erd" id="btn-erd">ERD</button>
+    <button class="snav-btn" data-view="revision" id="btn-rev">Revision</button>
   </nav>
-
   <div id="sidebar-footer">
-    <span id="doc-count">0 documents</span>
+    <button id="reload-btn" onclick="loadContent()">↺ Reload</button>
   </div>
 </aside>
 
 <main id="main">
-  <!-- Sub-tab bar (option tabs or before/after tabs) -->
   <div id="tab-bar" class="hidden"></div>
-
   <div id="content-wrap">
     <div id="placeholder">
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <rect x="3" y="3" width="18" height="18" rx="2"/>
-        <path d="M3 9h18M9 21V9"/>
+        <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>
       </svg>
-      <p>Select a document from the sidebar</p>
+      <p>Loading content…</p>
     </div>
-    <div id="doc-content" style="display:none"></div>
+    <div id="doc-content"></div>
   </div>
 </main>
 
 <script>
   mermaid.initialize({
-    startOnLoad: false,
-    theme: 'dark',
+    startOnLoad: false, theme: 'dark',
     themeVariables: {
-      background: '#22253a',
-      primaryColor: '#6c8ef5',
-      primaryTextColor: '#e2e4f0',
-      primaryBorderColor: '#2e3250',
-      lineColor: '#7a7f9e',
-      secondaryColor: '#1a1d27',
-      tertiaryColor: '#0f1117',
-      edgeLabelBackground: '#22253a',
+      background: '#22253a', primaryColor: '#6c8ef5', primaryTextColor: '#e2e4f0',
+      primaryBorderColor: '#2e3250', lineColor: '#7a7f9e', secondaryColor: '#1a1d27',
+      tertiaryColor: '#0f1117', edgeLabelBackground: '#22253a',
       fontFamily: '-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif',
     }
   });
-
   marked.setOptions({ gfm: true, breaks: false });
 
   // ── State ──
-  let currentFile = null;
   let currentView = 'architecture';
-  let currentOptionIndex = 0;
-  let currentRevisionTab = 'before';
-  let userHasSelectedTab = false;  // tracks if user manually picked a tab
+  let currentOptionIdx = 0;
+  let currentRevTab = 'before';
+  let userHasSelectedTab = false;
   let parsedDoc = null;
   let optionContents = [];
   let revisionData = { before: '', after: '' };
-  let refreshTimer = null;
-  let mermaidCounter = 0;
+  let mermaidCtr = 0;
 
-  // ── Manifest / sidebar ──
-  async function loadManifest() {
+  // ── Load content.md ──
+  async function loadContent() {
     try {
-      const r = await fetch('manifest.json?_=' + Date.now());
-      if (!r.ok) throw new Error('manifest not found');
-      return await r.json();
-    } catch { return { files: [] }; }
-  }
-
-  async function populateSidebar() {
-    const manifest = await loadManifest();
-    const list = document.getElementById('file-list');
-    const counter = document.getElementById('doc-count');
-    const files = manifest.files || [];
-
-    counter.textContent = files.length + ' document' + (files.length !== 1 ? 's' : '');
-
-    if (files.length === 0) {
-      list.innerHTML = '<p style="padding:16px;font-size:12px;color:var(--text-muted)">No design documents found in docs/archimind/</p>';
-      return;
-    }
-
-    list.innerHTML = '';
-    files.forEach(f => {
-      const item = document.createElement('div');
-      item.className = 'file-item';
-      const filePath = f.path || f.name;
-      item.dataset.path = filePath;
-
-      const tsMatch = filePath.match(/(\d{10,})[_\-]/);
-      let tsLabel = '';
-      if (tsMatch) {
-        const d = new Date(parseInt(tsMatch[1]));
-        tsLabel = d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-      }
-
-      const category = f.category || detectCategory(filePath);
-      item.innerHTML = `
-        <div class="file-title">${escapeHtml(f.title)}</div>
-        <div class="file-meta">
-          <span class="file-badge ${category}">${category}</span>
-          ${tsLabel ? `<span>${tsLabel}</span>` : ''}
-        </div>
-      `;
-      item.addEventListener('click', () => loadDoc(filePath));
-      list.appendChild(item);
-    });
-  }
-
-  function detectCategory(path) {
-    if (/\/database\//i.test(path) || /database/i.test(path)) return 'database';
-    return 'architecture';
-  }
-
-  // ── Document loading ──
-  async function loadDoc(filepath, isRefresh = false) {
-    if (!isRefresh) {
-      currentFile = filepath;
-      document.querySelectorAll('.file-item').forEach(el => {
-        el.classList.toggle('active', el.dataset.path === filepath);
-      });
-    }
-
-    try {
-      const r = await fetch(filepath + '?_=' + Date.now());
-      if (!r.ok) throw new Error('Could not load ' + filepath);
+      const r = await fetch('./content.md?_=' + Date.now());
+      if (!r.ok) throw new Error('content.md not found. Write the design content to this file and reload.');
       const md = await r.text();
-      processDoc(md, isRefresh);
-    } catch (e) { showError(e.message); }
-
-    clearInterval(refreshTimer);
-    refreshTimer = setInterval(() => { if (currentFile) loadDoc(currentFile, true); }, 10000);
+      processDoc(md);
+    } catch (e) {
+      showError(e.message);
+    }
   }
 
   // ── Document parsing ──
   function parseDocument(markdown) {
     const lines = markdown.split('\n');
     const doc = {
-      preamble: [],
-      archSectionLines: [],
-      optionSections: [],
-      erdLines: [],
-      revisionLines: [],
-      recommendationLines: [],
-      hasArchSection: false,
-      hasERD: false,
-      hasRevision: false,
+      preamble: [], arch: [], erd: [], revision: [], recommendation: [], top_options: [],
+      has_arch: false, has_erd: false, has_revision: false, title: ''
     };
+    let mode = 'preamble', opt_t = '', opt_l = [];
 
-    let mode = 'preamble';
-    let optTitle = '';
-    let optLines = [];
-
-    function flushOption() {
-      if (optTitle) {
-        doc.optionSections.push({ title: optTitle, content: optLines.join('\n') });
-        optTitle = ''; optLines = [];
-      }
+    function flush() {
+      if (opt_t) { doc.top_options.push({ title: opt_t, content: opt_l.join('\n') }); }
+      opt_t = ''; opt_l = [];
     }
 
     for (const line of lines) {
-      if (/^## Architecture Diagram\b/.test(line)) {
-        flushOption(); mode = 'arch'; doc.hasArchSection = true; continue;
-      }
-      if (/^## ERD\b/.test(line)) {
-        flushOption(); mode = 'erd'; doc.hasERD = true; doc.erdLines.push(line); continue;
-      }
-      if (/^## Revision\b/.test(line)) {
-        flushOption(); mode = 'revision'; doc.hasRevision = true; doc.revisionLines.push(line); continue;
-      }
-      if (/^## Recommendation\b/.test(line)) {
-        flushOption(); mode = 'recommendation'; doc.recommendationLines.push(line); continue;
-      }
-      if (/^## Option \d+:/.test(line)) {
-        flushOption(); mode = 'option';
-        optTitle = line.replace(/^## /, ''); optLines = [line]; continue;
-      }
-
-      if (mode === 'preamble') doc.preamble.push(line);
-      else if (mode === 'arch') doc.archSectionLines.push(line);
-      else if (mode === 'erd') doc.erdLines.push(line);
-      else if (mode === 'revision') doc.revisionLines.push(line);
-      else if (mode === 'recommendation') doc.recommendationLines.push(line);
-      else if (mode === 'option') optLines.push(line);
+      if (!doc.title && line.startsWith('# ')) doc.title = line.slice(2).trim();
+      if (/^## Architecture Diagram\b/.test(line)) { flush(); mode = 'arch'; doc.has_arch = true; continue; }
+      if (/^## ERD\b/.test(line)) { flush(); mode = 'erd'; doc.has_erd = true; doc.erd.push(line); continue; }
+      if (/^## Revision\b/.test(line)) { flush(); mode = 'revision'; doc.has_revision = true; doc.revision.push(line); continue; }
+      if (/^## Recommendation\b/.test(line)) { flush(); mode = 'rec'; doc.recommendation.push(line); continue; }
+      if (/^## Option \d+:/.test(line)) { flush(); mode = 'opt'; opt_t = line.slice(3); opt_l = [line]; continue; }
+      if (/^## /.test(line) && mode !== 'preamble') { flush(); mode = 'skip'; continue; }
+      const targets = { preamble: doc.preamble, arch: doc.arch, erd: doc.erd, revision: doc.revision, rec: doc.recommendation, opt: opt_l };
+      if (targets[mode]) targets[mode].push(line);
     }
-    flushOption();
+    flush();
     return doc;
   }
 
-  function parseArchSubOptions(content) {
-    const optRegex = /^(### (?:Option \d+:|Conservative|Moderate|Full).*)$/gm;
-    const options = [];
-    let lastIndex = 0; let lastTitle = null; let m;
-
-    while ((m = optRegex.exec(content)) !== null) {
-      if (lastTitle !== null) {
-        options.push({ title: lastTitle, content: content.slice(lastIndex, m.index).trim() });
-      }
-      lastTitle = m[1].replace(/^### /, '');
-      lastIndex = m.index;
+  function parseSubOptions(content) {
+    const pat = /^(### (?:Option \d+:|Conservative|Moderate|Full).*)$/gm;
+    const opts = []; let last_i = 0, last_t = null, m;
+    while ((m = pat.exec(content)) !== null) {
+      if (last_t !== null) opts.push({ title: last_t, content: content.slice(last_i, m.index).trim() });
+      last_t = m[1].replace(/^### /, ''); last_i = m.index;
     }
-    if (lastTitle !== null) {
-      options.push({ title: lastTitle, content: content.slice(lastIndex).trim() });
-    }
-    return options;
+    if (last_t !== null) opts.push({ title: last_t, content: content.slice(last_i).trim() });
+    return opts;
   }
 
-  function parseRevisionContent(content) {
-    const bI = content.search(/^### Before\b/m);
-    const aI = content.search(/^### After\b/m);
+  function parseRevision(content) {
+    const bm = content.search(/^### Before\b/m);
+    const am = content.search(/^### After\b/m);
     let before = '', after = '';
-
-    if (bI >= 0 && aI >= 0) {
-      before = content.slice(bI).replace(/^### Before\b[^\n]*\n?/, '').slice(0, aI - bI);
-      after = content.slice(aI).replace(/^### After\b[^\n]*\n?/, '');
-    } else if (bI >= 0) {
-      before = content.slice(bI).replace(/^### Before\b[^\n]*\n?/, '');
-    } else if (aI >= 0) {
-      after = content.slice(aI).replace(/^### After\b[^\n]*\n?/, '');
-    } else {
-      before = content;
-    }
-    return { before: before.trim(), after: after.trim() };
+    if (bm >= 0 && am >= 0) {
+      before = content.slice(bm).replace(/^### Before\b[^\n]*\n?/, '').slice(0, am - bm).trim();
+      after  = content.slice(am).replace(/^### After\b[^\n]*\n?/, '').trim();
+    } else if (bm >= 0) {
+      before = content.slice(bm).replace(/^### Before\b[^\n]*\n?/, '').trim();
+    } else if (am >= 0) {
+      after  = content.slice(am).replace(/^### After\b[^\n]*\n?/, '').trim();
+    } else { before = content.trim(); }
+    return { before, after };
   }
 
   // ── Main render ──
-  function processDoc(markdown, isRefresh = false) {
+  function processDoc(markdown) {
     parsedDoc = parseDocument(markdown);
+    currentView = 'architecture';
+    currentOptionIdx = 0;
+    currentRevTab = 'before';
+    userHasSelectedTab = false;
     optionContents = [];
 
-    if (!isRefresh) {
-      // New document — reset all navigation state
-      currentView = 'architecture';
-      currentOptionIndex = 0;
-      currentRevisionTab = 'before';
-      userHasSelectedTab = false;
-    }
+    document.getElementById('doc-title').textContent = parsedDoc.title || 'Design Document';
+    document.title = parsedDoc.title || 'Archimind Viewer';
+    document.getElementById('placeholder').style.display = 'none';
+    document.getElementById('doc-content').style.display = 'block';
 
-    const sectionNav = document.getElementById('section-nav');
-    const placeholder = document.getElementById('placeholder');
-    const docContent = document.getElementById('doc-content');
+    document.getElementById('btn-erd').disabled = !parsedDoc.has_erd;
+    document.getElementById('btn-rev').disabled = !parsedDoc.has_revision;
 
-    placeholder.style.display = 'none';
-    docContent.style.display = 'block';
-    sectionNav.classList.remove('hidden');
-
-    const erdBtn = sectionNav.querySelector('[data-view="erd"]');
-    const revBtn = sectionNav.querySelector('[data-view="revision"]');
-    erdBtn.disabled = !parsedDoc.hasERD;
-    revBtn.disabled = !parsedDoc.hasRevision;
-
-    // On refresh, if current view became unavailable, fall back to architecture
-    if (currentView === 'erd' && !parsedDoc.hasERD) currentView = 'architecture';
-    if (currentView === 'revision' && !parsedDoc.hasRevision) currentView = 'architecture';
-
-    setView(currentView);
+    setView('architecture');
   }
 
   function setView(view) {
     currentView = view;
-    document.querySelectorAll('.snav-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.view === view);
-    });
-
+    document.querySelectorAll('.snav-btn').forEach(b => b.classList.toggle('active', b.dataset.view === view));
     if (view === 'architecture') renderArchView();
     else if (view === 'erd') renderERDView();
     else if (view === 'revision') renderRevisionView();
@@ -587,239 +267,158 @@
   function renderArchView() {
     const doc = parsedDoc;
     let opts;
-
-    if (doc.hasArchSection) {
-      const sub = parseArchSubOptions(doc.archSectionLines.join('\n'));
-      opts = sub.length > 0 ? sub : [{ title: 'Overview', content: doc.archSectionLines.join('\n') }];
+    if (doc.has_arch) {
+      const sub = parseSubOptions(doc.arch.join('\n'));
+      opts = sub.length > 0 ? sub : [{ title: 'Overview', content: doc.arch.join('\n') }];
     } else {
-      opts = doc.optionSections.map(o => ({ title: o.title, content: o.content }));
+      opts = doc.top_options.map(o => ({ title: o.title, content: o.content }));
     }
-
-    if (doc.recommendationLines.length > 0) {
-      opts = [...opts, { title: 'Recommendation', content: doc.recommendationLines.join('\n') }];
-    }
-
+    if (doc.recommendation.length > 0) opts.push({ title: 'Recommendation', content: doc.recommendation.join('\n') });
     optionContents = opts;
 
-    const tabBar = document.getElementById('tab-bar');
-    tabBar.innerHTML = '';
-
+    const tb = document.getElementById('tab-bar');
+    tb.innerHTML = '';
     if (opts.length > 1) {
-      tabBar.classList.remove('hidden');
-
-      // Auto-select the marked option only on first load (user hasn't picked a tab yet)
-      const selectedIdx = opts.findIndex(o => /✅\s*SELECTED/i.test(o.title));
-      if (selectedIdx >= 0 && !userHasSelectedTab) {
-        currentOptionIndex = selectedIdx;
-      }
-      // Guard against index out of range after document update
-      if (currentOptionIndex >= opts.length) currentOptionIndex = 0;
-
+      tb.classList.remove('hidden');
+      const selIdx = opts.findIndex(o => /✅\s*SELECTED/i.test(o.title));
+      if (selIdx >= 0 && !userHasSelectedTab) currentOptionIdx = selIdx;
+      if (currentOptionIdx >= opts.length) currentOptionIdx = 0;
       opts.forEach((opt, i) => {
-        const isSelected = /✅\s*SELECTED/i.test(opt.title);
+        const isSel = /✅\s*SELECTED/i.test(opt.title);
         const btn = document.createElement('button');
-        btn.className = 'tab-btn' + (isSelected ? ' selected' : '') + (i === currentOptionIndex ? ' active' : '');
-        btn.textContent = formatTabLabel(opt.title);
-        btn.addEventListener('click', () => switchOptionTab(i));
-        tabBar.appendChild(btn);
+        btn.className = 'tab-btn' + (isSel ? ' selected' : '') + (i === currentOptionIdx ? ' active' : '');
+        btn.textContent = fmtLabel(opt.title);
+        btn.addEventListener('click', () => switchOptTab(i));
+        tb.appendChild(btn);
       });
     } else {
-      tabBar.classList.add('hidden');
+      tb.classList.add('hidden');
     }
-
-    renderOptionContent(currentOptionIndex);
+    renderOptContent(currentOptionIdx);
   }
 
-  function switchOptionTab(index) {
-    currentOptionIndex = index;
-    userHasSelectedTab = true;
-    document.querySelectorAll('#tab-bar .tab-btn').forEach((b, i) => {
-      b.classList.toggle('active', i === index);
-    });
-    renderOptionContent(index);
+  function switchOptTab(i) {
+    currentOptionIdx = i; userHasSelectedTab = true;
+    document.querySelectorAll('#tab-bar .tab-btn').forEach((b, j) => b.classList.toggle('active', j === i));
+    renderOptContent(i);
   }
 
-  function renderOptionContent(index) {
-    const opt = optionContents[index];
+  function renderOptContent(i) {
+    const opt = optionContents[i];
     if (!opt) return;
-
-    const docContent = document.getElementById('doc-content');
-    const preamble = parsedDoc.preamble.join('\n');
-
+    const dc = document.getElementById('doc-content');
     let html = '';
-    if (preamble.trim() && index === 0) html += marked.parse(preamble);
+    if (parsedDoc.preamble.join('\n').trim() && i === 0) html += marked.parse(parsedDoc.preamble.join('\n'));
     html += marked.parse(opt.content);
-
-    docContent.innerHTML = html;
-    renderMermaid(docContent);
+    dc.innerHTML = html;
+    renderMermaid(dc);
     document.getElementById('content-wrap').scrollTop = 0;
   }
 
   // ── ERD view ──
   function renderERDView() {
-    const tabBar = document.getElementById('tab-bar');
-    const docContent = document.getElementById('doc-content');
-
-    tabBar.classList.add('hidden');
-    tabBar.innerHTML = '';
-
-    if (!parsedDoc.hasERD) {
-      docContent.innerHTML = '<p style="color:var(--text-muted);padding:20px 0">No ERD section found in this document.</p>';
-      return;
-    }
-
-    docContent.innerHTML = marked.parse(parsedDoc.erdLines.join('\n'));
-    renderMermaid(docContent);
+    const tb = document.getElementById('tab-bar');
+    tb.classList.add('hidden'); tb.innerHTML = '';
+    const dc = document.getElementById('doc-content');
+    const erd = parsedDoc.erd.join('\n');
+    dc.innerHTML = erd ? marked.parse(erd) : '<p style="color:var(--muted);padding:20px 0">No ERD section found.</p>';
+    renderMermaid(dc);
     document.getElementById('content-wrap').scrollTop = 0;
   }
 
   // ── Revision view ──
   function renderRevisionView() {
-    const tabBar = document.getElementById('tab-bar');
-    const docContent = document.getElementById('doc-content');
-
-    if (!parsedDoc.hasRevision) {
-      tabBar.classList.add('hidden');
-      tabBar.innerHTML = '';
-      docContent.innerHTML = '<p style="color:var(--text-muted);padding:20px 0">No Revision section found in this document.</p>';
-      return;
-    }
-
-    revisionData = parseRevisionContent(parsedDoc.revisionLines.join('\n'));
-
-    tabBar.innerHTML = '';
-    tabBar.classList.remove('hidden');
-
+    const tb = document.getElementById('tab-bar');
+    tb.innerHTML = ''; tb.classList.remove('hidden');
+    revisionData = parseRevision(parsedDoc.revision.join('\n'));
     ['before', 'after'].forEach(tab => {
       const btn = document.createElement('button');
-      btn.className = 'tab-btn' + (tab === currentRevisionTab ? ' active' : '');
+      btn.className = 'tab-btn' + (tab === currentRevTab ? ' active' : '');
       btn.textContent = tab === 'before' ? 'Before' : 'After';
       btn.dataset.rtab = tab;
-      btn.addEventListener('click', () => switchRevisionTab(tab));
-      tabBar.appendChild(btn);
+      btn.addEventListener('click', () => switchRevTab(tab));
+      tb.appendChild(btn);
     });
-
-    renderRevisionTabContent(currentRevisionTab);
+    renderRevContent(currentRevTab);
   }
 
-  function switchRevisionTab(tab) {
-    currentRevisionTab = tab;
-    document.querySelectorAll('#tab-bar .tab-btn').forEach(b => {
-      b.classList.toggle('active', b.dataset.rtab === tab);
-    });
-    renderRevisionTabContent(tab);
+  function switchRevTab(tab) {
+    currentRevTab = tab;
+    document.querySelectorAll('#tab-bar .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.rtab === tab));
+    renderRevContent(tab);
   }
 
-  function renderRevisionTabContent(tab) {
-    const docContent = document.getElementById('doc-content');
+  function renderRevContent(tab) {
     const content = tab === 'before' ? revisionData.before : revisionData.after;
-
-    if (!content.trim()) {
-      docContent.innerHTML = `<p style="color:var(--text-muted);padding:20px 0">No "${tab}" content found.</p>`;
+    const dc = document.getElementById('doc-content');
+    if (!content?.trim()) {
+      dc.innerHTML = `<p style="color:var(--muted);padding:20px 0">No "${tab}" content found.</p>`;
       return;
     }
-
-    docContent.innerHTML = marked.parse(content);
-    renderMermaid(docContent);
+    dc.innerHTML = marked.parse(content);
+    renderMermaid(dc);
     document.getElementById('content-wrap').scrollTop = 0;
   }
 
-  // ── Mermaid rendering with download buttons ──
+  // ── Mermaid rendering ──
   async function renderMermaid(container) {
     const blocks = container.querySelectorAll('pre code.language-mermaid');
     let idx = 0;
-
     for (const code of blocks) {
       const pre = code.parentElement;
-      const def = code.textContent;
-      const id = 'mermaid-' + (++mermaidCounter) + '-' + (idx++);
+      const id = 'mmd-' + (++mermaidCtr) + '-' + (idx++);
       const wrap = document.createElement('div');
       wrap.className = 'mermaid-wrap';
-
       try {
-        const { svg } = await mermaid.render(id, def);
-
+        const { svg } = await mermaid.render(id, code.textContent);
         const actions = document.createElement('div');
         actions.className = 'diagram-actions';
-
         const svgBtn = document.createElement('button');
-        svgBtn.className = 'dl-btn';
-        svgBtn.textContent = '↓ SVG';
-        svgBtn.title = 'Download as SVG';
-
+        svgBtn.className = 'dl-btn'; svgBtn.textContent = '↓ SVG';
         const pngBtn = document.createElement('button');
-        pngBtn.className = 'dl-btn';
-        pngBtn.textContent = '↓ PNG';
-        pngBtn.title = 'Download as PNG';
-
-        actions.appendChild(svgBtn);
-        actions.appendChild(pngBtn);
-
-        const svgContainer = document.createElement('div');
-        svgContainer.className = 'diagram-svg-container';
-        svgContainer.innerHTML = svg;
-
-        const svgEl = svgContainer.querySelector('svg');
-        const diagName = 'diagram-' + mermaidCounter;
-
-        svgBtn.addEventListener('click', () => downloadSVG(svgEl, diagName));
-        pngBtn.addEventListener('click', () => downloadPNG(svgEl, diagName));
-
-        wrap.appendChild(actions);
-        wrap.appendChild(svgContainer);
+        pngBtn.className = 'dl-btn'; pngBtn.textContent = '↓ PNG';
+        actions.appendChild(svgBtn); actions.appendChild(pngBtn);
+        const svgWrap = document.createElement('div');
+        svgWrap.className = 'diagram-svg-container'; svgWrap.innerHTML = svg;
+        const svgEl = svgWrap.querySelector('svg');
+        const name = 'diagram-' + mermaidCtr;
+        svgBtn.addEventListener('click', () => dlSVG(svgEl, name));
+        pngBtn.addEventListener('click', () => dlPNG(svgEl, name));
+        wrap.appendChild(actions); wrap.appendChild(svgWrap);
       } catch (err) {
-        wrap.innerHTML = `<pre style="color:#f47983;font-size:12px;padding:16px">Mermaid error:\n${escapeHtml(err.message)}</pre>`;
+        wrap.innerHTML = `<pre style="color:#f47983;padding:16px">Mermaid error:\n${esc(err.message)}</pre>`;
       }
-
       pre.parentNode.replaceChild(wrap, pre);
     }
   }
 
   // ── Download helpers ──
-  function downloadSVG(svgEl, name) {
-    if (!svgEl) return;
-    const data = new XMLSerializer().serializeToString(svgEl);
-    const blob = new Blob([data], { type: 'image/svg+xml;charset=utf-8' });
-    triggerDownload(URL.createObjectURL(blob), name + '.svg');
+  function dlSVG(el, name) {
+    if (!el) return;
+    trigger(URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(el)], { type: 'image/svg+xml;charset=utf-8' })), name + '.svg');
   }
 
-  function downloadPNG(svgEl, name) {
-    if (!svgEl) return;
-
-    // Clone the SVG and set explicit dimensions so the browser can rasterize it
-    const svgClone = svgEl.cloneNode(true);
-    const rect = svgEl.getBoundingClientRect();
-    const vb = svgEl.viewBox?.baseVal;
-    const w = Math.max(rect.width || 0, vb?.width || 0, 400);
-    const h = Math.max(rect.height || 0, vb?.height || 0, 300);
-    svgClone.setAttribute('width', w);
-    svgClone.setAttribute('height', h);
-
-    const xml = new XMLSerializer().serializeToString(svgClone);
-    const svgBlob = new Blob([xml], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(svgBlob);
-
+  function dlPNG(el, name) {
+    if (!el) return;
+    const clone = el.cloneNode(true);
+    const r = el.getBoundingClientRect(), vb = el.viewBox?.baseVal;
+    const w = Math.max(r.width || 0, vb?.width || 0, 400);
+    const h = Math.max(r.height || 0, vb?.height || 0, 300);
+    clone.setAttribute('width', w); clone.setAttribute('height', h);
+    const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(clone)], { type: 'image/svg+xml;charset=utf-8' }));
     const img = new Image();
     img.onload = () => {
-      const scale = 2;
-      const canvas = document.createElement('canvas');
-      canvas.width = w * scale;
-      canvas.height = h * scale;
-      const ctx = canvas.getContext('2d');
-      ctx.scale(scale, scale);
-      ctx.fillStyle = '#22253a';
-      ctx.fillRect(0, 0, w, h);
-      ctx.drawImage(img, 0, 0, w, h);
-      canvas.toBlob(blob => {
-        if (blob) triggerDownload(URL.createObjectURL(blob), name + '.png');
-      }, 'image/png');
+      const c = document.createElement('canvas');
+      c.width = w * 2; c.height = h * 2;
+      const ctx = c.getContext('2d');
+      ctx.scale(2, 2); ctx.fillStyle = '#22253a'; ctx.fillRect(0, 0, w, h); ctx.drawImage(img, 0, 0, w, h);
+      c.toBlob(b => { if (b) trigger(URL.createObjectURL(b), name + '.png'); }, 'image/png');
       URL.revokeObjectURL(url);
     };
-    img.onerror = () => URL.revokeObjectURL(url);
     img.src = url;
   }
 
-  function triggerDownload(href, filename) {
+  function trigger(href, filename) {
     const a = document.createElement('a');
     a.href = href; a.download = filename;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
@@ -827,31 +426,32 @@
   }
 
   // ── Utilities ──
-  function formatTabLabel(title) {
-    const isSelected = /✅\s*SELECTED/i.test(title);
-    const cleaned = title.replace(/✅\s*SELECTED/i, '').trim();
-    const m = cleaned.match(/Option \d+:\s*([\w\s]+?)(?:\s*—|\s*\(|$)/);
-    const label = m ? m[1].trim() : cleaned.replace(/^Option \d+:\s*/, '');
-    return isSelected ? label + ' ✅' : label;
+  function fmtLabel(title) {
+    const sel = /✅\s*SELECTED/i.test(title);
+    const c = title.replace(/✅\s*SELECTED/i, '').trim();
+    const m = c.match(/Option \d+:\s*([\w\s]+?)(?:\s*—|\s*\(|$)/);
+    const label = m ? m[1].trim() : c.replace(/^Option \d+:\s*/, '');
+    return sel ? label + ' ✅' : label;
   }
 
   function showError(msg) {
-    const el = document.getElementById('doc-content');
-    el.style.display = 'block';
-    el.innerHTML = `<p style="color:#f47983;font-size:14px;padding:20px 0">Error: ${escapeHtml(msg)}</p>`;
+    document.getElementById('placeholder').innerHTML = `
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#f47983" stroke-width="1.5">
+        <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
+      </svg>
+      <p style="color:#f47983;text-align:center;max-width:320px">${esc(msg)}</p>`;
+    document.getElementById('placeholder').style.display = 'flex';
+    document.getElementById('doc-content').style.display = 'none';
   }
 
-  function escapeHtml(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
+  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-  // ── Section nav event listeners ──
-  document.querySelectorAll('.snav-btn').forEach(btn => {
-    btn.addEventListener('click', () => { if (!btn.disabled) setView(btn.dataset.view); });
-  });
+  // ── Section nav ──
+  document.querySelectorAll('.snav-btn').forEach(btn =>
+    btn.addEventListener('click', () => { if (!btn.disabled) setView(btn.dataset.view); }));
 
   // ── Init ──
-  populateSidebar();
+  loadContent();
 </script>
 </body>
 </html>

@@ -5,9 +5,20 @@ description: This skill should be used when the user asks to "design a database"
 
 # Design Database
 
-Design a new database schema from requirements, or analyze and normalize an existing schema. Produce an Entity-Relationship Diagram (Mermaid), detailed table specifications (columns, data types, constraints, indexes), normalization analysis, and a concise rationale for every decision. Save the output to `docs/archimind/`.
+Design a new database schema from requirements, or analyze and normalize an existing schema. Produce an Entity-Relationship Diagram (Mermaid), detailed table specifications (columns, data types, constraints, indexes), normalization analysis, and a concise rationale for every decision. Open a static HTML viewer so the user can see the ERD rendered with Mermaid JS.
 
 ## Workflow
+
+**Tools — create tasks and use structured questions throughout:**
+
+At the very start, call **TaskCreate** to create one task per step:
+1. Clarify goal and database context
+2. Design schema (or analyze existing schema)
+3. Produce ER diagram
+4. Produce table specifications
+5. Write content.md, open viewer, save final docs
+
+Mark each task `in_progress` when starting it and `completed` when done.
 
 ### 1. Clarify the Goal
 
@@ -16,11 +27,11 @@ Determine which mode applies:
 - **Design from scratch**: User describes requirements (entities, relationships, expected queries)
 - **Normalize existing schema**: User pastes SQL DDL (`CREATE TABLE` statements) or describes the existing tables
 
-Ask if not clear:
-- Target database engine (PostgreSQL, MySQL, SQLite, MongoDB, etc.)
-- Approximate data volume and read/write ratio
-- Most critical queries (search, reporting, real-time lookups)
-- Any existing data that needs migrating
+If the mode or context is unclear, use **AskUserQuestion** to ask (up to 4 questions at once):
+- What is the target database engine? (PostgreSQL, MySQL, SQLite, MongoDB, etc.)
+- Approximate data volume and read/write ratio?
+- Most critical queries (search, reporting, real-time lookups)?
+- Any existing data that needs migrating?
 
 ### 2A. Design from Scratch
 
@@ -157,19 +168,32 @@ For each table, provide a spec block:
 | idx_users_created_at        | BRIN   | created_at        | Range queries on large sequential data     |
 ```
 
-### 5. Save the Document
+### 5. Write Content, Open Viewer, and Save Final Docs
 
-1. Compute timestamp in milliseconds via shell tool:
-   - Linux: `date +%s%3N`
-   - macOS: `node -e 'process.stdout.write(String(Date.now()))'`
-2. Create `docs/archimind/database/` directory: `mkdir -p docs/archimind/database/`
-3. Determine topic slug (e.g., `ecommerce`, `user-management`)
-4. Save to: `docs/archimind/database/{timestamp_ms}-{topic}-database-design.md`
-5. Confirm saved path to user
+1. Use the **Write tool** to write the full design content to `$CLAUDE_PLUGIN_ROOT/scripts/site/content.md`. Follow the **Document Structure for Database Design** below.
+2. Start the viewer server and open the URL:
 
-### 6. Offer to Visualize
+```bash
+URL=$(bash "$CLAUDE_PLUGIN_ROOT/scripts/start-server.sh")
+open "$URL"
+```
 
-Prompt: "Would you like to view the ER diagram in the interactive viewer? Use `/archimind:visualize` to open it."
+Inform the user: "The viewer is open at `$URL` — the ERD is rendered with Mermaid JS. Click **↺ Reload** in the sidebar after any changes."
+
+3. Compute timestamp: `node -e 'process.stdout.write(String(Date.now()))'` (macOS) or `date +%s%3N` (Linux). Determine topic slug (e.g., `ecommerce`, `user-management`).
+4. Save permanent technical documentation to the user's project:
+
+```bash
+mkdir -p docs/archimind/database
+```
+
+Then use the **Write tool** to write the full content to `docs/archimind/database/{timestamp_ms}-{topic}.md`.
+
+5. Stop the viewer server:
+
+```bash
+bash "$CLAUDE_PLUGIN_ROOT/scripts/stop-server.sh"
+```
 
 ## Document Structure for Database Design
 
