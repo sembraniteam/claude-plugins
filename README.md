@@ -1,8 +1,23 @@
 # sembraniteam-claude-plugins
 
-A collection of [Claude Code](https://claude.ai/code) plugins for automating git workflows, release documentation, and debugging.
+A collection of [Claude Code](https://claude.ai/code) plugins for automating git workflows, release documentation, debugging, and software architecture design.
 
 ## Plugins
+
+### [archimind](./archimind)
+
+AI-powered software architecture and database designer with interactive Mermaid JS visualization.
+
+| Component                              | Description                                                                    |
+|----------------------------------------|--------------------------------------------------------------------------------|
+| `/archimind:design-architecture`       | Design a new architecture — presents three options (Low/Medium/High risk) with diagrams and tech stack recommendations |
+| `/archimind:review-architecture`       | Audit an existing system, identify antipatterns, and propose three redesign options with migration paths |
+| `/archimind:design-database`           | Design new schemas or normalize existing SQL DDL with ER diagrams and index strategy |
+| `/archimind:visualize`                 | Launch a local Mermaid JS viewer with tab navigation, pan/zoom, and PNG export |
+
+**Prerequisites:** Python 3
+
+---
 
 ### [changelog-manager](./changelog-manager)
 
@@ -59,6 +74,7 @@ cc plugin install https://github.com/sembraniteam/claude-plugins
 Or install a single plugin by pointing to its directory:
 
 ```bash
+cc plugin install https://github.com/sembraniteam/claude-plugins/archimind
 cc plugin install https://github.com/sembraniteam/claude-plugins/changelog-manager
 cc plugin install https://github.com/sembraniteam/claude-plugins/git-helper
 cc plugin install https://github.com/sembraniteam/claude-plugins/debugging-workflow
@@ -67,6 +83,20 @@ cc plugin install https://github.com/sembraniteam/claude-plugins/debugging-workf
 ---
 
 ## Quick Start
+
+### Architecture design workflow
+
+```
+/archimind:design-architecture
+```
+
+Claude asks 8 requirements questions, then presents three architecture options (Low/Medium/High risk) with Mermaid diagrams, tech stack recommendations, and risk analysis. The selected option is saved to `docs/archimind/architecture/`.
+
+```
+/archimind:visualize
+```
+
+Launches a local interactive viewer at `http://localhost:{port}` to explore diagrams with pan/zoom, tab navigation between options, and PNG export.
 
 ### Commit workflow
 
@@ -116,6 +146,20 @@ On first run, if no `.claude/debugging-workflow.local.md` exists, Claude will of
 .
 ├── .claude-plugin/
 │   └── marketplace.json          # Plugin registry
+├── archimind/
+│   ├── .claude-plugin/
+│   │   └── plugin.json
+│   ├── scripts/
+│   │   ├── find-port.sh
+│   │   ├── start-server.sh
+│   │   ├── stop-server.sh
+│   │   └── site/
+│   │       └── index.html        # Mermaid JS viewer
+│   └── skills/
+│       ├── design-architecture/
+│       ├── design-database/
+│       ├── review-architecture/
+│       └── visualize/
 ├── changelog-manager/
 │   ├── .claude-plugin/
 │   │   └── plugin.json
