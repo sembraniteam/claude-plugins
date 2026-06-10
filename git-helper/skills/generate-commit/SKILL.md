@@ -1,9 +1,8 @@
 ---
 name: generate-commit
-description: This skill should be used when the user invokes /git-helper:generate-commit, or asks to "generate a commit message", "write a commit for me", "what should my commit message be", "help me commit my changes", "suggest a commit message", "prepare a commit", "what commit type should I use", or "stage and commit my changes". Produces a conventional commit with type, scope, subject, optional body, and breaking change footer.
+description: This skill should be used when the user invokes /git-helper:generate-commit, or asks to "generate a commit message", "write a commit for me", "what should my commit message be", "help me commit my changes", "suggest a commit message", "prepare a commit", "what commit type should I use", "stage and commit my changes", "commit all my changes", or describes a change they just made and needs a commit message for it. Produces a conventional commit with type, scope, subject, optional body, and breaking change footer.
 argument-hint: "[file1 file2 ...]"
 allowed-tools: ["Bash", "AskUserQuestion", "Skill"]
-license: MIT
 ---
 
 # Generate Commit Message
@@ -14,97 +13,19 @@ Generate a conventional commit message by analyzing the current git context. Gat
 
 Before running any git commands, collect user intent using `AskUserQuestion` in up to two rounds.
 
-**Round 1 — call `AskUserQuestion` with both questions in a single call.**
+**Round 1** — ask both questions in a single call:
+- **New branch**: "Do you want to create a new branch for this commit?" (Yes / No)
+- **Stage files**: "Which files should be staged before committing?"
+  - If files were provided as arguments: Yes — all / Yes — provided files / No
+  - If no files were provided: Yes — all / No (user can select "Other" to specify custom paths)
 
-The "Stage files" options depend on whether file paths were provided by the user.
+**Round 2** — call only if needed, with only the applicable questions:
+- **Checkout** (if New branch = Yes): "After generating the branch name, run `git checkout -b <branch>` automatically?" (Yes / No)
+- **Auto-commit** (if Stage files ≠ No): "After generating the commit message, run `git commit -m "..."` automatically?" (Yes / No)
 
-*If files were provided:*
+Skip Round 2 entirely if neither condition is met.
 
-```json
-{
-  "questions": [
-    {
-      "question": "Do you want to create a new branch for this commit?",
-      "header": "New branch",
-      "multiSelect": false,
-      "options": [
-        { "label": "Yes", "description": "Generate a branch name and optionally check it out" },
-        { "label": "No",  "description": "Stay on the current branch" }
-      ]
-    },
-    {
-      "question": "Which files should be staged before committing?",
-      "header": "Stage files",
-      "multiSelect": false,
-      "options": [
-        { "label": "Yes — all",            "description": "git add --all" },
-        { "label": "Yes — provided files", "description": "git add <the provided files>" },
-        { "label": "No",                   "description": "Skip staging" }
-      ]
-    }
-  ]
-}
-```
-
-*If no files were provided (users can select "Other" to specify custom paths):*
-
-```json
-{
-  "questions": [
-    {
-      "question": "Do you want to create a new branch for this commit?",
-      "header": "New branch",
-      "multiSelect": false,
-      "options": [
-        { "label": "Yes", "description": "Generate a branch name and optionally check it out" },
-        { "label": "No",  "description": "Stay on the current branch" }
-      ]
-    },
-    {
-      "question": "Which files should be staged before committing?",
-      "header": "Stage files",
-      "multiSelect": false,
-      "options": [
-        { "label": "Yes — all", "description": "git add --all" },
-        { "label": "No",        "description": "Skip staging" }
-      ]
-    }
-  ]
-}
-```
-
-Evaluate which follow-up questions are needed:
-- If **New branch = Yes** → include the Checkout question
-- If **Stage files ≠ No** → include the Auto-commit question
-
-**Round 2 — if either condition is met, call `AskUserQuestion` with the applicable questions together.** Skip Round 2 entirely if neither applies.
-
-```json
-{
-  "questions": [
-    {
-      "question": "After generating the branch name, run `git checkout -b <branch>` automatically?",
-      "header": "Checkout",
-      "multiSelect": false,
-      "options": [
-        { "label": "Yes", "description": "Switch to the new branch immediately" },
-        { "label": "No",  "description": "Just show the branch name to copy" }
-      ]
-    },
-    {
-      "question": "After generating the commit message, run `git commit -m \"...\"` automatically?",
-      "header": "Auto-commit",
-      "multiSelect": false,
-      "options": [
-        { "label": "Yes", "description": "Commit will be created automatically" },
-        { "label": "No",  "description": "Just display the command to run manually" }
-      ]
-    }
-  ]
-}
-```
-
-After all answers, display a confirmation to the user:
+After all answers, display a confirmation to the user (substitute actual selections from user answers):
 
 > **Your selections:**
 > - New branch: Yes / No
@@ -135,7 +56,7 @@ If both diffs are empty and status shows no changes, inform the user and stop.
 | **Body**     | Include when change is non-obvious or breaking. Blank line after subject, wrap at 72 chars.                                                                      |
 | **Footer**   | If breaking: `BREAKING CHANGE: <what broke and how to migrate>`. Add `Co-Authored-By` only if the user explicitly requests it.                                   |
 
-**Commit type table:**
+**Commit type table** — for ambiguous cases, see **`references/commit-types.md`**:
 
 | Type       | When to use                           |
 |------------|---------------------------------------|
@@ -178,7 +99,7 @@ EOF
 Execute confirmed actions in order, showing output for each:
 
 1. **Stage files** — `git add <files>` or `git add --all`
-2. **Generate branch name** — invoke `git-helper:generate-branch` via Skill tool, passing the commit subject as work description. Do not ask for a description again.
+2. **Generate branch name** — invoke the `git-helper:generate-branch` skill using the Skill tool, passing the commit subject as the work description. Pass the commit subject as the work description without prompting the user again.
 3. **Checkout branch** — `git checkout -b <generated-branch-name>`
 4. **Execute commit** — run the commit command using subject + body + BREAKING CHANGE footer. Add `Co-Authored-By` trailer only if the user explicitly requested it.
 

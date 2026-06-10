@@ -1,14 +1,13 @@
 ---
 name: generate-branch
-description: This skill should be used when the user invokes /git-helper:generate-branch, or asks to "create a branch", "name my branch", "what should I name this branch", "suggest a branch name", "what prefix should I use", or describes work they are about to start and needs a branch name. Applies team naming conventions with prefix rules (feature/, bugfix/, hotfix/, release/, chore/, bump/).
-argument-hint: "[work description] [file1 file2 ...]"
+description: This skill should be used when the user invokes /git-helper:generate-branch, asks to "create a branch name", "name my branch", "what should I name this branch", "suggest a branch name", "what prefix should I use", "what branch should I create for this", or describes work they are about to start and needs a branch name for it. Applies team naming conventions with prefix rules (feature/, bugfix/, hotfix/, release/, chore/, bump/).
+argument-hint: "[#ticket] [work description]"
 allowed-tools: ["Bash"]
-license: MIT
 ---
 
 # Generate Branch Name
 
-Generate a valid git branch name following team naming conventions. Display the result for the user to copy — never create the branch automatically unless invoked from `generate-commit`.
+Generate a valid git branch name following team naming conventions. This skill generates and displays the branch name only — running `git checkout -b` is always the caller's responsibility (either the user directly, or the `generate-commit` skill when invoking this skill via the Skill tool).
 
 ## Input Collection
 
@@ -26,7 +25,9 @@ bash "$CLAUDE_PLUGIN_ROOT/scripts/collect-context.sh"
 bash "$CLAUDE_PLUGIN_ROOT/scripts/collect-context.sh" "src/auth/login.ts" "src/auth/logout.ts"
 ```
 
-If the description is provided but unclear, ask one brief question before proceeding.
+If the diff is empty and no description was provided, ask the user for a one-sentence description of the work.
+
+If the description is provided but unclear (e.g., a single ambiguous word like "fix" with no additional context), ask one brief clarifying question before proceeding.
 
 ## Branch Construction
 
@@ -45,6 +46,8 @@ If the description is provided but unclear, ask one brief question before procee
 1. Extract 2–5 core words, lowercase, replace spaces and special chars with hyphens
 2. Remove leading/trailing and consecutive hyphens
 3. If scope implied by description: use `type/scope/slug` format
+
+For the `type/scope/slug` three-part format and full naming rules, see **`references/branch-rules.md`**.
 
 **Naming constraints:**
 
@@ -79,10 +82,10 @@ Alternative: hotfix/fix-login-crash  ← use this if the fix is urgent
 
 After generating the branch name, display a summary block:
 
-| Field      | Value                      | Reason                              |
-|------------|----------------------------|-------------------------------------|
-| **Branch** | `feature/add-oauth2-login` | N/A                                 |
-| **Slug**   | `add-oauth2-login`         | Derived from work description       |
+| Field      | Value                      | Reason                        |
+|------------|----------------------------|-------------------------------|
+| **Branch** | `feature/add-oauth2-login` | N/A                           |
+| **Prefix** | `feature/`                 | Why this prefix was selected  |
 
 ## Examples
 
@@ -95,8 +98,6 @@ After generating the branch name, display a summary block:
 | "Update dependencies"                    | `chore/update-dependencies`         |
 | "Bump lodash to 4.17.21"                 | `bump/lodash-4.17.21`               |
 | "Refactor auth module" (auth scope)      | `chore/auth/refactor-module`        |
-
-For the `type/scope/slug` three-part format, see **`references/branch-rules.md`**.
 
 ## Additional Resources
 
