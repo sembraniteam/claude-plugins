@@ -611,12 +611,31 @@ erDiagram
 
 ### Security
 
-- **Authentication**: {mechanism — e.g., JWT / OAuth2 / session}
-- **Authorization**: {model — e.g., RBAC, attribute-based}
-- **Encryption at rest**: {DB encryption, object storage SSE}
-- **Encryption in transit**: {TLS version, cert management}
-- **Secrets**: {management tool — e.g., Vault, AWS Secrets Manager, env-based}
-- **Compliance**: {OWASP Top 10 / SOC2 / GDPR / HIPAA — applicable requirements}
+#### Application Security
+- **Authentication**: {mechanism — e.g., JWT / OAuth2 / OIDC / session-based}
+- **Authorization**: {model — e.g., RBAC, ABAC, policy-as-code}
+- **Secrets management**: {Vault / AWS Secrets Manager / GCP Secret Manager — never env vars in code}
+- **OWASP coverage**: {input validation, XSS protection, CSRF tokens, rate limiting, dependency scanning}
+
+#### Database Connectivity Security
+- **DB users**: Separate roles — `app_rw` (application), `app_ro` (analytics), `migrator` (schema changes only), `backup_user`; superuser never used from application code
+- **Credential storage**: {Vault dynamic secrets / Secrets Manager} — credentials fetched at runtime, not hardcoded or committed to version control
+- **Credential rotation**: {Dynamic short-lived (Vault DB engine) / static rotation every 90 days}; connection pool `maxLifetime` set below rotation interval
+- **TLS enforcement**: `sslmode=verify-full` (PostgreSQL) / `REQUIRE SSL` (MySQL) / `requireTLS` (MongoDB) on all connections; plaintext connections rejected at DB level
+- **Network isolation**: DB in private subnet; security groups restrict DB port to app-server security group only; no public IP on DB instance
+- **Connection pooling**: {PgBouncer / HikariCP / other} with TLS on both client↔pooler and pooler↔DB sides; pool auth via `scram-sha-256`
+
+#### Data Protection
+- **Encryption at rest**: {DB-level tablespace encryption / cloud-managed (RDS, Cloud SQL)} + backup encryption (AES-256, key stored separately)
+- **Sensitive column encryption**: {application-layer encryption via pgcrypto / Vault Transit for PII and PCI fields; or "N/A"}
+- **Encryption in transit**: TLS 1.2+ enforced on all DB connections and internal service-to-service calls
+- **SQL injection prevention**: Parameterized queries or ORM used throughout; no string-concatenated SQL; dynamic `ORDER BY` validated against allowlist
+
+#### Audit & Compliance
+- **Audit logging**: {pgaudit / MySQL Audit Plugin} for DDL and write events; application-level `security_audit_log` table for sensitive data access
+- **Compliance requirements**: {OWASP Top 10 / SOC 2 / GDPR / HIPAA / PCI DSS — applicable controls and how the design satisfies them}
+- **GDPR erasure**: {PII scrubbing strategy on soft-delete or explicit erasure request; or "N/A"}
+- **PCI DSS**: {CVV/CVC never stored; cardholder data encrypted at column level; or "N/A"}
 
 ### Trade-offs & Next Steps
 

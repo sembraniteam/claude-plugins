@@ -13,7 +13,7 @@ Core behaviors:
 - Recommend the least invasive change that delivers the most risk reduction
 - Never propose a higher-complexity option unless the simpler option demonstrably fails to address the root causes
 
-Analyze an existing software architecture, identify weaknesses and opportunities for improvement, then propose three redesign options — **Conservative Refactor**, **Moderate Redesign**, and **Full Overhaul** — each with Mermaid diagrams, rationale, and migration path. Open a static HTML viewer so the user can compare options before selecting.
+Analyze an existing software architecture, identify weaknesses and opportunities for improvement, then compose three redesign options — **Conservative Refactor**, **Moderate Redesign**, and **Full Overhaul** — directly into `content.md` and open the viewer. **Never output the full options in the chat response** — the viewer is the display surface. Keep chat responses brief status updates.
 
 ## Workflow
 
@@ -24,12 +24,10 @@ At the very start, call **TaskCreate** to create one task per step:
 2. Perform architecture analysis
 3. Confirm analysis summary
 4. Scaffold review document structure
-5. Generate three redesign options
-6. Add Recommendation section
-7. Write content.md and start viewer server
-8. User selects option
-9. Mark the chosen option and write decision notes
-10. Save final docs and stop server
+5. Generate three redesign options, Recommendation → write content.md → open viewer
+6. User selects option
+7. Mark the chosen option and write decision notes
+8. Save final docs and stop server
 
 Mark each task `in_progress` when starting it and `completed` when done.
 
@@ -114,7 +112,7 @@ Key structural rules:
 
 ### 5. Generate Three Redesign Options
 
-Present three options within the `## Architecture Diagram` section using `### Option N:` sub-headings (the viewer renders these as tabs).
+Compose three options directly into `/tmp/archimind-viewer/content.md` — do not output the full option text in the chat. Print a brief status line like "Generating 3 redesign options…" while writing. Structure the document under `## Architecture Diagram` using `### Option N:` sub-headings (the viewer renders these as tabs).
 
 #### Option 1: Conservative Refactor
 - Minimal structural change. Fix the most critical pain points without re-architecture.
@@ -131,9 +129,9 @@ Present three options within the `## Architecture Diagram` section using `### Op
 - Approach: Adopt a fundamentally different architecture (microservices, event-driven, serverless).
 - Migration effort: Months to quarters. Use Strangler Fig or parallel run — not big bang. See `$CLAUDE_PLUGIN_ROOT/skills/review-architecture/references/anti-patterns.md` for why.
 
-### 6. Add Recommendation
+### 6. Add Recommendation and Open Viewer
 
-After generating all three options, write a `## Recommendation` section **with actual scores filled in** (not the blank `/10` scaffold from Step 4). This section is included in the `## Recommendation` block written to `/tmp/archimind-viewer/content.md` in Step 7 — it is written **before** the user is asked to select, so the viewer shows the Recommendation tab immediately.
+After all three options, add a `## Recommendation` section to the document **with actual scores filled in** (not the blank `/10` scaffold from Step 4).
 
 1. **Confidence Scores table** — rate each option on four dimensions (0–10). The viewer renders `X/10` table cells as visual progress bars automatically. Use this column structure with FILLED SCORES:
 
@@ -154,6 +152,17 @@ Score criteria for review context:
 - **Cost** — relative infra + operational cost change vs. current state
 
 2. **Narrative** — 4–6 sentences stating which redesign is recommended, why, citing the highest Overall score and referencing the specific weaknesses it addresses.
+
+Once the Recommendation is written, **save the complete document** and **open the viewer** — both in one action sequence:
+
+1. Use the **Write tool** to finalize `/tmp/archimind-viewer/content.md`.
+2. Start the viewer and open the browser:
+
+```bash
+open "$(bash "$CLAUDE_PLUGIN_ROOT/scripts/start-server.sh")"
+```
+
+Post a brief chat message: "Viewer is open at http://localhost:PORT — use **Architecture Diagram** to compare redesign options and **Revision** to see the Before/After comparison. Select an option when ready."
 
 #### Required Sections Per Option
 
@@ -211,20 +220,7 @@ For Option 3: specify Strangler Fig, parallel run, or big bang and justify.
 2–3 bullets for ideal scenario.
 ```
 
-### 7. Write Content and Open Viewer for Comparison
-
-Write the draft and immediately open the viewer so the user can compare all three redesign options with their diagrams **before selecting**:
-
-1. Use the **Write tool** to save the draft to `/tmp/archimind-viewer/content.md`.
-2. Start the viewer server and open the browser — **run as a single command**:
-
-```bash
-open "$(bash "$CLAUDE_PLUGIN_ROOT/scripts/start-server.sh")"
-```
-
-Inform the user the viewer is open — use the **Architecture Diagram** nav to compare each redesign option's diagram, and the **Revision** nav to see the Before/After comparison. When ready, choose the option they'd like to proceed with.
-
-### 8. Require Redesign Selection (mandatory)
+### 7. Require Redesign Selection (mandatory)
 
 **The work is not complete until the user has explicitly chosen one redesign option.** Use **AskUserQuestion** to present the selection:
 
@@ -240,9 +236,9 @@ options:
     description: <one-line summary of what this option changes>
 ```
 
-Iterate if the user wants adjustments. Re-present the AskUserQuestion selection after adjustments. Do not proceed to Step 9 until the user states an explicit choice.
+Iterate if the user wants adjustments. Re-present the AskUserQuestion selection after adjustments. Do not proceed to Step 8 until the user states an explicit choice.
 
-### 9. Mark the Chosen Option
+### 8. Mark the Chosen Option
 
 1. Update `/tmp/archimind-viewer/content.md` (use the Write tool to overwrite):
    - Insert decision header after the title:
@@ -253,7 +249,7 @@ Iterate if the user wants adjustments. Re-present the AskUserQuestion selection 
    - Replace the placeholder diagram in `### After` within `## Revision` with the selected option's Infrastructure Layout diagram
    - Append a `## Decision Notes` section with user-requested adjustments, migration timing, and next steps
 
-### 10. Save Final Documentation and Stop Server
+### 9. Save Final Documentation and Stop Server
 
 > **Note**: Review workflows do not produce a `## Final Documentation` section. The `## Decision Notes` block serves that purpose — it captures the rationale, adjustments, and next steps that would otherwise go in Final Documentation.
 

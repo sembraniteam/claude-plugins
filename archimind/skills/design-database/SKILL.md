@@ -24,8 +24,9 @@ At the very start, call **TaskCreate** to create one task per step:
 2. Design schema (or analyze existing schema)
 3. Produce ER diagram
 4. Produce table specifications
-5. Write content.md and open viewer
-6. Save final docs and stop server
+5. Apply security recommendations
+6. Write content.md and open viewer
+7. Save final docs and stop server
 
 Mark each task `in_progress` when starting it and `completed` when done.
 
@@ -208,7 +209,72 @@ For each table, provide a spec block:
 | idx_users_created_at        | BRIN   | created_at        | Range queries on large sequential data     |
 ```
 
-### 5. Write Content and Open Viewer
+### 5. Security Recommendations
+
+After finalizing the schema and before writing the output document, apply security recommendations relevant to the design. Read `$CLAUDE_PLUGIN_ROOT/skills/design-database/references/security-guide.md` for the full reference. At minimum, address the following in the final document:
+
+**Access control:**
+- Define separate DB roles: `app_rw` (application), `app_ro` (analytics/replicas), `migrator` (migration runner), `backup_user`, `monitor_user`
+- Never use the superuser account from application code
+- For multi-tenant schemas: recommend Row-Level Security policies
+
+**Secrets management:**
+- Credentials must be stored in a secrets manager (Vault, AWS Secrets Manager, GCP Secret Manager) — never hardcoded or committed to version control
+- Recommend dynamic short-lived credentials (Vault DB secrets engine) for production
+- Note `maxLifetime` in connection pools must be less than the credential rotation interval
+
+**Connection security:**
+- Enforce TLS for all connections — `sslmode=verify-full` (PostgreSQL), `REQUIRE SSL` (MySQL), `requireTLS` (MongoDB)
+- DB server must not be publicly accessible — private subnet only, firewall/security group restricts DB port to app servers
+
+**Connection pooling:**
+- Recommend PgBouncer (PostgreSQL) or HikariCP (JVM) with TLS on both client↔pooler and pooler↔DB sides
+- Set `pool_mode = transaction` (PgBouncer) or equivalent for efficiency; document session-mode trade-offs if session-level features are used
+
+**SQL injection prevention:**
+- Mandate parameterized queries or ORM — never string-concatenated SQL
+- If `ORDER BY` column names come from user input, enforce an allowlist
+
+**Audit logging:**
+- Enable `pgaudit` (PostgreSQL) or equivalent for DDL, write, and role-change events
+- Recommend an application-level `security_audit_log` table for access to sensitive data
+
+**Compliance:**
+- GDPR: document the erasure flow (scrub PII columns, do not hard-delete referenced rows)
+- PCI DSS: confirm CVV/CVC are never stored; recommend application-layer encryption for cardholder data
+- HIPAA: confirm PHI is encrypted at rest (column-level for sensitive fields) and in transit
+
+Include a `## Security` section in the output document using the structure below.
+
+#### Security Section Structure
+
+```markdown
+## Security
+
+### Access Control
+- **DB users**: {list roles and their permissions}
+- **Superuser policy**: Used only for DBA ops; not accessible from application code
+- **Multi-tenant isolation**: {RLS policies if applicable, or "N/A"}
+
+### Secrets Management
+- **Credential storage**: {Vault / AWS Secrets Manager / GCP Secret Manager}
+- **Rotation strategy**: {dynamic short-lived / 90-day static rotation}
+
+### Connection Security
+- **TLS**: {sslmode=verify-full / REQUIRE SSL / requireTLS} — enforced on all connections
+- **Network**: DB in private subnet; {security group / firewall} restricts port {5432/3306/27017} to app servers only
+- **Connection pool**: {PgBouncer / HikariCP / other} with TLS on both client and server sides
+
+### Data Protection
+- **Encryption at rest**: {DB-level / tablespace / cloud-managed}
+- **Sensitive columns**: {list PII/PCI columns and encryption approach, or "N/A"}
+- **Audit logging**: {pgaudit / MySQL Audit Plugin / application audit table}
+
+### Compliance
+- {GDPR / PCI DSS / HIPAA / SOC2 — applicable requirements and how the schema addresses them}
+```
+
+### 6. Write Content and Open Viewer
 
 1. Use the **Write tool** to write the full design content to `/tmp/archimind-viewer/content.md`. Follow the **Document Structure for Database Design** below.
 2. Start the viewer server and open the URL:
@@ -220,7 +286,7 @@ open "$URL"
 
 Inform the user of the resolved URL, e.g.: "The viewer is open at http://localhost:3000 — the ERD is rendered with Mermaid JS. Click **↺ Reload** in the sidebar after any changes."
 
-### 6. Save Final Docs and Stop Server
+### 7. Save Final Docs and Stop Server
 
 **Recommend a migration tool** in the final documentation. Every production schema needs versioned migrations — select based on the user's language/framework:
 
@@ -286,3 +352,4 @@ After completing Step 5, structure the database design document as follows. Data
 - **`$CLAUDE_PLUGIN_ROOT/skills/design-database/references/normalization-guide.md`** — Complete 1NF → BCNF rules with SQL examples. Read when analyzing existing schemas.
 - **`$CLAUDE_PLUGIN_ROOT/skills/design-database/references/index-guide.md`** — Index type matrix (B-tree, Hash, GiST, GIN, BRIN, Full-text) with use cases and when to avoid. Read when deciding index strategy.
 - **`$CLAUDE_PLUGIN_ROOT/skills/design-database/references/data-types-guide.md`** — Data type recommendations for PostgreSQL, MySQL, and SQLite. Read when choosing column types.
+- **`$CLAUDE_PLUGIN_ROOT/skills/design-database/references/security-guide.md`** — Security recommendations and best practices for application-to-database connectivity. Read during Step 5 (Security Recommendations) and whenever the user asks about DB security, credential management, TLS, connection pooling security, SQL injection prevention, audit logging, or compliance requirements.

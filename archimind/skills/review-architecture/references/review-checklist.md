@@ -58,15 +58,35 @@ Use this checklist during Step 2 (Architecture Analysis) of the `review-architec
 
 ## 5. Security
 
-- [ ] Are secrets (DB credentials, API keys) stored in environment variables or a secrets manager, not in code?
+### General Application Security
+- [ ] Are secrets (DB credentials, API keys) stored in a secrets manager (Vault, AWS Secrets Manager, GCP Secret Manager), not in code or `.env` files committed to git?
 - [ ] Is authentication (AuthN) separated from authorization (AuthZ)?
 - [ ] Is input validated and sanitized at all system boundaries?
 - [ ] Is principle of least privilege applied to service-to-service calls?
 - [ ] Are admin APIs protected separately from public APIs?
-- [ ] Is data encrypted at rest and in transit?
-- [ ] Are dependency vulnerabilities scanned regularly?
+- [ ] Are dependency vulnerabilities scanned regularly (e.g., `npm audit`, `trivy`, Snyk)?
+- [ ] Are rate limits in place on authentication endpoints to prevent brute-force attacks?
 
-**Common findings**: Secrets hardcoded in config files checked into git; no rate limiting on auth endpoints; overly permissive service accounts.
+### Database Connectivity Security
+- [ ] Does each service use a dedicated low-privilege DB user (`app_rw`, `app_ro`) — never the superuser or root account?
+- [ ] Are DB credentials fetched from a secrets manager at runtime, not hardcoded or stored in version control?
+- [ ] Is credential rotation automated (dynamic Vault secrets or scheduled static rotation every 90 days)?
+- [ ] Is TLS enforced for all application-to-database connections (`sslmode=verify-full` or equivalent)? Are plaintext connections rejected at the DB level?
+- [ ] Is the database in a private subnet with no public IP? Do security groups/firewall rules restrict DB port access to only the application servers?
+- [ ] Is a connection pooler (PgBouncer, HikariCP) used, with TLS enabled on both the client-to-pooler and pooler-to-DB legs?
+- [ ] Is the connection pool's `maxLifetime` set below the DB credential rotation interval (critical with dynamic secrets)?
+- [ ] Are parameterized queries or a type-safe ORM used throughout? Is there any string-concatenated SQL that could enable injection?
+- [ ] For multi-tenant databases, is Row-Level Security (RLS) or equivalent tenant-isolation in place?
+- [ ] Is DB-level audit logging (`pgaudit`, MySQL Audit Plugin) enabled for DDL changes, write operations, and role grants?
+
+### Data Protection
+- [ ] Is data encrypted at rest (DB tablespace encryption or cloud-managed key)?
+- [ ] Are sensitive columns (PII, PCI cardholder data, PHI) encrypted at the application layer (pgcrypto, Vault Transit)?
+- [ ] Is there a documented erasure/scrubbing flow for GDPR right-to-erasure requests?
+- [ ] For PCI DSS: are CVV/CVC codes confirmed to never be stored?
+- [ ] Are database backups encrypted with a key stored separately from the backup?
+
+**Common findings**: DB credentials hardcoded in `application.properties` committed to git; `sslmode=disable` in the connection string; DB port 5432 open to `0.0.0.0/0` in the security group; single superuser account shared across all services; parameterized queries missing in one legacy query path; no RLS on a multi-tenant schema — tenants can see each other's data with a direct query.
 
 ---
 

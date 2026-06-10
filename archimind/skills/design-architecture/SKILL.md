@@ -13,7 +13,7 @@ Core behaviors:
 - Identify SPOFs, bottlenecks, security risks, and technical debt in every option
 - Explain the technical rationale and risk level behind every decision
 
-Follow this workflow strictly — gather requirements first, present three options, wait for the user to select one, then write final documentation.
+Follow this workflow strictly — gather requirements first, write three options directly to content.md and open the viewer, wait for the user to select one, then write final documentation. **Never output the full architecture options in the chat response** — the viewer is the display surface. Keep chat responses brief status updates.
 
 ## Workflow
 
@@ -23,12 +23,10 @@ At the very start, call **TaskCreate** to create one task per step:
 1. Gather requirements — Batch 1 (System & Scale)
 2. Gather requirements — Batch 2 (Technical & Operational)
 3. Confirm requirements summary
-4. Generate architecture options (3 options), ERD, and Recommendation
-5. Write content.md and start viewer server
-6. User selects option
-7. Mark the selected option
-8. Write final documentation sections
-9. Save final docs and stop server
+4. Generate architecture options, ERD, and Recommendation → write content.md → open viewer
+5. User selects option
+6. Mark the selected option and write final documentation
+7. Save final docs and stop server
 
 Mark each task `in_progress` when starting it and `completed` when done.
 
@@ -128,7 +126,9 @@ Wait for the user to confirm or correct before proceeding to Step 3. If the user
 
 ### 3. Generate Three Architecture Options
 
-After confirmation, analyze requirements and present **exactly 3 options**: Lean, Standard, and Advanced.
+After confirmation, compose the full design document — all 3 options, ERD, and Recommendation — **directly into `/tmp/archimind-viewer/content.md`** using the Write tool. Open the viewer immediately after. Do not output the full architecture content in the chat; print a short status line like "Designing 3 options…" while writing, and "Viewer is open at http://localhost:PORT" when done.
+
+Design **exactly 3 options**: Lean, Standard, and Advanced.
 
 **Anti-over-engineering check before generating options**: Map each stated requirement to the tier that satisfies it. If the Lean tier satisfies all stated requirements, make this explicit in the Recommendation — do not default to Standard or Advanced because they "seem more professional." Complexity must be justified by a specific, named requirement, not by preference for modern patterns.
 
@@ -151,7 +151,7 @@ For each option, cover all required sections (see "Required Sections Per Option"
 
 ### 4. Required Sections Per Option
 
-Structure each option under the `## Architecture Diagram` document section using `### Option N:` subheadings. Use `####` for subsections within each option. The full blank scaffold is in `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/output-template.md` — **read it for structure only; never write to it**.
+Structure each option in the document under `## Architecture Diagram` using `### Option N:` subheadings. Use `####` for subsections. The full blank scaffold is in `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/output-template.md` — **read it for structure only; never write to it**.
 
 Required `####` subsections for each option — **every option must include three Mermaid diagrams**. Read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/mermaid-guidelines.md` for syntax and per-tier guidance:
 
@@ -174,13 +174,11 @@ Read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/architecture-pat
 
 ### 5. ERD Section
 
-After presenting all options, include a `## ERD` section with Mermaid `erDiagram` covering the primary data model (use the recommended option's schema or a composite if all options share similar entities).
+After all options, add a `## ERD` section to the document with a Mermaid `erDiagram` covering the primary data model (use the recommended option's schema or a composite if all options share similar entities). Include table specifications for key entities (PK, columns, types, key indexes).
 
-Include table specifications for key entities (PK, columns, types, key indexes).
+### 6. Add Recommendation and Open Viewer
 
-### 6. Add Recommendation
-
-After all options, include a `## Recommendation` section with:
+Add a `## Recommendation` section to the document with:
 
 1. **Confidence Score table** — rate each option on four dimensions (0–10). The viewer automatically renders any `X/10` value in a table cell as a visual progress bar. Use this exact column structure:
 
@@ -202,20 +200,18 @@ Score criteria:
 
 2. **Narrative** — 4–6 sentences stating which option is recommended and why, referencing actual requirements (team size, timeline, scale). Cite the highest Overall score.
 
-### 7. Write Content and Open Viewer
+Once the Recommendation section is written, **save the complete document** (all options + ERD + Recommendation) and **open the viewer** — both in a single action sequence:
 
-After presenting all 3 options, the ERD, and the Recommendation — **before asking the user to choose** — write the content and open the viewer so the user can compare options with rendered Mermaid diagrams:
-
-1. Use the **Write tool** to save the full draft to `/tmp/archimind-viewer/content.md`. Follow the **Document Structure Convention** below. Do NOT include `## Final Documentation` at this stage.
-2. Start the viewer server and open the browser — **run as a single command**:
+1. Use the **Write tool** to finalize `/tmp/archimind-viewer/content.md`. Follow the **Document Structure Convention** below. Do NOT include `## Final Documentation` at this stage.
+2. Start the viewer and open the browser:
 
 ```bash
 open "$(bash "$CLAUDE_PLUGIN_ROOT/scripts/start-server.sh")"
 ```
 
-Inform the user the viewer is open — use the **Architecture Diagram** nav to compare each option's diagrams side by side, and the **ERD** nav to view the data model. When ready, select the option they'd like to proceed with.
+Post a brief chat message: "Viewer is open at http://localhost:PORT — use **Architecture Diagram** to compare options side by side and **ERD** to view the data model. Select an option when ready."
 
-### 8. Option Selection
+### 7. Option Selection
 
 Use **AskUserQuestion** to ask the user to choose:
 
@@ -231,10 +227,13 @@ options:
     description: <one-line summary of Option 3 name/pattern>
 ```
 
-Iterate freely if the user wants adjustments (e.g., "swap MongoDB for PostgreSQL in Option 2"). After each adjustment, update `/tmp/archimind-viewer/content.md` with the Write tool and re-present AskUserQuestion. The user can click **↺ Reload** in the viewer sidebar to see updated content. Do not proceed to Step 9 until the user makes an explicit choice.
+Iterate freely if the user wants adjustments (e.g., "swap MongoDB for PostgreSQL in Option 2"). After each adjustment, update `/tmp/archimind-viewer/content.md` with the Write tool and re-present AskUserQuestion. The user can click **↺ Reload** in the viewer sidebar to see updated content. Do not proceed to Step 8 until the user makes an explicit choice.
 
-### 9. Mark the Selected Option
+### 8. Mark Selected Option and Write Final Documentation
 
+Once the user has chosen, complete all of the following in sequence — these are one continuous step, not multiple:
+
+**Mark the selection:**
 1. Read the saved document
 2. Insert decision header after the document title:
    ```markdown
@@ -244,9 +243,7 @@ Iterate freely if the user wants adjustments (e.g., "swap MongoDB for PostgreSQL
 3. For **review workflows only**: populate `## Revision / ### After` with the selected option's proposed architecture diagrams. For fresh designs, omit or leave the Revision section empty.
 4. Append a `## Decision Notes` section capturing user-requested adjustments, migration timing, and next steps
 
-### 10. Write Final Documentation Sections
-
-After selection is marked, append the final documentation using this trimmed structure. Each section should be substantive — do not leave placeholders:
+**Append Final Documentation** — each section must be substantive, no placeholders:
 
 ```markdown
 ## Final Documentation
@@ -260,9 +257,9 @@ After selection is marked, append the final documentation using this trimmed str
 ### Trade-offs & Next Steps
 ```
 
-For the content guide for each section, read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/output-template.md` — the Final Documentation block contains field-level guidance for Overview, Architecture Decision, Technology Stack, Data Architecture, Observability, Security, and Trade-offs & Next Steps.
+For field-level guidance on each section, read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/output-template.md`.
 
-### 11. Save Final Documentation and Stop Server
+### 9. Save Final Documentation and Stop Server
 
 After marking the selection and appending final documentation:
 
@@ -353,3 +350,4 @@ Read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/mermaid-guidelin
 - **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/engineering-principles.md`** — 10 guiding principles for acting as a Software Architect. Read at the start of every session. Covers: critical analysis, no-assumption rule, needs-based recommendations, trade-off comparison, SPOF identification, over-engineering avoidance, and DR considerations.
 - **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/output-template.md`** — Full blank template for the output document. **Read-only — never write to this file.** Output always goes to `/tmp/archimind-viewer/content.md` (viewer) or `docs/archimind/architecture/{timestamp_ms}-{topic}.md` (final docs).
 - **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/mermaid-guidelines.md`** — Diagram type selection, node limits, edge labeling, subgraph conventions, and syntax examples.
+- **`$CLAUDE_PLUGIN_ROOT/skills/design-database/references/security-guide.md`** — Database security and connectivity best practices: secrets management, least-privilege DB roles, TLS enforcement, network isolation, connection pool security, SQL injection prevention, audit logging, and compliance (GDPR, PCI DSS, HIPAA). Read when writing the `### Security` section of Final Documentation.
