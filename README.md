@@ -10,7 +10,7 @@ AI-powered software architecture and database designer with interactive Mermaid 
 
 | Component                              | Description                                                                    |
 |----------------------------------------|--------------------------------------------------------------------------------|
-| `/archimind:design-architecture`       | Design a new architecture — presents three options (Low/Medium/High risk) with diagrams and tech stack recommendations |
+| `/archimind:design-architecture`       | Design a new architecture — presents three options (Lean/Standard/Advanced) with diagrams and tech stack recommendations |
 | `/archimind:review-architecture`       | Audit an existing system, identify antipatterns, and propose three redesign options with migration paths |
 | `/archimind:design-database`           | Design new schemas or normalize existing SQL DDL with ER diagrams and index strategy |
 | `/archimind:visualize`                 | Launch a local Mermaid JS viewer with tab navigation, pan/zoom, and PNG export |
@@ -90,7 +90,7 @@ cc plugin install https://github.com/sembraniteam/claude-plugins/debugging-workf
 /archimind:design-architecture
 ```
 
-Claude asks 8 requirements questions, then presents three architecture options (Low/Medium/High risk) with Mermaid diagrams, tech stack recommendations, and risk analysis. The selected option is saved to `docs/archimind/architecture/`.
+Claude asks 8 requirements questions, then presents three architecture options (Lean/Standard/Advanced) with Mermaid diagrams, tech stack recommendations, and trade-off analysis. The selected option is saved to `docs/archimind/architecture/`.
 
 ```
 /archimind:visualize

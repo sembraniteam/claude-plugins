@@ -160,6 +160,43 @@ CREATE UNIQUE INDEX idx_enrollments_user_course ON course_enrollments(user_id, c
 
 ---
 
+## Table Partitioning
+
+For tables projected to exceed **10–50M rows** or with heavy time-range queries, consider partitioning before the table grows — retrofitting partitioning onto a large live table requires downtime or complex online migration.
+
+### Partition Types (PostgreSQL)
+
+| Type    | Use case                           | Example                                       |
+|---------|------------------------------------|-----------------------------------------------|
+| `RANGE` | Time-series, date-based archiving  | Partition `events` by `created_at` month/year |
+| `LIST`  | Discrete known values              | Partition `orders` by `region` or `status`    |
+| `HASH`  | Uniform distribution across shards | Partition `user_data` by hash of `user_id`    |
+
+```sql
+-- RANGE partition on created_at (monthly)
+CREATE TABLE events (
+  id         BIGSERIAL,
+  user_id    BIGINT NOT NULL,
+  event_type VARCHAR(50),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+) PARTITION BY RANGE (created_at);
+
+CREATE TABLE events_2025_01 PARTITION OF events
+  FOR VALUES FROM ('2025-01-01') TO ('2025-02-01');
+CREATE TABLE events_2025_02 PARTITION OF events
+  FOR VALUES FROM ('2025-02-01') TO ('2025-03-01');
+```
+
+**Key rules:**
+- Primary key must include the partition column (PostgreSQL requirement)
+- Indexes are per-partition — create on parent, propagated automatically
+- Use `pg_partman` extension to automate partition creation/maintenance
+- Old partitions can be detached and archived without locking the live table
+
+**When NOT to partition**: Tables under 10M rows — the overhead (query planner complexity, partition pruning) rarely pays off at small scale.
+
+---
+
 ## Over-Indexing: What to Avoid
 
 Indexes are not free:

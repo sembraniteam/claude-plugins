@@ -1,6 +1,6 @@
 ---
 name: visualize
-description: This skill should be used when the user asks to "visualize the architecture", "open the diagram viewer", "show me the diagrams", "open the viewer", "start the viewer", "reopen this document", "re-visualize", "open this design in the viewer", "update the diagram", "revise the diagram", "change the architecture diagram", "edit the Mermaid code", or "regenerate the diagram", or when the user wants to view, update, or regenerate architecture or database diagrams in the browser, including previously saved docs/archimind/ documents.
+description: This skill should be used when the user asks to "visualize the architecture", "open the diagram viewer", "show me the diagrams", "show me the architecture", "let me see the options", "open the viewer", "start the viewer", "reopen this document", "re-visualize", "open this design in the viewer", "update the diagram", "edit the Mermaid code", or "regenerate the diagram", or when the user wants to view, update, or regenerate architecture or database diagrams in the browser.
 ---
 
 # Visualize Architecture
@@ -16,8 +16,9 @@ Open a static website viewer that renders architecture options, ERDs, and Before
 open "$(bash "$CLAUDE_PLUGIN_ROOT/scripts/start-server.sh")"
 ```
 
-3. The browser loads `index.html`, which fetches `content.md` and renders it client-side with Mermaid JS.
-4. To stop the server when done:
+3. The browser loads `index.html`, which fetches `content.md` and renders it client-side with Mermaid JS via CDN — **an internet connection is required**.
+
+**Cleanup** — stop the server when done:
 
 ```bash
 bash "$CLAUDE_PLUGIN_ROOT/scripts/stop-server.sh"
@@ -37,9 +38,10 @@ Open the viewer **before asking the user to select** an option:
 Previously saved documents in `docs/archimind/` contain only the selected option (single-option view — no option tabs). To re-visualize one:
 
 ```bash
-bash "$CLAUDE_PLUGIN_ROOT/scripts/open-doc.sh" docs/archimind/architecture/{filename}.md
+# Run from the project root, or use an absolute path:
+bash "$CLAUDE_PLUGIN_ROOT/scripts/open-doc.sh" "$(pwd)/docs/archimind/architecture/{filename}.md"
 # or
-bash "$CLAUDE_PLUGIN_ROOT/scripts/open-doc.sh" docs/archimind/database/{filename}.md
+bash "$CLAUDE_PLUGIN_ROOT/scripts/open-doc.sh" "$(pwd)/docs/archimind/database/{filename}.md"
 ```
 
 `open-doc.sh` copies the file to `/tmp/archimind-viewer/content.md`, restarts the server, and opens the browser. The viewer renders the saved document with its ERD, Revision (Before/After), and the single selected architecture option.

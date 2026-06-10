@@ -111,3 +111,72 @@ Use this checklist during Step 2 (Architecture Analysis) of the `review-architec
 | Big Bang Migration      | Large schema change requiring downtime on production DB             |
 
 Refer to these canonical names when writing the analysis summary to keep descriptions precise and searchable.
+
+---
+
+## 8. Single Points of Failure (SPOF)
+
+- [ ] Is there any single component whose failure causes a full or partial system outage?
+- [ ] Is the primary database a SPOF? (no read replica, no failover, no connection pooling)
+- [ ] Is there a single load balancer, API gateway, or message broker with no HA configuration?
+- [ ] Are background jobs or cron tasks running on a single server with no failover?
+- [ ] Are external dependency calls (third-party APIs, payment gateways) handled with fallback behavior?
+- [ ] Is there a "hero engineer" dependency — does the system require specific human intervention to recover?
+
+For each SPOF identified: quantify **blast radius** (what fraction of users/features are affected?) and **detection time** (does monitoring alert within seconds, minutes, or after user complaints?).
+
+**Common findings**: Primary DB with no replica — full outage on any DB failure; single Redis instance caching all sessions — cache failure logs everyone out; no circuit breaker on third-party payment API — one slow upstream causes request queue backup.
+
+---
+
+## 9. Disaster Recovery & Business Continuity
+
+- [ ] Are RTO (Recovery Time Objective) and RPO (Recovery Point Objective) targets defined and documented?
+- [ ] Is there an automated backup strategy with tested restore procedures?
+- [ ] Is the last backup restore time known? (A backup that has never been tested is not a backup.)
+- [ ] Is there a runbook for the most critical failure scenarios (DB corruption, cloud region outage, security breach)?
+- [ ] Is data replicated across availability zones or regions proportionate to the stated SLA?
+- [ ] Are deployments reversible? Is rollback documented and tested?
+- [ ] Is there a documented incident response process, including on-call rotation?
+
+**Common findings**: Backups exist but restore procedure has never been tested; RTO/RPO targets never defined ("we'll recover as fast as we can"); no multi-AZ for a product with 99.9% SLA commitment.
+
+---
+
+## 10. Technical Debt
+
+- [ ] Are there known workarounds or "temporary" solutions that have become permanent?
+- [ ] Is there undocumented logic that only specific team members understand?
+- [ ] Are dependencies outdated or end-of-life? (language runtime, framework major versions, cloud service deprecations)
+- [ ] Are there "god files" or modules that have grown beyond a manageable size?
+- [ ] Is there duplicated business logic across services or layers?
+- [ ] Have architectural decisions been documented (ADRs)? If not, is the rationale for current patterns known?
+- [ ] Are integration tests missing for critical paths, creating risk in any change?
+
+**Common findings**: 5-year-old "temporary" authentication workaround now handling all auth; Node.js 14 on end-of-life runtime; no ADRs — the team doesn't know why the current architecture was chosen, making refactoring politically impossible.
+
+---
+
+## 11. Cost & Infrastructure Efficiency
+
+- [ ] Is infrastructure cost visible and tracked? (cloud cost dashboards, budget alerts)
+- [ ] Are there obvious over-provisioned resources? (VMs with < 20% CPU, oversized RDS instances)
+- [ ] Are ephemeral/batch workloads running on always-on infrastructure instead of spot instances or serverless?
+- [ ] Is data egress optimized? (CDN for static assets, avoid cross-region traffic)
+- [ ] Are unused resources cleaned up? (orphaned snapshots, idle instances, unused Elastic IPs)
+- [ ] Is auto-scaling configured, or is the system permanently sized for peak load?
+
+**Common findings**: Production DB instance sized for theoretical peak but averaging 5% CPU; no CDN for a media-heavy app paying per-GB egress; logs retained forever with no TTL policy.
+
+---
+
+## 12. API Design & Versioning
+
+- [ ] Is there an API versioning strategy? (`/v1/`, `/v2/`, headers, or content negotiation)
+- [ ] Are breaking changes to the API documented and communicated with a deprecation period?
+- [ ] Is the API contract validated? (OpenAPI/Swagger spec, schema validation on input)
+- [ ] Are API responses consistent in structure? (envelope pattern, error format)
+- [ ] Is pagination implemented for list endpoints? (cursor-based preferred over offset for large datasets)
+- [ ] Are internal service APIs versioned the same way as external-facing APIs?
+
+**Common findings**: No versioning strategy — all clients break on the next API change; offset pagination on a 10M-row table timing out at page 500; inconsistent error response formats across endpoints.

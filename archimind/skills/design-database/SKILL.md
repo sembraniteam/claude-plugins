@@ -5,6 +5,14 @@ description: This skill should be used when the user asks to "design a database"
 
 # Design Database
 
+Act as a **Database Architect** with production experience across OLTP, analytical, and distributed systems. Read and apply `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/engineering-principles.md` throughout this workflow.
+
+Core behaviors:
+- Make every performance, scalability, and maintainability implication explicit for each design decision
+- Identify potential bottlenecks proactively: missing indexes, N+1 patterns, lock contention, hot partitions
+- Recommend the simplest schema that satisfies stated query patterns; avoid premature normalization or denormalization
+- Explain rationale and trade-offs for every structural decision
+
 Design a new database schema from requirements, or analyze and normalize an existing schema. Produce an Entity-Relationship Diagram (Mermaid), detailed table specifications (columns, data types, constraints, indexes), normalization analysis, and a concise rationale for every decision. Open a static HTML viewer so the user can see the ERD rendered with Mermaid JS.
 
 ## Workflow
@@ -53,7 +61,7 @@ Design directly to at least **3NF** (Third Normal Form). Apply BCNF where applic
 For each column, choose the most appropriate data type. Key principles:
 
 - Use the **smallest type that fits** the domain (e.g., `SMALLINT` not `BIGINT` for a status flag)
-- Use `UUID` for distributed PKs, `BIGSERIAL`/`BIGINT AUTO_INCREMENT` for sequential PKs
+- Use `ULID` or `UUID v7` for distributed PKs (ULID preferred — time-sortable, reduces B-tree fragmentation vs. random UUID); use `BIGSERIAL`/`BIGINT AUTO_INCREMENT` for single-node sequential PKs
 - Use `TEXT` over `VARCHAR(n)` in PostgreSQL (no performance difference); use `VARCHAR(n)` in MySQL when length is meaningful
 - Use `TIMESTAMPTZ` (PostgreSQL) or `DATETIME` + UTC convention for timestamps
 - Use `NUMERIC(p,s)` or `DECIMAL` for money, never `FLOAT`/`DOUBLE`
@@ -75,6 +83,37 @@ For each index, specify:
 - Justification tied to a specific query pattern
 
 Refer to `$CLAUDE_PLUGIN_ROOT/skills/design-database/references/index-guide.md` for index type selection rules.
+
+#### Apply Common Design Patterns
+
+Proactively apply these patterns where relevant — they are frequently needed but easy to miss in early design:
+
+**Soft Delete** — Use `deleted_at TIMESTAMPTZ` instead of hard-deleting rows. Required whenever: data must be auditable, relationships reference the row, or undo functionality is needed.
+```sql
+ALTER TABLE users ADD COLUMN deleted_at TIMESTAMPTZ;
+-- Query: WHERE deleted_at IS NULL (add partial index on frequently-queried columns)
+CREATE INDEX idx_users_active_email ON users(email) WHERE deleted_at IS NULL;
+-- Or for listing active users by creation date:
+CREATE INDEX idx_users_active_created ON users(created_at) WHERE deleted_at IS NULL;
+```
+
+**Audit Log Table** — Capture who changed what and when, separately from the main table. Required for compliance (GDPR, PCI DSS) and debugging production issues.
+```sql
+CREATE TABLE user_audit_log (
+  id         BIGSERIAL PRIMARY KEY,
+  user_id    BIGINT NOT NULL REFERENCES users(id),
+  changed_by BIGINT REFERENCES users(id),
+  action     VARCHAR(20) NOT NULL,  -- 'INSERT', 'UPDATE', 'DELETE'
+  old_data   JSONB,
+  new_data   JSONB,
+  changed_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+Implement via triggers or application-layer interceptors.
+
+**Status Enum Table** — Avoid magic strings in status columns. Use a lookup/enum table or a PostgreSQL `ENUM` type.
+
+**Optimistic Locking** — Add `version INTEGER NOT NULL DEFAULT 1` to tables with concurrent updates. Increment on every write; reject writes where `version` doesn't match.
 
 ### 2B. Normalize Existing Schema
 
@@ -179,9 +218,23 @@ URL=$(bash "$CLAUDE_PLUGIN_ROOT/scripts/start-server.sh")
 open "$URL"
 ```
 
-Inform the user: "The viewer is open at `$URL` — the ERD is rendered with Mermaid JS. Click **↺ Reload** in the sidebar after any changes."
+Inform the user of the resolved URL, e.g.: "The viewer is open at http://localhost:3000 — the ERD is rendered with Mermaid JS. Click **↺ Reload** in the sidebar after any changes."
 
 ### 6. Save Final Docs and Stop Server
+
+**Recommend a migration tool** in the final documentation. Every production schema needs versioned migrations — select based on the user's language/framework:
+
+| Stack         | Recommended tool                                  | Notes                                           |
+|---------------|---------------------------------------------------|-------------------------------------------------|
+| Go            | `golang-migrate`                                  | CLI + library, supports PostgreSQL/MySQL/SQLite |
+| Java / Kotlin | Flyway (simple) or Liquibase (XML/YAML, rollback) | Flyway integrates with Spring Boot by default   |
+| Python        | Alembic (SQLAlchemy) or Django migrations         | Alembic for non-Django projects                 |
+| Node.js       | Knex.js migrations or Prisma Migrate              | Prisma for type-safe ORM workflows              |
+| Ruby          | ActiveRecord Migrations (Rails)                   | Built-in                                        |
+| PHP           | Doctrine Migrations or Laravel Migrations         | Laravel has built-in migration support          |
+| Any           | Flyway (standalone)                               | Works with any stack via CLI                    |
+
+Include a `## Migration Strategy` section in the final document covering: tool choice, file naming convention (`V1__create_users.sql`), rollback approach, and zero-downtime migration notes for large tables.
 
 1. Compute timestamp: `node -e 'process.stdout.write(String(Date.now()))'` (macOS) or `date +%s%3N` (Linux). Determine topic slug (e.g., `ecommerce`, `user-management`).
 2. Save permanent technical documentation to the user's project:
@@ -217,12 +270,19 @@ After completing Step 5, structure the database design document as follows. Data
 ## Index Strategy Summary
 ...
 
-## Migration Notes (if applicable)
+## Migration Strategy
+- **Tool**: {recommended migration tool}
+- **Naming convention**: `V{n}__{description}.sql` (Flyway) or `{timestamp}_{description}.py`
+- **Rollback approach**: {expand-contract / snapshot / backup-and-restore}
+- **Zero-downtime notes**: {add-nullable → backfill → add-constraint → drop-old}
+
+## Migration Notes (if applicable — only for normalization mode)
 ...
 ```
 
 ## Additional Resources
 
+- **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/engineering-principles.md`** — 10 guiding principles for acting as a Database Architect. Read at the start of every session.
 - **`$CLAUDE_PLUGIN_ROOT/skills/design-database/references/normalization-guide.md`** — Complete 1NF → BCNF rules with SQL examples. Read when analyzing existing schemas.
 - **`$CLAUDE_PLUGIN_ROOT/skills/design-database/references/index-guide.md`** — Index type matrix (B-tree, Hash, GiST, GIN, BRIN, Full-text) with use cases and when to avoid. Read when deciding index strategy.
 - **`$CLAUDE_PLUGIN_ROOT/skills/design-database/references/data-types-guide.md`** — Data type recommendations for PostgreSQL, MySQL, and SQLite. Read when choosing column types.

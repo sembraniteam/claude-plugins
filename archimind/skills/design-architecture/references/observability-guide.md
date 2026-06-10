@@ -212,9 +212,9 @@ Application → OTel SDK → OTel Collector → Backend (SigNoz / Grafana / Data
 
 | Tier                 | Instrumentation      | Logs                       | Metrics                       | Traces              | Unified Dashboard       |
 |----------------------|----------------------|----------------------------|-------------------------------|---------------------|-------------------------|
-| **Low Risk**         | OTel SDK (basic)     | Loki + Promtail            | Prometheus + Grafana          | Tempo               | Grafana                 |
-| **Medium Risk**      | OTel SDK             | Loki                       | Prometheus + VictoriaMetrics  | Tempo               | Grafana or SigNoz       |
-| **High Risk**        | OTel SDK + Collector | Loki / ClickHouse          | VictoriaMetrics / Mimir       | Tempo / Jaeger      | SigNoz or Grafana Stack |
+| **Lean**             | OTel SDK (basic)     | Loki + Promtail            | Prometheus + Grafana          | Tempo               | Grafana                 |
+| **Standard**         | OTel SDK             | Loki                       | Prometheus + VictoriaMetrics  | Tempo               | Grafana or SigNoz       |
+| **Advanced**         | OTel SDK + Collector | Loki / ClickHouse          | VictoriaMetrics / Mimir       | Tempo / Jaeger      | SigNoz or Grafana Stack |
 | **Budget-first**     | OTel SDK             | Uptrace (built-in)         | Uptrace (built-in)            | Uptrace (built-in)  | Uptrace                 |
 | **Enterprise**       | OTel SDK             | Datadog                    | Datadog                       | Datadog APM         | Datadog                 |
 | **Serverless/Cloud** | OTel SDK             | CloudWatch / Cloud Logging | CloudWatch / Cloud Monitoring | X-Ray / Cloud Trace | Managed                 |
@@ -250,7 +250,7 @@ Unified backends (logs + metrics + traces together):
 
 ---
 
-## Minimum Viable Observability (for MVP / Low Risk)
+## Minimum Viable Observability (for MVP / Lean)
 
 Even simple monoliths should have at minimum:
 

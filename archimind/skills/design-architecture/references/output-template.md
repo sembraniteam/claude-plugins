@@ -18,7 +18,7 @@ Use this template as a scaffold when generating the design file. Replace all pla
 **Summary:** {One-sentence description of the system}
 
 <!-- Fill in after user selects: -->
-<!-- **Selected:** Option N — {Risk Level}: {Architecture Name} -->
+<!-- **Selected:** Option N — {Tier}: {Architecture Name} -->
 <!-- **Decision date:** {ISO date} -->
 
 ## Project Overview
@@ -38,7 +38,7 @@ Use this template as a scaffold when generating the design file. Replace all pla
 
 ## Architecture Diagram
 
-### Option 1: Low Risk — {Architecture Name}
+### Option 1: Lean — {Architecture Name}
 
 {One paragraph describing the core approach and why it is appropriate for the conservative tier.}
 
@@ -180,7 +180,7 @@ flowchart TD
 
 ---
 
-### Option 2: Medium Risk — {Architecture Name}
+### Option 2: Standard — {Architecture Name}
 
 {One paragraph for the balanced tier.}
 
@@ -312,7 +312,7 @@ flowchart TD
 
 ---
 
-### Option 3: High Risk — {Architecture Name}
+### Option 3: Advanced — {Architecture Name}
 
 {One paragraph for the ambitious tier.}
 
@@ -475,11 +475,11 @@ flowchart TD
 ### Confidence Scores
 
 <!-- PLACEHOLDER — do not copy /10 blanks into content.md. Step 6 fills actual scores. -->
-| Option                         | Team Fit | Timeline | Scale | Cost | Overall |
-|--------------------------------|----------|----------|-------|------|---------|
-| Option 1 — Low Risk: {Name}    | /10      | /10      | /10   | /10  | **/10** |
-| Option 2 — Medium Risk: {Name} | /10      | /10      | /10   | /10  | **/10** |
-| Option 3 — High Risk: {Name}   | /10      | /10      | /10   | /10  | **/10** |
+| Option                      | Team Fit | Timeline | Scale | Cost | Overall |
+|-----------------------------|----------|----------|-------|------|---------|
+| Option 1 — Lean: {Name}     | /10      | /10      | /10   | /10  | **/10** |
+| Option 2 — Standard: {Name} | /10      | /10      | /10   | /10  | **/10** |
+| Option 3 — Advanced: {Name} | /10      | /10      | /10   | /10  | **/10** |
 
 {4–6 sentences stating which option is recommended, why, referencing actual requirements (team size, scale, data characteristics). Cite the option with the highest Overall score. Acknowledge the main trade-off.}
 
@@ -552,7 +552,7 @@ flowchart TD
 ## Decision Notes
 
 <!-- Fill in after user selects an option -->
-- **Chosen option:** Option N — {Risk Level}: {Architecture Name}
+- **Chosen option:** Option N — {Tier}: {Architecture Name}
 - **User-requested adjustments:** {if any}
 - **Prioritized next steps:** {first implementation milestones}
 - **Open questions:** {anything to revisit during implementation}
@@ -567,7 +567,7 @@ flowchart TD
 
 ### Architecture Decision
 
-**Chosen:** Option N — {Risk Level}: {Architecture Name}
+**Chosen:** Option N — {Tier}: {Architecture Name}
 **Reason:** {2–3 sentences on why this option was selected over the alternatives, referencing actual requirements.}
 
 > See the selected `### Option N:` heading above for the full Infrastructure Layout, Request Flow, and Component Flow diagrams.

@@ -4,7 +4,7 @@ AI-powered software architecture and database designer for Claude Code. Designs 
 
 ## Features
 
-- **Design Architecture** — Present three options (Low / Medium / High risk) with Mermaid diagrams, tech stack recommendations, database suggestions, and risk analysis.
+- **Design Architecture** — Present three options (Lean / Standard / Advanced) with Mermaid diagrams, tech stack recommendations, database suggestions, and trade-off analysis.
 - **Review Architecture** — Audit an existing system, identify antipatterns, and propose three redesign options with migration paths.
 - **Design Database** — Design new schemas or normalize existing SQL DDL. Includes ER diagrams, data type recommendations, index strategy, and normalization analysis.
 - **Visualize** — Run a local static site viewer with Mermaid JS rendering, left sidebar section nav, and tab navigation between architecture options, ERD, and Before/After revision.
@@ -119,13 +119,16 @@ archimind/
 │   │   └── references/
 │   │       ├── architecture-patterns.md
 │   │       ├── database-selection-guide.md
+│   │       ├── engineering-principles.md
+│   │       ├── mermaid-guidelines.md
 │   │       ├── observability-guide.md
 │   │       └── output-template.md
 │   ├── review-architecture/
 │   │   ├── SKILL.md
 │   │   └── references/
-│   │       ├── review-checklist.md
-│   │       └── anti-patterns.md
+│   │       ├── anti-patterns.md
+│   │       ├── output-template.md
+│   │       └── review-checklist.md
 │   ├── design-database/
 │   │   ├── SKILL.md
 │   │   └── references/
@@ -138,6 +141,7 @@ archimind/
 │   ├── find-port.sh       ← finds unused TCP port
 │   ├── start-server.sh    ← deploys viewer + starts server
 │   ├── stop-server.sh     ← stops server via /tmp/.archimind-$UID.pid
+│   ├── open-doc.sh        ← re-visualizes a saved docs/archimind/ document
 │   └── site/
 │       └── index.html     ← Mermaid JS viewer (HTML + Vanilla JS)
 └── README.md

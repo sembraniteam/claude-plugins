@@ -1,10 +1,10 @@
 # Architecture Patterns Reference
 
-A reference for selecting the right architecture pattern per risk tier. Use when deciding which pattern to recommend for each of the three options in `design-architecture`.
+A reference for selecting the right architecture pattern per complexity tier. Use when deciding which pattern to recommend for each of the three options in `design-architecture`.
 
 ---
 
-## Monolithic Architecture (Low Risk)
+## Monolithic Architecture (Lean)
 
 **Profile**: All components packaged and deployed as a single unit.
 
@@ -33,7 +33,7 @@ flowchart TD
 
 ---
 
-## Modular Monolith (Low–Medium Risk)
+## Modular Monolith (Lean–Standard)
 
 **Profile**: Single deployment unit, but code is organized into clearly bounded modules with explicit internal APIs.
 
@@ -61,7 +61,7 @@ flowchart TD
 
 ---
 
-## Backend-for-Frontend (BFF) Pattern (Medium Risk)
+## Backend-for-Frontend (BFF) Pattern (Standard)
 
 **Profile**: Separate lightweight API gateway per client type (web, mobile, admin), each aggregating downstream services.
 
@@ -76,7 +76,53 @@ flowchart TD
 
 ---
 
-## Microservices (High Risk)
+## API Gateway Pattern (Lean–Advanced)
+
+**Profile**: A single entry point for all client requests — handles routing, authentication, rate limiting, SSL termination, and request transformation before forwarding to upstream services.
+
+**Use when** (applies at every tier):
+- Multiple client types or services need a unified public interface
+- Rate limiting, auth, and CORS must not be duplicated per service
+- Lean tier: use as a simple reverse proxy + rate limiter (NGINX, Caddy, Kong)
+- Advanced tier: use as a full-featured gateway (Kong, AWS API Gateway, Apigee, Traefik)
+
+**Responsibilities at each tier**:
+
+| Responsibility   | Lean                          | Standard                        | Advanced                                          |
+|------------------|-------------------------------|---------------------------------|---------------------------------------------------|
+| SSL termination  | ✅                             | ✅                               | ✅                                                 |
+| Rate limiting    | Basic (IP-based)              | Per-user quota                  | Per-plan, burst                                   |
+| Auth validation  | JWT or PASETO v4.public check | JWT / PASETO v4.public + OAuth2 | OAuth2 + OIDC + API keys; PASETO v4.local for M2M |
+| Request routing  | Static rules                  | Path-based + headers            | Dynamic, canary, A/B                              |
+| Response caching | ❌                             | Static assets                   | Full response cache                               |
+| Analytics        | Basic logs                    | Structured logs                 | APM-level tracing                                 |
+
+> **Token format — JWT vs PASETO v4:**
+> - **PASETO v4.public** (Ed25519 asymmetric signing) — preferred over JWT for new systems. Eliminates JWT's `alg:none` and algorithm confusion attacks by design; no header to tamper with. Drop-in replacement for JWT RS256/ES256 access tokens.
+> - **PASETO v4.local** (XChaCha20-Poly1305 symmetric encryption) — for encrypted service-to-service (M2M) tokens on the internal network where token payload must not be readable by intermediaries. Replaces JWE.
+> - **JWT** — remain valid for OAuth2/OIDC interoperability (IdPs like Auth0, Keycloak, AWS Cognito issue JWTs by default); use `alg` allowlist + `kid` validation to mitigate known weaknesses.
+
+**Pros**: Single enforcement point for cross-cutting concerns. Clients see a stable API surface regardless of backend changes. Simplifies service code (no auth boilerplate in every service).
+
+**Cons**: Single point of failure if not HA. Can become a bottleneck. Adds a network hop. Must not contain business logic.
+
+**Mermaid pattern**:
+```mermaid
+flowchart TD
+  Client[Client]
+  GW[API Gateway\nAuth · Rate Limit · Route]
+  A[Service A]
+  B[Service B]
+  C[Service C]
+  Client --> GW
+  GW --> A & B & C
+```
+
+**Common tools**: NGINX / Caddy (Lean), Kong (Standard–Advanced), AWS API Gateway / Google Cloud Endpoints (Serverless), Traefik (Kubernetes-native), Envoy (service mesh).
+
+---
+
+## Microservices (Advanced)
 
 **Profile**: Independently deployable services, each owning a bounded domain and its own data store.
 
@@ -106,7 +152,7 @@ flowchart TD
 
 ---
 
-## Event-Driven Architecture (High Risk)
+## Event-Driven Architecture (Advanced)
 
 **Profile**: Services communicate via events on a message broker (Kafka, RabbitMQ, SNS/SQS). Publishers and subscribers are decoupled.
 
@@ -121,7 +167,7 @@ flowchart TD
 
 ---
 
-## CQRS (Command Query Responsibility Segregation) (High Risk)
+## CQRS (Command Query Responsibility Segregation) (Advanced)
 
 **Profile**: Separate write model (commands) from read model (queries). Write path updates the source of truth; read path uses optimized read stores (e.g., Elasticsearch, Redis, materialized views).
 
@@ -136,7 +182,7 @@ flowchart TD
 
 ---
 
-## Serverless / FaaS (Medium–High Risk)
+## Serverless / FaaS (Standard–Advanced)
 
 **Profile**: Functions deployed on-demand, billed per invocation. No server management.
 

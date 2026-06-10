@@ -5,7 +5,15 @@ description: This skill should be used when the user asks to "design an architec
 
 # Design Architecture
 
-Act as a **Software Architect** who helps users design software architecture in a gradual, efficient, and easy-to-understand manner. Follow this workflow strictly — gather requirements first, present three options, wait for the user to select one, then write final documentation.
+Act as a **Software Architect and Senior Software Engineer** with 5+ years of production experience. Read and apply `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/engineering-principles.md` throughout this workflow.
+
+Core behaviors:
+- Analyze requirements critically before generating any option — the right architecture is driven by actual constraints (team, deadline, scale, budget, compliance), not trends
+- Recommend the simplest option that satisfies all requirements; introduce complexity only when a specific requirement demands it
+- Identify SPOFs, bottlenecks, security risks, and technical debt in every option
+- Explain the technical rationale and risk level behind every decision
+
+Follow this workflow strictly — gather requirements first, present three options, wait for the user to select one, then write final documentation.
 
 ## Workflow
 
@@ -110,7 +118,7 @@ Present the summary in this exact format, then wait for confirmation:
 | Observability tier | {basic / full / SRE-grade}     | Q2 + Q4 (inferred) |
 
 **Key inferences:**
-- {1–3 bullets summarizing constraints inferred from the combination of answers — e.g., "High volume + small team → Low Risk is the safest starting point", "SaaS + massive scale → strong consistency for transactions, eventual for feeds"}
+- {1–3 bullets summarizing constraints inferred from the combination of answers — e.g., "High volume + small team → Lean is the safest starting point", "SaaS + massive scale → strong consistency for transactions, eventual for feeds"}
 
 > Does this accurately capture your requirements? Reply with any corrections, or say **"Yes, proceed"** to generate the architecture options.
 
@@ -120,21 +128,23 @@ Wait for the user to confirm or correct before proceeding to Step 3. If the user
 
 ### 3. Generate Three Architecture Options
 
-After confirmation, analyze requirements and present **exactly 3 options**: Low Risk, Medium Risk, and High Risk.
+After confirmation, analyze requirements and present **exactly 3 options**: Lean, Standard, and Advanced.
+
+**Anti-over-engineering check before generating options**: Map each stated requirement to the tier that satisfies it. If the Lean tier satisfies all stated requirements, make this explicit in the Recommendation — do not default to Standard or Advanced because they "seem more professional." Complexity must be justified by a specific, named requirement, not by preference for modern patterns.
 
 For each option, cover all required sections (see "Required Sections Per Option" below). Do not skip any section.
 
-#### Option 1: Low Risk
+#### Option 1: Lean
 - Proven, well-understood patterns. Minimal infrastructure complexity.
 - Typical: Monolith, Modular Monolith, Simple REST + Single DB.
 - Best for MVPs, small teams, tight deadlines.
 
-#### Option 2: Medium Risk
+#### Option 2: Standard
 - Balanced between pragmatism and scalability. Some distributed elements where justified.
 - Typical: Modular Monolith with service boundaries, BFF + separate services for key domains.
 - Best for growing products with 6–18 month horizon.
 
-#### Option 3: High Risk
+#### Option 3: Advanced
 - Full distributed architecture optimized for scale or flexibility.
 - Typical: Microservices, Event-Driven + CQRS, Serverless-first, Hexagonal.
 - Best for teams with operational maturity and long investment horizon.
@@ -154,6 +164,8 @@ Required `####` subsections for each option — **every option must include thre
 - **Object Storage** — only if relevant to user's answers: solution (MinIO / S3 / GCS / R2), what's stored, bucket org, access control, encryption, self-hosted vs. managed trade-offs
 - **Observability Strategy** — OTel-first; pillars: Instrumentation, Logs, Metrics, Distributed Traces, Alerting. Scale tooling to complexity. See `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/observability-guide.md`.
 - **Technology Decision Rationale** — for each major choice: why chosen, better-than-alternatives, required skills, ecosystem longevity
+- **SPOF Analysis** — identify every single point of failure: what component's failure causes a full or partial outage? For each SPOF: blast radius (users affected), detection time (how quickly is it noticed?), and mitigation (HA strategy, circuit breaker, graceful degradation, or explicit acceptance of the risk)
+- **Disaster Recovery** — RTO target (max acceptable downtime), RPO target (max acceptable data loss), backup strategy (frequency, retention, restore procedure), failover approach (manual/automated, hot/warm/cold standby), and which tier of DR is proportionate to the stated scale and compliance requirements
 - **Future Impact** — 6-month / 1-year / 3-year table + scalability ceiling, operational overhead, reversibility, vendor lock-in
 - **Risks & Mitigations** — table: Risk / Likelihood / Impact / Mitigation
 - **When to Choose This Option** — 2–3 bullets for the ideal scenario
@@ -177,9 +189,9 @@ After all options, include a `## Recommendation` section with:
 
 | Option | Team Fit | Timeline | Scale | Cost | Overall |
 |--------|----------|----------|-------|------|---------|
-| Option 1 — Low Risk: {Name}     | 9/10 | 9/10 | 7/10 | 8/10 | **8.3/10** |
-| Option 2 — Medium Risk: {Name}  | 7/10 | 6/10 | 8/10 | 7/10 | **7.0/10** |
-| Option 3 — High Risk: {Name}    | 4/10 | 3/10 | 10/10 | 5/10 | **5.5/10** |
+| Option 1 — Lean: {Name}     | 9/10 | 9/10 | 7/10 | 8/10 | **8.3/10** |
+| Option 2 — Standard: {Name} | 7/10 | 6/10 | 8/10 | 7/10 | **7.0/10** |
+| Option 3 — Advanced: {Name} | 4/10 | 3/10 | 10/10 | 5/10 | **5.5/10** |
 ```
 
 Score criteria:
@@ -211,11 +223,11 @@ Use **AskUserQuestion** to ask the user to choose:
 question: "Which architecture would you like to proceed with?"
 header: "Select Option"
 options:
-  - label: "Option 1 — Low Risk"
+  - label: "Option 1 — Lean"
     description: <one-line summary of Option 1 name/pattern>
-  - label: "Option 2 — Medium Risk"
+  - label: "Option 2 — Standard"
     description: <one-line summary of Option 2 name/pattern>
-  - label: "Option 3 — High Risk"
+  - label: "Option 3 — Advanced"
     description: <one-line summary of Option 3 name/pattern>
 ```
 
@@ -226,7 +238,7 @@ Iterate freely if the user wants adjustments (e.g., "swap MongoDB for PostgreSQL
 1. Read the saved document
 2. Insert decision header after the document title:
    ```markdown
-   **Selected:** Option N — {Risk Level}: {Architecture Name}
+   **Selected:** Option N — {Tier}: {Architecture Name}
    **Decision date:** {ISO date}
    ```
 3. For **review workflows only**: populate `## Revision / ### After` with the selected option's proposed architecture diagrams. For fresh designs, omit or leave the Revision section empty.
@@ -248,14 +260,7 @@ After selection is marked, append the final documentation using this trimmed str
 ### Trade-offs & Next Steps
 ```
 
-Section content guide:
-- **Overview** — what the system does, who uses it, key characteristics (2–4 sentences)
-- **Architecture Decision** — which option was chosen and the core rationale; reference the diagrams already in the selected `### Option N:` heading above
-- **Technology Stack** — single table: Layer / Technology / Reason. Include language, backend, frontend, DB, cache, messaging, infra, observability
-- **Data Architecture** — DB choices and rationale; ERD (repeat the `erDiagram` from `## ERD` for standalone readability); migration strategy (schema versioning tool, rollback approach, zero-downtime considerations)
-- **Observability** — all three pillars in one section: logs (tool + agent), metrics (tool + key dashboards), distributed tracing (tool + sampling). Alerting thresholds
-- **Security** — authentication/authorization approach, data encryption at rest/in transit, secret management, compliance considerations
-- **Trade-offs & Next Steps** — what the chosen option sacrifices (scalability ceiling, operational overhead, reversibility); first 3 implementation milestones; open questions
+For the content guide for each section, read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/output-template.md` — the Final Documentation block contains field-level guidance for Overview, Architecture Decision, Technology Stack, Data Architecture, Observability, Security, and Trade-offs & Next Steps.
 
 ### 11. Save Final Documentation and Stop Server
 
@@ -275,7 +280,7 @@ Then use the **Write tool** to write `docs/archimind/architecture/{timestamp_ms}
 # Architecture Design: {Topic}
 
 **Generated:** {ISO date}
-**Selected:** Option N — {Risk Level}: {Architecture Name}
+**Selected:** Option N — {Tier}: {Architecture Name}
 **Decision date:** {ISO date}
 
 ## Project Overview
@@ -286,7 +291,7 @@ Then use the **Write tool** to write `docs/archimind/architecture/{timestamp_ms}
 
 ## Architecture Diagram
 
-### Option N: {Risk Level} — {Architecture Name}
+### Option N: {Tier} — {Architecture Name}
 
 {Selected option's full content — all #### subsections}
 
@@ -345,5 +350,6 @@ Read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/mermaid-guidelin
 - **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/architecture-patterns.md`** — Detailed patterns (Monolith, Microservices, Serverless, Event-Driven, CQRS, Hexagonal). Read when deciding which pattern fits each risk tier.
 - **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/database-selection-guide.md`** — Comprehensive database selection guide (relational, document, key-value, column-family, time-series, graph, search, NewSQL, polyglot persistence). Read when choosing the data layer.
 - **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/observability-guide.md`** — Observability stack guide (OpenTelemetry, Loki, Prometheus, Jaeger/Tempo, SigNoz, Uptrace, Grafana Stack, Datadog). Read when designing the observability strategy.
+- **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/engineering-principles.md`** — 10 guiding principles for acting as a Software Architect. Read at the start of every session. Covers: critical analysis, no-assumption rule, needs-based recommendations, trade-off comparison, SPOF identification, over-engineering avoidance, and DR considerations.
 - **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/output-template.md`** — Full blank template for the output document. **Read-only — never write to this file.** Output always goes to `/tmp/archimind-viewer/content.md` (viewer) or `docs/archimind/architecture/{timestamp_ms}-{topic}.md` (final docs).
 - **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/mermaid-guidelines.md`** — Diagram type selection, node limits, edge labeling, subgraph conventions, and syntax examples.

@@ -5,6 +5,14 @@ description: This skill should be used when the user asks to "review architectur
 
 # Review Architecture
 
+Act as a **Senior Software Engineer** conducting a formal architecture review. Read and apply `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/engineering-principles.md` throughout this workflow.
+
+Core behaviors:
+- Prioritize evidence over intuition — verify pain points with metrics before proposing changes
+- Identify SPOFs, technical debt, security gaps, scalability ceilings, and disaster recovery gaps systematically
+- Recommend the least invasive change that delivers the most risk reduction
+- Never propose a higher-complexity option unless the simpler option demonstrably fails to address the root causes
+
 Analyze an existing software architecture, identify weaknesses and opportunities for improvement, then propose three redesign options — **Conservative Refactor**, **Moderate Redesign**, and **Full Overhaul** — each with Mermaid diagrams, rationale, and migration path. Open a static HTML viewer so the user can compare options before selecting.
 
 ## Workflow
@@ -42,6 +50,15 @@ Then ask the user to provide any relevant artefacts:
 Read any relevant files the user points to (e.g., `docker-compose.yml`, `package.json`, database migration files, service directories).
 
 ### 2. Perform Architecture Analysis
+
+#### Measure Before Redesigning
+
+Before analyzing weaknesses, confirm the stated pain points are backed by observable data — not assumptions. Ask:
+- Are there existing metrics? (p50/p95/p99 latencies, error rates, throughput, slow query logs)
+- Which specific operations are slow or failing — exact endpoints, jobs, or queries?
+- If no metrics exist, flag this explicitly: **"Lack of observability means the redesign is based on assumptions, not evidence."** Recommending an observability improvement (structured logging, metrics endpoint) as part of Option 1 is almost always warranted.
+
+Redesigning without measurement data risks solving the wrong problem. A query missing an index often outperforms a microservices migration.
 
 Evaluate the existing architecture against the checklist in `$CLAUDE_PLUGIN_ROOT/skills/review-architecture/references/review-checklist.md`. Produce an **Analysis Summary** covering:
 
@@ -83,70 +100,17 @@ Wait for the user to confirm or correct before proceeding to Step 4. If the user
 
 ### 4. Scaffold the Review Document Structure
 
-Structure the review document with a `## Revision` section that contains both `### Before` and `### After` subsections. This is what the viewer renders as Before/After tabs. The temp file is written in Step 7 after options are generated.
+Structure the review document with `## Architecture Diagram`, `## ERD`, `## Revision`, and `## Recommendation` top-level sections. The `## Revision` section must contain `### Before` and `### After` subsections — this is what the viewer renders as Before/After tabs.
 
 **Viewer content path**: `/tmp/archimind-viewer/content.md`
 
-Structure:
-```markdown
-# Architecture Review: {System Name}
+For the complete document scaffold (all required headings, placeholder text, and subsection structure), read:
+`$CLAUDE_PLUGIN_ROOT/skills/review-architecture/references/output-template.md` — **read-only; never write to it.**
 
-## Architecture Diagram
-
-### Option 1: Conservative Refactor — {Title}
-{content}
-
-### Option 2: Moderate Redesign — {Title}
-{content}
-
-### Option 3: Full Overhaul — {Title}
-{content}
-
-## ERD
-{erDiagram if applicable}
-
-## Revision
-
-### Before
-
-{2–4 sentence overview of current architecture}
-
-```mermaid
-flowchart TD
-  (current state topology — mark problematic nodes with ⚠)
-```
-
-**Identified Issues:**
-- {Issue 1 — specific, cites antipattern name if applicable}
-- {Issue 2}
-
-### After
-
-{Overview of the recommended redesign option and what changes}
-
-```mermaid
-flowchart TD
-  (proposed architecture topology — mark new/changed nodes with [NEW])
-```
-
-**Key Improvements:**
-- {How identified weaknesses are addressed}
-
-## Recommendation
-
-<!-- PLACEHOLDER — do not copy /10 blanks into content.md. Step 6 fills actual scores. -->
-### Confidence Scores
-
-| Option                           | Migration Effort | Risk Reduction | Team Fit | Cost | Overall |
-|----------------------------------|------------------|----------------|----------|------|---------|
-| Option 1 — Conservative Refactor | /10              | /10            | /10      | /10  | **/10** |
-| Option 2 — Moderate Redesign     | /10              | /10            | /10      | /10  | **/10** |
-| Option 3 — Full Overhaul         | /10              | /10            | /10      | /10  | **/10** |
-
-{Narrative placeholder — filled in Step 5b.}
-```
-
-> **Note on columns**: review uses `Migration Effort | Risk Reduction | Team Fit | Cost | Overall` (migration-centric) vs. design-architecture which uses `Team Fit | Timeline | Scale | Cost | Overall` — intentionally different because review prioritises migration feasibility.
+Key structural rules:
+- Use `### Option N:` (level-3) within `## Architecture Diagram` — the viewer splits on these to create option tabs
+- The `## Recommendation` section in the draft (written in Step 7) uses blank `/10` placeholders; Step 6 fills actual scores before writing to disk
+- The `### After` diagram in `## Revision` is initially a placeholder — Step 9 replaces it with the selected option's Infrastructure Layout diagram
 
 ### 5. Generate Three Redesign Options
 
@@ -195,57 +159,55 @@ Score criteria for review context:
 
 Each `### Option N:` section must include **three Mermaid diagrams** and the sections below. Read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/mermaid-guidelines.md` for review-specific diagram conventions (mark changed nodes with `[NEW]`, problematic nodes with `⚠`).
 
-```
-### Infrastructure Layout (architecture-beta)
-PROPOSED infrastructure topology with icons.
-Mark new/added services clearly.
+```markdown
+#### Infrastructure Layout (architecture-beta)
+PROPOSED infrastructure topology with icons. Mark new/added services clearly.
 
-### Request Flow (sequenceDiagram)
+#### Request Flow (sequenceDiagram)
 Primary user request through the PROPOSED architecture.
 
-### Component Flow (flowchart TD)
-Logical data flow between proposed components.
-Mark changed/new components with [NEW] labels.
+#### Component Flow (flowchart TD)
+Logical data flow between proposed components. Mark changed/new components with [NEW] labels.
 
-### What Changes
+#### What Changes
 Bulleted list comparing current state vs. proposed state.
 
-### Key Improvements
+#### Key Improvements
 How this option addresses each identified weakness.
 
-### Technology Changes
+#### Technology Changes
 | Component | Current | Proposed | Reason |
 
-### Data Layer Changes
+#### Data Layer Changes
 Which databases are added, removed, or replaced — and why.
 Non-relational stores introduced (cache, search, analytics) and rationale.
 Schema migration approach and data migration steps.
 
-### Object Storage Changes (if applicable)
+#### Object Storage Changes (if applicable)
 Changes to file/blob storage strategy.
 
-### Observability Changes
+#### Observability Changes
 OpenTelemetry-based instrumentation improvements.
 New monitoring, tracing, alerting components.
 
-### Technology Decision Rationale
+#### Technology Decision Rationale
 For each proposed change: why this replaces the current, alternatives considered, team skills required.
 
-### Future Impact
+#### Future Impact
 | Timeframe | Impact |
 | 6 months  | ... |
 | 1 year    | ... |
 | 3 years   | ... |
 Scalability improvement, operational overhead change, reversibility.
 
-### Migration Path
+#### Migration Path
 Step-by-step migration approach. Rollback strategy.
 For Option 3: specify Strangler Fig, parallel run, or big bang and justify.
 
-### Risks & Mitigations
+#### Risks & Mitigations
 | Risk | Likelihood | Impact | Mitigation |
 
-### When to Choose This Option
+#### When to Choose This Option
 2–3 bullets for ideal scenario.
 ```
 
@@ -383,8 +345,10 @@ Read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/mermaid-guidelin
 
 ## Additional Resources
 
-- **`$CLAUDE_PLUGIN_ROOT/skills/review-architecture/references/review-checklist.md`** — Structured checklist (scalability, coupling, observability, data, security, operational). Read during Step 2 analysis.
+- **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/engineering-principles.md`** — 10 guiding principles for acting as a Senior Software Engineer. Read at the start of every review session.
+- **`$CLAUDE_PLUGIN_ROOT/skills/review-architecture/references/review-checklist.md`** — Structured checklist (12 categories: scalability, coupling, data consistency, observability, security, operational complexity, distributed systems, SPOF, disaster recovery, technical debt, cost, API versioning). Read during Step 2 analysis.
 - **`$CLAUDE_PLUGIN_ROOT/skills/review-architecture/references/anti-patterns.md`** — Canonical antipattern names (God Service, Shared DB, Chatty Microservices, Big Bang Migration, etc.). Read when naming identified problems and specifying Option 3 migration approach.
+- **`$CLAUDE_PLUGIN_ROOT/skills/review-architecture/references/output-template.md`** — Full document scaffold for review output. **Read-only — never write to it.** Read during Step 4 to understand required section structure.
 - **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/database-selection-guide.md`** — Comprehensive database selection guide. Read when proposing database changes.
 - **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/observability-guide.md`** — Observability stack guide. Read when proposing observability improvements.
 - **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/mermaid-guidelines.md`** — Diagram type selection, node limits, edge labeling, and review-specific node labeling conventions.

@@ -78,13 +78,13 @@ architecture-beta
   auth:B --> T:db
 ```
 
-### Per-Risk-Tier Guidance
+### Per-Tier Guidance
 
-| Tier                      | Typical groups                   | Typical services                     |
-|---------------------------|----------------------------------|--------------------------------------|
-| Low Risk (Monolith)       | 2–3 groups: Client, App, Data    | 3–5 services; no internal fan-out    |
-| Medium Risk (Modular)     | 3–4 groups; split App by domain  | 5–8 services; one async worker       |
-| High Risk (Microservices) | 5+ groups; separate mesh/gateway | 8–15 services; message queue visible |
+| Tier                     | Typical groups                   | Typical services                     |
+|--------------------------|----------------------------------|--------------------------------------|
+| Lean (Monolith)          | 2–3 groups: Client, App, Data    | 3–5 services; no internal fan-out    |
+| Standard (Modular)       | 3–4 groups; split App by domain  | 5–8 services; one async worker       |
+| Advanced (Microservices) | 5+ groups; separate mesh/gateway | 8–15 services; message queue visible |
 
 ### Infrastructure Mapping from Requirements
 
@@ -123,7 +123,7 @@ Add the matching zones as separate groups in the `architecture-beta` diagram.
 | GDPR            | Single-region data residency label on database group; encryption-at-rest annotation  |
 | PCI DSS / HIPAA | Private subnet group (isolate DB), bastion/jump host, HSM / KMS service, WAF         |
 
-Include compliance components for the tier where they are relevant — all options should meet OWASP Top 10 minimum; higher-compliance requirements appear in Medium and High Risk tiers unless the user indicated they apply at all tiers.
+Include compliance components for the tier where they are relevant — all options should meet OWASP Top 10 minimum; higher-compliance requirements appear in Standard and Advanced tiers unless the user indicated they apply at all tiers.
 
 ---
 
