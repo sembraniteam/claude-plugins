@@ -114,7 +114,7 @@
 
     /* Pan/zoom container */
     .diagram-svg-container { padding: 20px; overflow: hidden; cursor: grab;
-      position: relative; user-select: none; min-height: 182px; }
+      position: relative; user-select: none; min-height: 500px; }
     .diagram-svg-container.grabbing { cursor: grabbing; }
     .diagram-inner { display: inline-block; transform-origin: 0 0; }
     .diagram-inner svg { display: block; max-width: none; }
@@ -203,7 +203,7 @@
   function makePanZoom(container, inner, btnIn, btnOut, btnReset) {
     const pz = {
       container, inner,
-      tx: 0, ty: 0, scale: 1, initTx: 0,
+      tx: 0, ty: 0, scale: 1, initTx: 0, initScale: 1,
       apply() {
         inner.style.transform = `translate(${this.tx}px,${this.ty}px) scale(${this.scale})`;
       }
@@ -238,7 +238,7 @@
       pz.scale = Math.max(pz.scale / 1.3, 0.1); pz.apply();
     });
     btnReset.addEventListener('click', () => {
-      pz.tx = pz.initTx; pz.ty = 0; pz.scale = 1; pz.apply();
+      pz.tx = pz.initTx; pz.ty = 0; pz.scale = pz.initScale; pz.apply();
     });
     return pz;
   }
@@ -247,7 +247,10 @@
   async function loadContent() {
     try {
       const r = await fetch('./content.md?_=' + Date.now());
-      if (!r.ok) throw new Error('content.md not found. Write the design content to this file and reload.');
+      if (!r.ok) {
+        showError('content.md not found. Write the design content to this file and reload.');
+        return;
+      }
       const md = await r.text();
       processDoc(md);
     } catch (e) {
@@ -479,14 +482,26 @@
       }
       pre.parentNode.replaceChild(wrap, pre);
 
-      // Center diagram horizontally after DOM insert
+      // Fit diagram to container width on first display
       if (pz && svgContainer && svgInner) {
-        const containerW = svgContainer.offsetWidth;
-        const innerW = svgInner.offsetWidth;
-        if (innerW > 0 && innerW < containerW) {
-          const initTx = Math.floor((containerW - innerW) / 2);
-          pz.initTx = initTx;
-          pz.tx = initTx;
+        const svgEl = svgInner.querySelector('svg');
+        const padding = 40; // 2 × 20px container padding
+        const availW = svgContainer.clientWidth - padding;
+        const vb = svgEl?.viewBox?.baseVal;
+        const natW = (vb && vb.width > 0) ? vb.width : svgInner.offsetWidth;
+
+        if (natW > 0 && availW > 0) {
+          if (natW > availW) {
+            // Scale down so diagram fills available width
+            const s = availW / natW;
+            pz.scale = s; pz.initScale = s;
+            pz.tx = 0; pz.initTx = 0;
+          } else {
+            // Diagram fits naturally — center it horizontally
+            const initTx = Math.floor((availW - natW) / 2);
+            pz.initTx = initTx; pz.tx = initTx;
+            pz.initScale = 1;
+          }
           pz.apply();
         }
       }
@@ -526,8 +541,12 @@
     clone.removeAttribute('style'); // strip any transform from pan/zoom
 
     const serialized = new XMLSerializer().serializeToString(clone);
-    // Use base64 data URL — avoids cross-origin Blob URL restrictions in some browsers
-    const b64 = btoa(unescape(encodeURIComponent(serialized)));
+    // Use base64 data URL — avoids cross-origin Blob URL restrictions in some browsers.
+    // TextEncoder replaces the deprecated btoa(unescape(encodeURIComponent())) pattern.
+    const bytes = new TextEncoder().encode(serialized);
+    let binary = '';
+    for (const b of bytes) binary += String.fromCharCode(b);
+    const b64 = btoa(binary);
     const dataUrl = 'data:image/svg+xml;base64,' + b64;
 
     const SCALE = 2; // 2× for retina quality
