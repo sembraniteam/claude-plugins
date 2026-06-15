@@ -1,6 +1,6 @@
 ---
 name: review-architecture
-description: This skill should be used when the user asks to "review architecture", "analyze my architecture", "audit the architecture", "review my system design", "improve my system", "refactor architecture", "redesign my system", "what's wrong with my architecture", "critique my design", "help me improve my existing system", "is my architecture good", "identify bottlenecks in my architecture", or provides an existing architecture description, diagram, or codebase structure for evaluation.
+description: This skill should be used when the user asks to "review architecture", "analyze my architecture", "audit the architecture", "review my system design", "improve my existing architecture", "refactor architecture", "redesign my system", "what's wrong with my architecture", "critique my design", "help me improve my existing system", "is my architecture good", "identify bottlenecks in my architecture", or provides an existing architecture description, diagram, or codebase structure for evaluation.
 ---
 
 # Review Architecture
@@ -13,53 +13,49 @@ Core behaviors:
 - Recommend the least invasive change that delivers the most risk reduction
 - Never propose a higher-complexity option unless the simpler option demonstrably fails to address the root causes
 
-Analyze an existing software architecture, identify weaknesses and opportunities for improvement, then compose three redesign options — **Conservative Refactor**, **Moderate Redesign**, and **Full Overhaul** — directly into `content.md` and open the viewer. **Never output the full options in the chat response** — the viewer is the display surface. Keep chat responses brief status updates.
+Follow the **Spec → Plan → Review → Ship** workflow strictly — collect and analyze the existing architecture first, generate three redesign options and write them to content.md, present a compact summary for user confirmation, then open the visual viewer for final selection. **Never output the full redesign options in the chat response** — the viewer is the display surface. Keep chat responses brief status updates.
 
 ## Workflow
 
-**Tools — create tasks and use structured questions throughout:**
-
 At the very start, call **TaskCreate** to create one task per step:
-1. Collect existing architecture information
-2. Perform architecture analysis
-3. Confirm analysis summary
-4. Scaffold review document structure
-5. Generate three redesign options, Recommendation → write content.md → open viewer
-6. User selects option
-7. Mark the chosen option and write decision notes
-8. Save final docs and stop server
+1. Spec — Collect existing architecture information
+2. Spec — Perform architecture analysis
+3. Spec — Confirm analysis summary
+4. Plan — Generate 3 redesign options and Recommendation → write content.md
+5. Review — Present redesign summary, confirm or iterate
+6. Ship — Open viewer and await option selection
+7. Ship — Mark chosen option and write decision notes
+8. Ship — Save permanent docs and stop server
 
 Mark each task `in_progress` when starting it and `completed` when done.
 
-### 1. Collect Existing Architecture Information
+---
 
-Use **AskUserQuestion** to gather context before the user provides free-form details. Ask up to 4 questions at once to understand:
+### Stage 1: Spec — Collect and Analyze
+
+**Collect Existing Architecture Information**
+
+Use **AskUserQuestion** to gather context before the user provides free-form details. Ask up to 4 questions at once. These are **free-text questions** — do not attempt to map them to A/B/C/D options; pass them as open-ended `description` fields or use the `Other` option only:
 - What type of system is it? (web app, backend API, data pipeline, mobile backend, etc.)
 - What are the primary pain points that prompted this review?
 - What constraints exist that cannot change? (legacy integrations, compliance, team skills)
 - How is the system currently deployed? (cloud/on-premise, containerized, serverless, etc.)
 
-Then ask the user to provide any relevant artefacts:
-
+Then ask the user to provide any relevant artifacts:
 - **Description**: What the system does, how it's structured today
 - **Tech stack**: Languages, frameworks, databases, infra currently used
 - **Architecture diagram** or a textual description of services/components
 
 Read any relevant files the user points to (e.g., `docker-compose.yml`, `package.json`, database migration files, service directories).
 
-### 2. Perform Architecture Analysis
-
-#### Measure Before Redesigning
+**Perform Architecture Analysis**
 
 Before analyzing weaknesses, confirm the stated pain points are backed by observable data — not assumptions. Ask:
 - Are there existing metrics? (p50/p95/p99 latencies, error rates, throughput, slow query logs)
 - Which specific operations are slow or failing — exact endpoints, jobs, or queries?
-- If no metrics exist, flag this explicitly: **"Lack of observability means the redesign is based on assumptions, not evidence."** Recommending an observability improvement (structured logging, metrics endpoint) as part of Option 1 is almost always warranted.
-
-Redesigning without measurement data risks solving the wrong problem. A query missing an index often outperforms a microservices migration.
+- If no metrics exist, flag this explicitly: **"Lack of observability means the redesign is based on assumptions, not evidence."** Recommending an observability improvement as part of Option 1 is almost always warranted.
 
 Evaluate the existing architecture against the checklist in `$CLAUDE_PLUGIN_ROOT/skills/review-architecture/references/review-checklist.md`. Produce an **Analysis Summary** covering:
-
 - **Strengths**: What the current architecture does well
 - **Weaknesses**: Specific identified problems (scalability, coupling, observability, data, security, operational)
 - **Antipatterns found**: Reference `$CLAUDE_PLUGIN_ROOT/skills/review-architecture/references/anti-patterns.md` for canonical names
@@ -67,11 +63,9 @@ Evaluate the existing architecture against the checklist in `$CLAUDE_PLUGIN_ROOT
 
 Keep the analysis concise: 3–6 bullet points per category. Be specific ("single DB handles both OLTP and analytics queries, causing lock contention"), not vague.
 
-### 3. Confirm Analysis Summary
+**Confirm Analysis Summary**
 
-After completing the analysis, display a summary to the user **before** generating redesign options. This ensures the assessment is accurate.
-
-Present the summary in this format, then wait for confirmation:
+After completing the analysis, display a summary to the user **before** generating redesign options. Present in this format, then wait for confirmation:
 
 ---
 
@@ -79,14 +73,14 @@ Present the summary in this format, then wait for confirmation:
 
 **Current Architecture:** {1–2 sentence description of what was understood}
 
-| Category                    | Finding                                                                                                                   |
-|-----------------------------|---------------------------------------------------------------------------------------------------------------------------|
-| Tech stack                  | {languages, frameworks, databases identified}                                                                             |
-| Architecture style          | {monolith / modular monolith / microservices / etc.}                                                                      |
-| Strengths                   | {1–2 key positives}                                                                                                       |
-| Primary pain points         | {top 2–3 issues identified}                                                                                               |
-| Antipatterns detected       | {canonical names from `$CLAUDE_PLUGIN_ROOT/skills/review-architecture/references/anti-patterns.md`, or "None identified"} |
-| Constraints (cannot change) | {legacy integrations, compliance, team skills, etc.}                                                                      |
+| Category                    | Finding                                                               |
+|-----------------------------|-----------------------------------------------------------------------|
+| Tech stack                  | {languages, frameworks, databases identified}                         |
+| Architecture style          | {monolith / modular monolith / microservices / etc.}                  |
+| Strengths                   | {1–2 key positives}                                                   |
+| Primary pain points         | {top 2–3 issues identified}                                           |
+| Antipatterns detected       | {canonical names from anti-patterns.md, or "None identified"}         |
+| Constraints (cannot change) | {legacy integrations, compliance, team skills, etc.}                  |
 
 **Root cause hypothesis:** {1–2 sentences on why the main issues exist — e.g., "The system evolved from a monolith without service boundaries, resulting in tight coupling that now blocks independent scaling."}
 
@@ -94,25 +88,21 @@ Present the summary in this format, then wait for confirmation:
 
 ---
 
-Wait for the user to confirm or correct before proceeding to Step 4. If the user provides corrections, update the summary and re-confirm.
+Wait for the user to confirm or correct. If the user provides corrections, update the summary and re-confirm. Only proceed to Stage 2 when the user explicitly approves.
 
-### 4. Scaffold the Review Document Structure
+---
 
-Structure the review document with `## Architecture Diagram`, `## ERD`, `## Revision`, and `## Recommendation` top-level sections. The `## Revision` section must contain `### Before` and `### After` subsections — this is what the viewer renders as Before/After tabs.
+### Stage 2: Plan — Generate Redesign Options
 
-**Viewer content path**: `/tmp/archimind-viewer/content.md`
+After confirmation, scaffold the review document and compose three redesign options directly into `/tmp/archimind-viewer/content.md` using the Write tool. Print a brief status line like "Planning 3 redesign options…" while writing. **Do not open the viewer yet — that happens in Stage 4: Ship.**
 
-For the complete document scaffold (all required headings, placeholder text, and subsection structure), read:
-`$CLAUDE_PLUGIN_ROOT/skills/review-architecture/references/output-template.md` — **read-only; never write to it.**
+Structure the document with `## Architecture Diagram`, `## ERD`, `## Revision`, and `## Recommendation` top-level sections. The `## Revision` section must contain `### Before` and `### After` subsections — the viewer renders these as Before/After tabs.
+
+For the complete document scaffold (all required headings and placeholder text), read: `$CLAUDE_PLUGIN_ROOT/skills/review-architecture/references/output-template.md` — **read-only; never write to it.**
 
 Key structural rules:
 - Use `### Option N:` (level-3) within `## Architecture Diagram` — the viewer splits on these to create option tabs
-- The `## Recommendation` section in the draft (written in Step 7) uses blank `/10` placeholders; Step 6 fills actual scores before writing to disk
-- The `### After` diagram in `## Revision` is initially a placeholder — Step 9 replaces it with the selected option's Infrastructure Layout diagram
-
-### 5. Generate Three Redesign Options
-
-Compose three options directly into `/tmp/archimind-viewer/content.md` — do not output the full option text in the chat. Print a brief status line like "Generating 3 redesign options…" while writing. Structure the document under `## Architecture Diagram` using `### Option N:` sub-headings (the viewer renders these as tabs).
+- The `### After` diagram in `## Revision` is initially a placeholder — Stage 4 replaces it with the selected option's Infrastructure Layout diagram
 
 #### Option 1: Conservative Refactor
 - Minimal structural change. Fix the most critical pain points without re-architecture.
@@ -129,34 +119,57 @@ Compose three options directly into `/tmp/archimind-viewer/content.md` — do no
 - Approach: Adopt a fundamentally different architecture (microservices, event-driven, serverless).
 - Migration effort: Months to quarters. Use Strangler Fig or parallel run — not big bang. See `$CLAUDE_PLUGIN_ROOT/skills/review-architecture/references/anti-patterns.md` for why.
 
-### 6. Add Recommendation and Open Viewer
+#### Required Sections Per Option
 
-After all three options, add a `## Recommendation` section to the document **with actual scores filled in** (not the blank `/10` scaffold from Step 4).
+Each `### Option N:` section must include **three Mermaid diagrams** and a standard set of subsections. Read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/mermaid-guidelines.md` for review-specific diagram conventions (mark changed nodes with `[NEW]`, problematic nodes with `⚠`).
 
-1. **Confidence Scores table** — rate each option on four dimensions (0–10). The viewer renders `X/10` table cells as visual progress bars automatically. Use this column structure with FILLED SCORES:
+Each option must include the three Mermaid diagrams (**Infrastructure Layout**, **Request Flow**, **Component Flow**) and the standard subsections listed in `$CLAUDE_PLUGIN_ROOT/skills/review-architecture/references/output-template.md`.
 
-```markdown
-### Confidence Scores
+#### Recommendation Section
 
-| Option | Migration Effort | Risk Reduction | Team Fit | Cost | Overall |
-|--------|-----------------|---------------|----------|------|---------|
-| Option 1 — Conservative Refactor | 9/10 | 6/10 | 9/10 | 8/10 | **8.0/10** |
-| Option 2 — Moderate Redesign      | 6/10 | 8/10 | 7/10 | 7/10 | **7.0/10** |
-| Option 3 — Full Overhaul          | 3/10 | 9/10 | 5/10 | 5/10 | **5.5/10** |
+After all three options, add `## Recommendation` with a **Narrative** — 4–6 sentences stating which redesign is recommended and why, referencing the specific weaknesses it addresses and the team's constraints.
+
+Save the complete document with the Write tool. **Do not call start-server.sh at this stage.**
+
+---
+
+### Stage 3: Review — Confirm Before Shipping
+
+After writing content.md, present a compact **Plan Summary** in chat to let the user verify the direction before opening the viewer:
+
+---
+
+**Plan Summary**
+
+| Option | Label                 | Short Title | Key Changes                                     |
+|--------|-----------------------|-------------|-------------------------------------------------|
+| 1      | Conservative Refactor | {Name}      | {e.g., Add Redis cache + query indexes}         |
+| 2      | Moderate Redesign     | {Name}      | {e.g., Extract auth service + add read replica} |
+| 3      | Full Overhaul         | {Name}      | {e.g., Microservices + Kafka + CQRS}            |
+
+**Recommended:** Option N — {1–2 sentence rationale citing the specific weaknesses it addresses.}
+
+---
+
+Use **AskUserQuestion** to ask the user what to do next:
+
+```
+question: "Three redesign options are ready. What would you like to do?"
+header: "Next Step"
+options:
+  - label: "Ship — open the visual viewer"
+    description: "Open the interactive viewer to compare all three options side by side and make your final choice"
+  - label: "Iterate — adjust before viewing"
+    description: "Request changes to the options, tech choices, or migration approach before opening the viewer"
 ```
 
-Score criteria for review context:
-- **Migration Effort** — how achievable the migration is (10 = easiest/lowest risk)
-- **Risk Reduction** — how much this option addresses the identified weaknesses
-- **Team Fit** — how well it matches the team's current skills and constraints
-- **Cost** — relative infra + operational cost change vs. current state
+If the user chooses **Iterate**: apply the requested changes to `/tmp/archimind-viewer/content.md`, update the Plan Summary table, and re-present Stage 3. Repeat until the user chooses **Ship**.
 
-2. **Narrative** — 4–6 sentences stating which redesign is recommended, why, citing the highest Overall score and referencing the specific weaknesses it addresses.
+---
 
-Once the Recommendation is written, **save the complete document** and **open the viewer** — both in one action sequence:
+### Stage 4: Ship — Visual Selection and Final Documentation
 
-1. Use the **Write tool** to finalize `/tmp/archimind-viewer/content.md`.
-2. Start the viewer and open the browser:
+Open the viewer and invite the user to compare redesign options visually:
 
 ```bash
 open "$(bash "$CLAUDE_PLUGIN_ROOT/scripts/start-server.sh")"
@@ -164,65 +177,9 @@ open "$(bash "$CLAUDE_PLUGIN_ROOT/scripts/start-server.sh")"
 
 Post a brief chat message: "Viewer is open at http://localhost:PORT — use **Architecture Diagram** to compare redesign options and **Revision** to see the Before/After comparison. Select an option when ready."
 
-#### Required Sections Per Option
+**Option Selection**
 
-Each `### Option N:` section must include **three Mermaid diagrams** and the sections below. Read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/mermaid-guidelines.md` for review-specific diagram conventions (mark changed nodes with `[NEW]`, problematic nodes with `⚠`).
-
-```markdown
-#### Infrastructure Layout (architecture-beta)
-PROPOSED infrastructure topology with icons. Mark new/added services clearly.
-
-#### Request Flow (sequenceDiagram)
-Primary user request through the PROPOSED architecture.
-
-#### Component Flow (flowchart TD)
-Logical data flow between proposed components. Mark changed/new components with [NEW] labels.
-
-#### What Changes
-Bulleted list comparing current state vs. proposed state.
-
-#### Key Improvements
-How this option addresses each identified weakness.
-
-#### Technology Changes
-| Component | Current | Proposed | Reason |
-
-#### Data Layer Changes
-Which databases are added, removed, or replaced — and why.
-Non-relational stores introduced (cache, search, analytics) and rationale.
-Schema migration approach and data migration steps.
-
-#### Object Storage Changes (if applicable)
-Changes to file/blob storage strategy.
-
-#### Observability Changes
-OpenTelemetry-based instrumentation improvements.
-New monitoring, tracing, alerting components.
-
-#### Technology Decision Rationale
-For each proposed change: why this replaces the current, alternatives considered, team skills required.
-
-#### Future Impact
-| Timeframe | Impact |
-| 6 months  | ... |
-| 1 year    | ... |
-| 3 years   | ... |
-Scalability improvement, operational overhead change, reversibility.
-
-#### Migration Path
-Step-by-step migration approach. Rollback strategy.
-For Option 3: specify Strangler Fig, parallel run, or big bang and justify.
-
-#### Risks & Mitigations
-| Risk | Likelihood | Impact | Mitigation |
-
-#### When to Choose This Option
-2–3 bullets for ideal scenario.
-```
-
-### 7. Require Redesign Selection (mandatory)
-
-**The work is not complete until the user has explicitly chosen one redesign option.** Use **AskUserQuestion** to present the selection:
+Use **AskUserQuestion** to present the selection:
 
 ```
 question: "Which redesign would you like to proceed with?"
@@ -236,34 +193,32 @@ options:
     description: <one-line summary of what this option changes>
 ```
 
-Iterate if the user wants adjustments. Re-present the AskUserQuestion selection after adjustments. Do not proceed to Step 8 until the user states an explicit choice.
+Allow iterations if the user wants adjustments. Re-present AskUserQuestion after each change. Do not proceed until the user makes an explicit choice.
 
-### 8. Mark the Chosen Option
+**Mark the Chosen Option**
 
-1. Update `/tmp/archimind-viewer/content.md` (use the Write tool to overwrite):
-   - Insert decision header after the title:
-     ```markdown
-     **Selected:** Option N — {Label}: {Short Title}
-     **Decision date:** {ISO date}
-     ```
-   - Replace the placeholder diagram in `### After` within `## Revision` with the selected option's Infrastructure Layout diagram
-   - Append a `## Decision Notes` section with user-requested adjustments, migration timing, and next steps
+Update `/tmp/archimind-viewer/content.md` using the Write tool:
+1. Insert decision header after the title:
+   ```markdown
+   **Selected:** Option N — {Label}: {Short Title}
+   **Decision date:** {ISO date}
+   ```
+2. Replace the placeholder diagram in `### After` within `## Revision` with the selected option's Infrastructure Layout diagram
+3. Append a `## Decision Notes` section with user-requested adjustments, migration timing, and next steps
 
-### 9. Save Final Documentation and Stop Server
+**Save Permanent Documentation and Stop Server**
 
-> **Note**: Review workflows do not produce a `## Final Documentation` section. The `## Decision Notes` block serves that purpose — it captures the rationale, adjustments, and next steps that would otherwise go in Final Documentation.
-
-After updating the content:
+> **Note**: Review workflows do not produce a `## Final Documentation` section. The `## Decision Notes` block captures the rationale, adjustments, and next steps.
 
 1. Inform the user: "The viewer is updated — click **↺ Reload** in the sidebar to see the final state."
 2. Compute timestamp: `node -e 'process.stdout.write(String(Date.now()))'` (macOS) or `date +%s%3N` (Linux). Derive topic slug from the system name (e.g., `payment-service`, `ecommerce-api`).
-3. Save permanent technical documentation to the user's project:
+3. Save permanent technical documentation:
 
 ```bash
 mkdir -p docs/archimind/architecture
 ```
 
-Then use the **Write tool** to write `docs/archimind/architecture/{timestamp_ms}-{topic}-review.md`. **This file must contain only the chosen redesign option** — not all three. Structure it as:
+Write `docs/archimind/architecture/{timestamp_ms}-{topic}-review.md` containing **only the chosen redesign option** — not all three. Structure it as:
 
 ```markdown
 # Architecture Review: {System Name}
@@ -291,15 +246,7 @@ Then use the **Write tool** to write `docs/archimind/architecture/{timestamp_ms}
 
 ## Recommendation
 
-### Confidence Scores
-
-| Option | Migration Effort | Risk Reduction | Team Fit | Cost | Overall |
-|--------|-----------------|---------------|----------|------|---------|
-| Option 1 — Conservative Refactor | X/10 | X/10 | X/10 | X/10 | **X.X/10** |
-| Option 2 — Moderate Redesign      | X/10 | X/10 | X/10 | X/10 | **X.X/10** |
-| Option 3 — Full Overhaul          | X/10 | X/10 | X/10 | X/10 | **X.X/10** |
-
-{Copy filled scores from Step 6. 4–6 sentences: which option was chosen, why, citing the highest Overall score and the weaknesses it addresses. Acknowledge the main trade-off.}
+{4–6 sentence narrative: which option was chosen, why, citing the specific weaknesses it addresses and the constraints that drove the decision.}
 
 ## Decision Notes
 ...
@@ -312,6 +259,8 @@ Omit the two options that were not selected. To re-visualize later: `bash "$CLAU
 ```bash
 bash "$CLAUDE_PLUGIN_ROOT/scripts/stop-server.sh"
 ```
+
+---
 
 ## Document Structure Convention
 
@@ -342,9 +291,9 @@ Read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/mermaid-guidelin
 ## Additional Resources
 
 - **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/engineering-principles.md`** — 10 guiding principles for acting as a Senior Software Engineer. Read at the start of every review session.
-- **`$CLAUDE_PLUGIN_ROOT/skills/review-architecture/references/review-checklist.md`** — Structured checklist (12 categories: scalability, coupling, data consistency, observability, security, operational complexity, distributed systems, SPOF, disaster recovery, technical debt, cost, API versioning). Read during Step 2 analysis.
+- **`$CLAUDE_PLUGIN_ROOT/skills/review-architecture/references/review-checklist.md`** — Structured checklist (12 categories: scalability, coupling, data consistency, observability, security, operational complexity, distributed systems, SPOF, disaster recovery, technical debt, cost, API versioning). Read during Stage 1 analysis.
 - **`$CLAUDE_PLUGIN_ROOT/skills/review-architecture/references/anti-patterns.md`** — Canonical antipattern names (God Service, Shared DB, Chatty Microservices, Big Bang Migration, etc.). Read when naming identified problems and specifying Option 3 migration approach.
-- **`$CLAUDE_PLUGIN_ROOT/skills/review-architecture/references/output-template.md`** — Full document scaffold for review output. **Read-only — never write to it.** Read during Step 4 to understand required section structure.
+- **`$CLAUDE_PLUGIN_ROOT/skills/review-architecture/references/output-template.md`** — Full document scaffold for review output. **Read-only — never write to it.** Read during Stage 2 to understand required section structure.
 - **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/database-selection-guide.md`** — Comprehensive database selection guide. Read when proposing database changes.
 - **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/observability-guide.md`** — Observability stack guide. Read when proposing observability improvements.
 - **`$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/mermaid-guidelines.md`** — Diagram type selection, node limits, edge labeling, and review-specific node labeling conventions.

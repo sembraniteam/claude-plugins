@@ -21,7 +21,8 @@ Design a new database schema from requirements, or analyze and normalize an exis
 
 At the very start, call **TaskCreate** to create one task per step:
 1. Clarify goal and database context
-2. Design schema (or analyze existing schema)
+2A. Design schema from scratch (skip if normalizing existing schema)
+2B. Normalize existing schema (skip if designing from scratch)
 3. Produce ER diagram
 4. Produce table specifications
 5. Apply security recommendations
@@ -89,28 +90,9 @@ Refer to `$CLAUDE_PLUGIN_ROOT/skills/design-database/references/index-guide.md` 
 
 Proactively apply these patterns where relevant — they are frequently needed but easy to miss in early design:
 
-**Soft Delete** — Use `deleted_at TIMESTAMPTZ` instead of hard-deleting rows. Required whenever: data must be auditable, relationships reference the row, or undo functionality is needed.
-```sql
-ALTER TABLE users ADD COLUMN deleted_at TIMESTAMPTZ;
--- Query: WHERE deleted_at IS NULL (add partial index on frequently-queried columns)
-CREATE INDEX idx_users_active_email ON users(email) WHERE deleted_at IS NULL;
--- Or for listing active users by creation date:
-CREATE INDEX idx_users_active_created ON users(created_at) WHERE deleted_at IS NULL;
-```
+**Soft Delete** — Use `deleted_at TIMESTAMPTZ` instead of hard-deleting rows. Required whenever data must be auditable, relationships reference the row, or undo functionality is needed. See `$CLAUDE_PLUGIN_ROOT/skills/design-database/references/normalization-guide.md` for the DDL pattern and partial index strategy.
 
-**Audit Log Table** — Capture who changed what and when, separately from the main table. Required for compliance (GDPR, PCI DSS) and debugging production issues.
-```sql
-CREATE TABLE user_audit_log (
-  id         BIGSERIAL PRIMARY KEY,
-  user_id    BIGINT NOT NULL REFERENCES users(id),
-  changed_by BIGINT REFERENCES users(id),
-  action     VARCHAR(20) NOT NULL,  -- 'INSERT', 'UPDATE', 'DELETE'
-  old_data   JSONB,
-  new_data   JSONB,
-  changed_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-```
-Implement via triggers or application-layer interceptors.
+**Audit Log Table** — Capture who changed what and when, separately from the main table. Required for compliance (GDPR, PCI DSS) and debugging production issues. See `$CLAUDE_PLUGIN_ROOT/skills/design-database/references/normalization-guide.md` for the DDL template. Implement via triggers or application-layer interceptors.
 
 **Status Enum Table** — Avoid magic strings in status columns. Use a lookup/enum table or a PostgreSQL `ENUM` type.
 
@@ -244,37 +226,11 @@ After finalizing the schema and before writing the output document, apply securi
 - PCI DSS: confirm CVV/CVC are never stored; recommend application-layer encryption for cardholder data
 - HIPAA: confirm PHI is encrypted at rest (column-level for sensitive fields) and in transit
 
-Include a `## Security` section in the output document using the structure below.
-
-#### Security Section Structure
-
-```markdown
-## Security
-
-### Access Control
-- **DB users**: {list roles and their permissions}
-- **Superuser policy**: Used only for DBA ops; not accessible from application code
-- **Multi-tenant isolation**: {RLS policies if applicable, or "N/A"}
-
-### Secrets Management
-- **Credential storage**: {Vault / AWS Secrets Manager / GCP Secret Manager}
-- **Rotation strategy**: {dynamic short-lived / 90-day static rotation}
-
-### Connection Security
-- **TLS**: {sslmode=verify-full / REQUIRE SSL / requireTLS} — enforced on all connections
-- **Network**: DB in private subnet; {security group / firewall} restricts port {5432/3306/27017} to app servers only
-- **Connection pool**: {PgBouncer / HikariCP / other} with TLS on both client and server sides
-
-### Data Protection
-- **Encryption at rest**: {DB-level / tablespace / cloud-managed}
-- **Sensitive columns**: {list PII/PCI columns and encryption approach, or "N/A"}
-- **Audit logging**: {pgaudit / MySQL Audit Plugin / application audit table}
-
-### Compliance
-- {GDPR / PCI DSS / HIPAA / SOC2 — applicable requirements and how the schema addresses them}
-```
+Include a `## Security` section in the output document with five subsections: **Access Control** (DB roles, superuser policy, multi-tenant isolation), **Secrets Management** (credential storage and rotation), **Connection Security** (TLS enforcement, network isolation, connection pooling), **Data Protection** (encryption at rest, sensitive column handling, audit logging), and **Compliance** (GDPR/PCI DSS/HIPAA/SOC2 requirements). Read `$CLAUDE_PLUGIN_ROOT/skills/design-database/references/security-guide.md` for the full required fields and examples for each subsection.
 
 ### 6. Write Content and Open Viewer
+
+> **Note**: Database design produces a **single-design document** — not a 3-option tabbed view. The viewer renders it as a single scrollable page with the ERD and table specs. Do not use `### Option N:` headings.
 
 1. Use the **Write tool** to write the full design content to `/tmp/archimind-viewer/content.md`. Follow the **Document Structure for Database Design** below.
 2. Start the viewer server and open the URL:

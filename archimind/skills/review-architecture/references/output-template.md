@@ -127,32 +127,9 @@ flowchart TD
 
 ## Recommendation
 
-### Confidence Scores
-
-| Option | Migration Effort | Risk Reduction | Team Fit | Cost | Overall |
-|--------|-----------------|---------------|----------|------|---------|
-| Option 1 — Conservative Refactor | X/10 | X/10 | X/10 | X/10 | **X.X/10** |
-| Option 2 — Moderate Redesign     | X/10 | X/10 | X/10 | X/10 | **X.X/10** |
-| Option 3 — Full Overhaul         | X/10 | X/10 | X/10 | X/10 | **X.X/10** |
-
-{4–6 sentences: which option is recommended and why, citing the highest Overall score and specific weaknesses it addresses.}
+{4–6 sentences: which option is recommended and why, citing the specific weaknesses it addresses and the constraints that drove the decision.}
 
 ## Decision Notes
 
 {User-requested adjustments, migration timing, next steps.}
 ```
-
----
-
-## Column Semantics (Review vs. Design)
-
-Review uses **`Migration Effort | Risk Reduction | Team Fit | Cost | Overall`** — migration-centric scores:
-
-| Column | Meaning |
-|---|---|
-| **Migration Effort** | How achievable is the migration? (10 = easiest/lowest risk) |
-| **Risk Reduction** | How much does this option address the identified weaknesses? |
-| **Team Fit** | How well does it match team skills and constraints? |
-| **Cost** | Relative infra + operational cost change vs. current state |
-
-This differs intentionally from `design-architecture` which uses `Team Fit | Timeline | Scale | Cost` — greenfield design prioritizes timeline and scale, reviews prioritize migration feasibility.

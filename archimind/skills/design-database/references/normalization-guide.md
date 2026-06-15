@@ -207,3 +207,50 @@ CREATE TABLE course_enrollments (
   UNIQUE (user_id, course_id)
 );
 ```
+
+---
+
+## Soft Delete Pattern
+
+Use `deleted_at TIMESTAMPTZ` instead of hard-deleting rows. Required whenever data must be auditable, relationships reference the row, or undo functionality is needed.
+
+```sql
+ALTER TABLE users ADD COLUMN deleted_at TIMESTAMPTZ;
+
+-- Partial index for active-user lookups (most frequent query pattern)
+CREATE INDEX idx_users_active_email ON users(email) WHERE deleted_at IS NULL;
+
+-- Partial index for listing active users by creation date
+CREATE INDEX idx_users_active_created ON users(created_at) WHERE deleted_at IS NULL;
+```
+
+**Query convention**: Always filter with `WHERE deleted_at IS NULL` for active records. Never omit this filter in application queries.
+
+**Trade-off**: Soft-deleted rows accumulate over time. For tables with high churn, schedule periodic archival of old deleted rows to a separate archive table or cold storage.
+
+---
+
+## Audit Log Table Pattern
+
+Capture who changed what and when, separately from the main table. Required for compliance (GDPR, PCI DSS) and debugging production incidents.
+
+```sql
+CREATE TABLE user_audit_log (
+  id         BIGSERIAL PRIMARY KEY,
+  user_id    BIGINT NOT NULL REFERENCES users(id),
+  changed_by BIGINT REFERENCES users(id),
+  action     VARCHAR(20) NOT NULL,  -- 'INSERT', 'UPDATE', 'DELETE'
+  old_data   JSONB,
+  new_data   JSONB,
+  changed_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Index for looking up a user's history
+CREATE INDEX idx_user_audit_user ON user_audit_log(user_id, changed_at DESC);
+```
+
+**Implementation options**:
+- **Database triggers**: Automatic, no application code required. Use `pgaudit` (PostgreSQL) or an `AFTER INSERT OR UPDATE OR DELETE` trigger. Harder to test and debug.
+- **Application-layer interceptors**: ORM hooks (e.g., SQLAlchemy events, Hibernate listeners). Easier to test, but requires discipline to apply consistently.
+
+**GDPR note**: If a user requests erasure, scrub PII columns in `user_audit_log` (set to NULL or a placeholder) rather than deleting rows — the audit trail structure must be preserved for compliance.

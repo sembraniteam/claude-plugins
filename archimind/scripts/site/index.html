@@ -119,12 +119,6 @@
     .diagram-inner { display: inline-block; transform-origin: 0 0; }
     .diagram-inner svg { display: block; max-width: none; }
 
-    /* Confidence score bars (Recommendation tab) */
-    .conf-cell { display: flex; align-items: center; gap: 10px; }
-    .conf-track { flex: 1; height: 6px; background: var(--border); border-radius: 3px;
-      overflow: hidden; min-width: 80px; }
-    .conf-fill { height: 100%; border-radius: 3px; transition: width .4s ease; }
-    .conf-value { font-size: 12px; font-weight: 700; min-width: 34px; text-align: right; }
 
     /* Scrollbar */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -383,7 +377,6 @@
     if (parsedDoc.preamble.join('\n').trim() && i === 0) html += marked.parse(parsedDoc.preamble.join('\n'));
     html += marked.parse(opt.content);
     dc.innerHTML = html;
-    transformConfidenceScores(dc);
     renderMermaid(dc);
     document.getElementById('content-wrap').scrollTop = 0;
   }
@@ -395,7 +388,6 @@
     const dc = document.getElementById('doc-content');
     const erd = parsedDoc.erd.join('\n');
     dc.innerHTML = erd ? marked.parse(erd) : '<p style="color:var(--muted);padding:20px 0">No ERD section found.</p>';
-    transformConfidenceScores(dc);
     renderMermaid(dc);
     document.getElementById('content-wrap').scrollTop = 0;
   }
@@ -430,31 +422,10 @@
       return;
     }
     dc.innerHTML = marked.parse(content);
-    transformConfidenceScores(dc);
     renderMermaid(dc);
     document.getElementById('content-wrap').scrollTop = 0;
   }
 
-  // ── Confidence score visualization ──
-  // Detects "X/10" or "X.X/10" in table cells and renders as a colored progress bar.
-  function transformConfidenceScores(container) {
-    const re = /^(\d+(?:\.\d+)?)\/10$/;
-    container.querySelectorAll('td').forEach(td => {
-      const text = td.textContent.trim();
-      const m = text.match(re);
-      if (!m) return;
-      const score = parseFloat(m[1]);
-      const pct = Math.min((score / 10) * 100, 100);
-      const color = score >= 7 ? '#4cd964' : score >= 4 ? '#f5a623' : '#f47983';
-      td.innerHTML = `
-        <div class="conf-cell">
-          <div class="conf-track">
-            <div class="conf-fill" style="width:${pct}%;background:${color}"></div>
-          </div>
-          <span class="conf-value" style="color:${color}">${m[1]}/10</span>
-        </div>`;
-    });
-  }
 
   // ── Mermaid rendering ──
   async function renderMermaid(container) {

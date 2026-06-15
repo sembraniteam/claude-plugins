@@ -472,16 +472,7 @@ flowchart TD
 
 ## Recommendation
 
-### Confidence Scores
-
-<!-- PLACEHOLDER — do not copy /10 blanks into content.md. Step 6 fills actual scores. -->
-| Option                      | Team Fit | Timeline | Scale | Cost | Overall |
-|-----------------------------|----------|----------|-------|------|---------|
-| Option 1 — Lean: {Name}     | /10      | /10      | /10   | /10  | **/10** |
-| Option 2 — Standard: {Name} | /10      | /10      | /10   | /10  | **/10** |
-| Option 3 — Advanced: {Name} | /10      | /10      | /10   | /10  | **/10** |
-
-{4–6 sentences stating which option is recommended, why, referencing actual requirements (team size, scale, data characteristics). Cite the option with the highest Overall score. Acknowledge the main trade-off.}
+{4–6 sentences stating which option is recommended and why, referencing actual requirements (team size, scale, data characteristics). Acknowledge the main trade-off.}
 
 ---
 
