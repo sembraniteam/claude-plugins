@@ -6,14 +6,15 @@ A collection of [Claude Code](https://claude.ai/code) plugins for automating git
 
 ### [archimind](./archimind)
 
-AI-powered software architecture and database designer with interactive Mermaid JS visualization.
+Design and review system architectures, database schemas, and feature modules with three-option comparison and visual Mermaid diagrams in a local browser viewer.
 
-| Component                        | Description                                                                                                              |
-|----------------------------------|--------------------------------------------------------------------------------------------------------------------------|
-| `/archimind:design-architecture` | Design a new architecture — presents three options (Lean/Standard/Advanced) with diagrams and tech stack recommendations |
-| `/archimind:review-architecture` | Audit an existing system, identify antipatterns, and propose three redesign options with migration paths                 |
-| `/archimind:design-database`     | Design new schemas or normalize existing SQL DDL with ER diagrams and index strategy                                     |
-| `/archimind:visualize`           | Launch a local Mermaid JS viewer with tab navigation, pan/zoom, and PNG export                                           |
+| Component                        | Description                                                                                                                     |
+|----------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
+| `/archimind:design-architecture` | Design a new architecture — presents three options (Lean/Standard/Advanced) with diagrams and tech stack recommendations        |
+| `/archimind:review-architecture` | Audit an existing system, identify antipatterns, and propose three redesign options with migration paths                        |
+| `/archimind:design-database`     | Design new schemas or normalize existing SQL DDL with ER diagrams and index strategy                                            |
+| `/archimind:design-feature`      | Design a new feature or module — presents three options (Inline/Modular/Decoupled) with integration diagrams and test strategy  |
+| `/archimind:visualize`           | Launch a local Mermaid JS viewer with tab navigation, pan/zoom, and PNG export                                                  |
 
 **Prerequisites:** Python 3
 
@@ -90,7 +91,7 @@ cc plugin install https://github.com/sembraniteam/claude-plugins/debugging-workf
 /archimind:design-architecture
 ```
 
-Claude asks 8 requirements questions, then presents three architecture options (Lean/Standard/Advanced) with Mermaid diagrams, tech stack recommendations, and trade-off analysis. The selected option is saved to `docs/archimind/architecture/`.
+Claude gathers requirements dynamically (skipping questions already answered in context), then presents three architecture options (Lean/Standard/Advanced) with Mermaid diagrams, tech stack recommendations, and trade-off analysis. The selected option is saved to `docs/archimind/architecture/`.
 
 ```
 /archimind:visualize
@@ -98,13 +99,21 @@ Claude asks 8 requirements questions, then presents three architecture options (
 
 Launches a local interactive viewer at `http://localhost:{port}` to explore diagrams with pan/zoom, tab navigation between options, and PNG export.
 
+### Feature design workflow
+
+```
+/archimind:design-feature
+```
+
+Claude analyzes the existing application context and feature requirements, then presents three implementation options (Inline/Modular/Decoupled) with integration diagrams and testing strategies. The selected option is saved to `docs/archimind/features/`.
+
 ### Commit workflow
 
 ```
 /git-helper:generate-commit
 ```
 
-Analyzes your staged changes and outputs a ready-to-run `git commit` command. After generating the message, it offers to generate a branch name if you need one.
+Asks pre-flight questions (stage files, create branch, auto-commit), analyzes your changes, and generates a conventional commit message. Executes confirmed actions automatically.
 
 ### Changelog + release notes workflow
 
@@ -158,6 +167,7 @@ On first run, if no `.claude/debugging-workflow.local.md` exists, Claude will of
 │   └── skills/
 │       ├── design-architecture/
 │       ├── design-database/
+│       ├── design-feature/
 │       ├── review-architecture/
 │       └── visualize/
 ├── changelog-manager/
@@ -187,8 +197,6 @@ On first run, if no `.claude/debugging-workflow.local.md` exists, Claude will of
 └── git-helper/
     ├── .claude-plugin/
     │   └── plugin.json
-    ├── scripts/
-    │   └── collect-context.sh
     └── skills/
         ├── generate-branch/
         └── generate-commit/

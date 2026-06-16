@@ -1,12 +1,13 @@
 # Archimind
 
-AI-powered software architecture and database designer for Claude Code. Designs new architectures, audits existing ones, designs and normalizes databases, and visualizes everything with an interactive Mermaid JS diagram viewer.
+AI-powered architecture, database, and feature designer for Claude Code. Designs new architectures, audits existing ones, designs feature modules, designs and normalizes databases, and visualizes everything with an interactive Mermaid JS diagram viewer.
 
 ## Features
 
 - **Design Architecture** — Present three options (Lean / Standard / Advanced) with Mermaid diagrams, tech stack recommendations, database suggestions, and trade-off analysis.
 - **Review Architecture** — Audit an existing system, identify antipatterns, and propose three redesign options with migration paths.
 - **Design Database** — Design new schemas or normalize existing SQL DDL. Includes ER diagrams, data type recommendations, index strategy, and normalization analysis.
+- **Design Feature** — Plan a new feature or module within an existing application. Presents three options (Inline/Modular/Decoupled) with integration diagrams, testing strategies, and conditional ERD when schema changes are needed.
 - **Visualize** — Run a local static site viewer with Mermaid JS rendering, left sidebar section nav, and tab navigation between architecture options, ERD, and Before/After revision.
 
 ## Requirements
@@ -61,6 +62,15 @@ Say any of:
 
 Paste your SQL DDL directly in the chat for normalization.
 
+### Design a new feature or module
+
+Say any of:
+- "Design a notification feature for my app"
+- "How should I implement this feature?"
+- "Plan the implementation of the checkout module"
+
+Claude gathers the feature requirements and existing application context, then presents three implementation options (Inline/Modular/Decoupled) as tabs with diagrams and testing strategy. The design is saved to `docs/archimind/features/`.
+
 ### Open the diagram viewer
 
 Say any of:
@@ -88,8 +98,10 @@ docs/archimind/
 ├── architecture/
 │   ├── {timestamp_ms}-{topic}.md           ← new architecture design
 │   └── {timestamp_ms}-{topic}-review.md    ← existing system review
-└── database/
-    └── {timestamp_ms}-{topic}.md           ← database schema design
+├── database/
+│   └── {timestamp_ms}-{topic}.md           ← database schema design
+└── features/
+    └── {timestamp_ms}-{topic}.md           ← feature/module design
 ```
 
 The timestamp prefix (Unix milliseconds) makes files sort by creation time.
@@ -123,18 +135,23 @@ archimind/
 │   │       ├── mermaid-guidelines.md
 │   │       ├── observability-guide.md
 │   │       └── output-template.md
+│   ├── design-database/
+│   │   ├── SKILL.md
+│   │   └── references/
+│   │       ├── data-types-guide.md
+│   │       ├── index-guide.md
+│   │       ├── normalization-guide.md
+│   │       └── security-guide.md
+│   ├── design-feature/
+│   │   ├── SKILL.md
+│   │   └── references/
+│   │       └── output-template.md
 │   ├── review-architecture/
 │   │   ├── SKILL.md
 │   │   └── references/
 │   │       ├── anti-patterns.md
 │   │       ├── output-template.md
 │   │       └── review-checklist.md
-│   ├── design-database/
-│   │   ├── SKILL.md
-│   │   └── references/
-│   │       ├── normalization-guide.md
-│   │       ├── index-guide.md
-│   │       └── data-types-guide.md
 │   └── visualize/
 │       └── SKILL.md
 ├── scripts/

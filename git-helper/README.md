@@ -8,7 +8,7 @@ A Claude Code plugin that generates conventional commit messages and branch name
 - Detects breaking changes and formats `BREAKING CHANGE` footers automatically
 - Generates branch names following team prefix and naming rules
 - Supports optional scope and ticket number (`#123`) arguments
-- Displays ready-to-run git commands — never commits or creates branches automatically
+- Displays ready-to-run git commands with optional auto-execution after pre-flight confirmation
 
 ## Prerequisites
 
@@ -22,7 +22,7 @@ Generates a conventional commit message from the current git context.
 
 **What it does:**
 1. Reads optional settings from `.claude/git-helper.local.md`
-2. Runs `scripts/collect-context.sh` to read `git log`, `git status`, `git diff`, and `git diff --cached`
+2. Runs `git log`, `git status`, `git diff`, and `git diff --cached` to collect context
 3. Selects the correct commit type based on the changes
 4. Detects breaking changes
 5. Formats the subject line, optional body, and `BREAKING CHANGE` footer
