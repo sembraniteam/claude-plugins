@@ -35,6 +35,8 @@ Mark each task `in_progress` when starting it and `completed` when done.
 
 **Collect Existing Architecture Information**
 
+Scan the user's initial message for context already provided (system type, pain points, constraints, deployment). Ask only about what's missing.
+
 Use **AskUserQuestion** to gather context before the user provides free-form details. Ask up to 4 questions at once. These are **free-text questions** — do not attempt to map them to A/B/C/D options; pass them as open-ended `description` fields or use the `Other` option only:
 - What type of system is it? (web app, backend API, data pipeline, mobile backend, etc.)
 - What are the primary pain points that prompted this review?

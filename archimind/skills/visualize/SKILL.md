@@ -31,7 +31,8 @@ Open the viewer **before asking the user to select** an option:
 1. After drafting architecture options (design-architecture skill) — open so the user can compare all three options with rendered Mermaid diagrams
 2. After completing a database design (design-database skill) — open so the user can inspect the ERD
 3. After drafting architecture review options (review-architecture skill) — open so the user can compare options and the Before/After revision
-4. When the user explicitly asks to view or reopen the diagrams
+4. After drafting feature design options (design-feature skill) — open so the user can compare Inline / Modular / Decoupled options side by side
+5. When the user explicitly asks to view or reopen the diagrams
 
 ## Re-opening a Saved Document
 
@@ -42,9 +43,11 @@ Previously saved documents in `docs/archimind/` contain only the selected option
 bash "$CLAUDE_PLUGIN_ROOT/scripts/open-doc.sh" "$(pwd)/docs/archimind/architecture/{filename}.md"
 # or
 bash "$CLAUDE_PLUGIN_ROOT/scripts/open-doc.sh" "$(pwd)/docs/archimind/database/{filename}.md"
+# or
+bash "$CLAUDE_PLUGIN_ROOT/scripts/open-doc.sh" "$(pwd)/docs/archimind/features/{filename}.md"
 ```
 
-`open-doc.sh` copies the file to `/tmp/archimind-viewer/content.md`, restarts the server, and opens the browser. The viewer renders the saved document with its ERD, Revision (Before/After), and the single selected architecture option.
+`open-doc.sh` copies the file to `/tmp/archimind-viewer/content.md`, restarts the server, and opens the browser. The viewer renders the saved document with its ERD, Revision (Before/After), and the single selected option.
 
 To list available saved documents:
 

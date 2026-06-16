@@ -18,14 +18,13 @@ Follow the **Spec → Plan → Review → Ship** workflow strictly — gather re
 ## Workflow
 
 At the very start, call **TaskCreate** to create one task per step:
-1. Spec — Gather requirements (Batch 1: System & Scale)
-2. Spec — Gather requirements (Batch 2: Technical & Operational)
-3. Spec — Confirm requirements summary
-4. Plan — Generate 3 architecture options, ERD, and Recommendation → write content.md
-5. Review — Present plan summary, confirm or iterate
-6. Ship — Open viewer and await option selection
-7. Ship — Write final documentation
-8. Ship — Save permanent docs and stop server
+1. Spec — Identify and gather missing requirements
+2. Spec — Confirm requirements summary
+3. Plan — Generate 3 architecture options, ERD, and Recommendation → write content.md
+4. Review — Present plan summary, confirm or iterate
+5. Ship — Open viewer and await option selection
+6. Ship — Write final documentation
+7. Ship — Save permanent docs and stop server
 
 Mark each task `in_progress` when starting it and `completed` when done.
 
@@ -33,63 +32,66 @@ Mark each task `in_progress` when starting it and `completed` when done.
 
 ### Stage 1: Spec — Gather Requirements
 
-Before generating any architecture options, ask structured A/B/C/D questions in batches of 3–4. Use **AskUserQuestion** for each batch — map A/B/C/D options to the tool's `options` array (up to 4 per question). For questions that include "Other: describe briefly", the tool provides an automatic "Other" option. Wait for the user to answer each batch before asking the next.
+Analyze the user's initial message and any provided context (code snippets, files, prior conversation) to extract known information. Map what is found to the **8 required data points** in the catalog below — classify each as:
+- **Known** — explicitly stated (e.g., "I'm building an API in Go on AWS")
+- **Inferable** — derivable with high confidence (e.g., "early-stage startup" → small team; "MVP" → small scale; "IoT ingestion pipeline" → high volume, data processing)
+- **Unknown** — cannot be determined without asking
 
-**Batch 1 — System & Scale:**
+Ask only about **Unknown** data points using **AskUserQuestion** — map A/B/C/D options from the catalog to the tool's `options` array (up to 4 per question). Group up to 4 unknown data points per call. If all points are Known or Inferable, skip to **Confirm Requirements Summary** immediately. Never ask about information already provided.
 
-1. What is the primary purpose of the system?
-   - A) SaaS platform (multi-tenant, web-based)
-   - B) Internal enterprise / back-office tool
-   - C) Mobile application backend
-   - D) Data processing / analytics platform
-   - Other: Describe briefly
+**Required Data Points**
 
-2. Expected user scale at launch and in 2 years?
-   - A) Small: < 1,000 users
-   - B) Medium: 1,000 – 100,000 users
-   - C) Large: 100,000 – 1M users
-   - D) Massive: 1M+ users
+Use the corresponding options when a data point is Unknown:
 
-3. Expected transaction volume (requests per second at peak)?
-   - A) Low: < 100 rps
-   - B) Moderate: 100 – 1,000 rps
-   - C) High: 1,000 – 10,000 rps
-   - D) Very high: 10,000+ rps
+**1. System purpose**
+- A) SaaS platform (multi-tenant, web-based)
+- B) Internal enterprise / back-office tool
+- C) Mobile application backend
+- D) Data processing / analytics platform
+- Other: Describe briefly
 
-4. Team size and technical expertise?
-   - A) Solo / tiny team (1–3), generalists
-   - B) Small team (4–10), mixed seniority
-   - C) Medium team (10–30), specialized roles
-   - D) Large engineering org (30+)
+**2. User scale** (at launch and in 2 years)
+- A) Small: < 1,000 users
+- B) Medium: 1,000 – 100,000 users
+- C) Large: 100,000 – 1M users
+- D) Massive: 1M+ users
 
-**Batch 2 — Technical & Operational:**
+**3. Transaction volume** (requests per second at peak)
+- A) Low: < 100 rps
+- B) Moderate: 100 – 1,000 rps
+- C) High: 1,000 – 10,000 rps
+- D) Very high: 10,000+ rps
 
-5. File and object storage requirements?
-   - A) None
-   - B) User uploads (images, documents — small to medium)
-   - C) Media assets (video, audio — large files, CDN delivery)
-   - D) Backups, archives, data lake, or static website assets
+**4. Team size and expertise**
+- A) Solo / tiny team (1–3), generalists
+- B) Small team (4–10), mixed seniority
+- C) Medium team (10–30), specialized roles
+- D) Large engineering org (30+)
 
-6. Deployment preference?
-   - A) Managed cloud (AWS, GCP, Azure)
-   - B) Self-hosted / on-premise
-   - C) Hybrid (cloud + on-premise)
-   - D) Fully serverless
+**5. File and object storage requirements**
+- A) None
+- B) User uploads (images, documents — small to medium)
+- C) Media assets (video, audio — large files, CDN delivery)
+- D) Backups, archives, data lake, or static website assets
 
-7. Programming language / framework preference?
-   - A) Java / Kotlin (Spring Boot, Quarkus)
-   - B) Go (Gin, Echo, Fiber, standard library)
-   - C) Node.js / TypeScript (NestJS, Express, Fastify)
-   - D) Python (FastAPI, Django) or C# (.NET)
-   - Other: Specify language and any frameworks
+**6. Deployment preference**
+- A) Managed cloud (AWS, GCP, Azure)
+- B) Self-hosted / on-premise
+- C) Hybrid (cloud + on-premise)
+- D) Fully serverless
 
-8. Compliance and security requirements?
-   - A) Standard web security (OWASP Top 10)
-   - B) SOC 2 Type II
-   - C) GDPR / data privacy regulations
-   - D) PCI DSS / HIPAA / financial or healthcare regulations
+**7. Programming language / framework preference**
+- A) Java / Kotlin (Spring Boot, Quarkus)
+- B) Go (Gin, Echo, Fiber, standard library)
+- C) Node.js / TypeScript (NestJS, Express, Fastify)
+- D) Python (FastAPI, Django) or C# (.NET)
+- Other: Specify language and any frameworks
 
-If the user has already provided sufficient context to answer most of these, proceed directly to the confirmation step.
+**8. Compliance and security requirements**
+- A) Standard web security (OWASP Top 10)
+- B) SOC 2 Type II
+- C) GDPR / data privacy regulations
+- D) PCI DSS / HIPAA / financial or healthcare regulations
 
 **Confirm Requirements Summary**
 
@@ -129,7 +131,7 @@ Wait for the user to confirm or correct. If the user provides corrections, updat
 
 After confirmation, compose the full design document — all 3 options, ERD, and Recommendation — **directly into `/tmp/archimind-viewer/content.md`** using the Write tool. Print a short status line like "Planning 3 options…" while writing. **Do not open the viewer yet — that happens in Stage 4: Ship.**
 
-Design **exactly 3 options**: Lean, Standard, and Advanced.
+Design **exactly 3 options**: Lean, Standard, and Advanced. For canonical pattern names and per-tier constraints, read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/architecture-patterns.md`.
 
 **Anti-over-engineering check before generating options**: Map each stated requirement to the tier that satisfies it. If the Lean tier satisfies all stated requirements, make this explicit in the Recommendation — do not default to Standard or Advanced because they "seem more professional." Complexity must be justified by a specific, named requirement, not by preference for modern patterns.
 
@@ -253,8 +255,7 @@ Once the user has chosen, complete all the following in sequence — these are o
    **Selected:** Option N — {Tier}: {Architecture Name}
    **Decision date:** {ISO date}
    ```
-3. For **review workflows only**: populate `## Revision / ### After` with the selected option's proposed architecture diagrams. For fresh designs, omit or leave the Revision section empty.
-4. Append a `## Decision Notes` section capturing user-requested adjustments, migration timing, and next steps
+3. Append a `## Decision Notes` section capturing user-requested adjustments, migration timing, and next steps
 
 **Append Final Documentation** — each section must be substantive, no placeholders:
 

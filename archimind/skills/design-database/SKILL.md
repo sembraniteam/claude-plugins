@@ -38,7 +38,7 @@ Determine which mode applies:
 - **Design from scratch**: User describes requirements (entities, relationships, expected queries)
 - **Normalize existing schema**: User pastes SQL DDL (`CREATE TABLE` statements) or describes the existing tables
 
-If the mode or context is unclear, use **AskUserQuestion** to ask (up to 4 questions at once):
+Extract as much context as possible from the initial message — engine, data volume, query patterns, and migration needs. Ask only about what remains unclear using **AskUserQuestion** (up to 4 questions at once):
 - What is the target database engine? (PostgreSQL, MySQL, SQLite, MongoDB, etc.)
 - Approximate data volume and read/write ratio?
 - Most critical queries (search, reporting, real-time lookups)?
@@ -193,40 +193,13 @@ For each table, provide a spec block:
 
 ### 5. Security Recommendations
 
-After finalizing the schema and before writing the output document, apply security recommendations relevant to the design. Read `$CLAUDE_PLUGIN_ROOT/skills/design-database/references/security-guide.md` for the full reference. At minimum, address the following in the final document:
+Read `$CLAUDE_PLUGIN_ROOT/skills/design-database/references/security-guide.md` for the full requirements and examples. Apply its recommendations to the design, then include a `## Security` section in the output document with these five subsections:
 
-**Access control:**
-- Define separate DB roles: `app_rw` (application), `app_ro` (analytics/replicas), `migrator` (migration runner), `backup_user`, `monitor_user`
-- Never use the superuser account from application code
-- For multi-tenant schemas: recommend Row-Level Security policies
-
-**Secrets management:**
-- Credentials must be stored in a secrets manager (Vault, AWS Secrets Manager, GCP Secret Manager) — never hardcoded or committed to version control
-- Recommend dynamic short-lived credentials (Vault DB secrets engine) for production
-- Note `maxLifetime` in connection pools must be less than the credential rotation interval
-
-**Connection security:**
-- Enforce TLS for all connections — `sslmode=verify-full` (PostgreSQL), `REQUIRE SSL` (MySQL), `requireTLS` (MongoDB)
-- DB server must not be publicly accessible — private subnet only, firewall/security group restricts DB port to app servers
-
-**Connection pooling:**
-- Recommend PgBouncer (PostgreSQL) or HikariCP (JVM) with TLS on both client↔pooler and pooler↔DB sides
-- Set `pool_mode = transaction` (PgBouncer) or equivalent for efficiency; document session-mode trade-offs if session-level features are used
-
-**SQL injection prevention:**
-- Mandate parameterized queries or ORM — never string-concatenated SQL
-- If `ORDER BY` column names come from user input, enforce an allowlist
-
-**Audit logging:**
-- Enable `pgaudit` (PostgreSQL) or equivalent for DDL, write, and role-change events
-- Recommend an application-level `security_audit_log` table for access to sensitive data
-
-**Compliance:**
-- GDPR: document the erasure flow (scrub PII columns, do not hard-delete referenced rows)
-- PCI DSS: confirm CVV/CVC are never stored; recommend application-layer encryption for cardholder data
-- HIPAA: confirm PHI is encrypted at rest (column-level for sensitive fields) and in transit
-
-Include a `## Security` section in the output document with five subsections: **Access Control** (DB roles, superuser policy, multi-tenant isolation), **Secrets Management** (credential storage and rotation), **Connection Security** (TLS enforcement, network isolation, connection pooling), **Data Protection** (encryption at rest, sensitive column handling, audit logging), and **Compliance** (GDPR/PCI DSS/HIPAA/SOC2 requirements). Read `$CLAUDE_PLUGIN_ROOT/skills/design-database/references/security-guide.md` for the full required fields and examples for each subsection.
+- **Access Control** — DB roles (`app_rw`, `app_ro`, `migrator`, `backup_user`), superuser policy, multi-tenant Row-Level Security
+- **Secrets Management** — credential storage (Vault / AWS Secrets Manager), rotation interval vs. pool `maxLifetime`
+- **Connection Security** — TLS enforcement (`sslmode=verify-full`), private subnet isolation, PgBouncer / HikariCP configuration
+- **Data Protection** — encryption at rest, sensitive column handling, audit logging (`pgaudit`, `security_audit_log`)
+- **Compliance** — GDPR erasure flow, PCI DSS card data rules, HIPAA PHI encryption at rest and in transit
 
 ### 6. Write Content and Open Viewer
 
