@@ -8,12 +8,12 @@ A collection of [Claude Code](https://claude.ai/code) plugins for automating git
 
 AI-powered software architecture and database designer with interactive Mermaid JS visualization.
 
-| Component                              | Description                                                                    |
-|----------------------------------------|--------------------------------------------------------------------------------|
-| `/archimind:design-architecture`       | Design a new architecture — presents three options (Lean/Standard/Advanced) with diagrams and tech stack recommendations |
-| `/archimind:review-architecture`       | Audit an existing system, identify antipatterns, and propose three redesign options with migration paths |
-| `/archimind:design-database`           | Design new schemas or normalize existing SQL DDL with ER diagrams and index strategy |
-| `/archimind:visualize`                 | Launch a local Mermaid JS viewer with tab navigation, pan/zoom, and PNG export |
+| Component                        | Description                                                                                                              |
+|----------------------------------|--------------------------------------------------------------------------------------------------------------------------|
+| `/archimind:design-architecture` | Design a new architecture — presents three options (Lean/Standard/Advanced) with diagrams and tech stack recommendations |
+| `/archimind:review-architecture` | Audit an existing system, identify antipatterns, and propose three redesign options with migration paths                 |
+| `/archimind:design-database`     | Design new schemas or normalize existing SQL DDL with ER diagrams and index strategy                                     |
+| `/archimind:visualize`           | Launch a local Mermaid JS viewer with tab navigation, pan/zoom, and PNG export                                           |
 
 **Prerequisites:** Python 3
 

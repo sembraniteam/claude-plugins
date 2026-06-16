@@ -2,7 +2,7 @@
 name: generate-branch
 description: This skill should be used when the user invokes /git-helper:generate-branch, asks to "create a branch name", "name my branch", "what should I name this branch", "suggest a branch name", "what prefix should I use", "what branch should I create for this", or describes work they are about to start and needs a branch name for it. Applies team naming conventions with prefix rules (feature/, bugfix/, hotfix/, release/, chore/, bump/).
 argument-hint: "[#ticket] [work description]"
-allowed-tools: ["Bash"]
+allowed-tools: ["Bash", "AskUserQuestion"]
 ---
 
 # Generate Branch Name
@@ -15,14 +15,13 @@ Collect from the invocation and conversation context:
 - **Work description** — what the user will work on (optional)
 - **File paths** — from the argument, limits the diff to specific files (optional)
 
-If no work description is provided, run the context script and infer a 2–5 word description from the staged diff (primary) or unstaged diff (secondary). Pass any file paths as arguments to scope the diff. Do not ask — infer from diff:
+If no work description is provided, run these commands and infer a 2–5 word description from the staged diff (primary) or unstaged diff (secondary). Append `-- <files>` to scope diffs to specific paths. Do not ask — infer from diff:
 
 ```bash
-# All changes
-bash "$CLAUDE_PLUGIN_ROOT/scripts/collect-context.sh"
-
-# Scoped to specific files
-bash "$CLAUDE_PLUGIN_ROOT/scripts/collect-context.sh" "src/auth/login.ts" "src/auth/logout.ts"
+git --no-pager log --oneline -10
+git --no-pager status --short
+git --no-pager diff [-- <files>]
+git --no-pager diff --cached [-- <files>]
 ```
 
 If the diff is empty and no description was provided, ask the user for a one-sentence description of the work.

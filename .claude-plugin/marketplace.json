@@ -1,6 +1,6 @@
 {
   "name": "sembraniteam-claude-plugins",
-  "description": "Sembrani Team Claude Code Plugins",
+  "description": "Claude Code plugins by Sembrani Team for architecture design, database design, feature planning, git workflows, changelog management, and systematic debugging.",
   "owner": {
     "name": "Ahmad Rifa'i",
     "email": "develop.rifai@gmail.com"
@@ -8,7 +8,7 @@
   "plugins": [
     {
       "name": "archimind",
-      "description": "AI-powered software architecture and database designer with Mermaid JS visualization",
+      "description": "Design and review system architectures, database schemas, and feature modules with three-option comparison and visual Mermaid diagrams in a local browser viewer.",
       "version": "0.7.0",
       "source": "./archimind",
       "author": {
@@ -18,7 +18,7 @@
     },
     {
       "name": "changelog-manager",
-      "description": "Changelog manager plugin for Claude Code by Sembrani Team",
+      "description": "Automatically generate and update CHANGELOG and RELEASE_NOTES files from git commit history with bilingual, platform-specific support.",
       "version": "0.4.0",
       "source": "./changelog-manager",
       "author": {
@@ -38,8 +38,8 @@
     },
     {
       "name": "git-helper",
-      "description": "Git helper plugin for Claude Code by Sembrani Team",
-      "version": "0.6.0",
+      "description": "Generate conventional commit messages and branch names from git context and user descriptions.",
+      "version": "0.7.0",
       "source": "./git-helper",
       "author": {
         "name": "Ahmad Rifa'i",

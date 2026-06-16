@@ -35,12 +35,13 @@ After all answers, display a confirmation to the user (substitute actual selecti
 
 ## Analysis & Generation
 
-**Collect git context** — run the context script with any user-supplied file paths:
+**Collect git context** — run these commands (append `-- <files>` to scope diffs to user-supplied paths):
 
 ```bash
-bash "$CLAUDE_PLUGIN_ROOT/scripts/collect-context.sh"
-# with files:
-bash "$CLAUDE_PLUGIN_ROOT/scripts/collect-context.sh" "src/auth/login.ts" "src/auth/logout.ts"
+git --no-pager log --oneline -10
+git --no-pager status --short
+git --no-pager diff
+git --no-pager diff --cached
 ```
 
 If both diffs are empty and status shows no changes, inform the user and stop.
