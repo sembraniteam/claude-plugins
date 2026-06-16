@@ -287,8 +287,8 @@ Read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/mermaid-guidelin
 
 - Current state diagram goes in `## Revision / ### Before`
 - Proposed state diagram goes in `## Revision / ### After` and within each option section
-- Mark changed/new components with `[NEW]` or `[UPDATED]` node labels
-- Mark problematic current-state nodes with `⚠` in the label (Before diagram only)
+- Mark changed/new components with `[NEW]` or `[UPDATED]` in `flowchart TD` (Component Flow) node names only — **never inside `architecture-beta` labels** (causes parse errors; append text without brackets instead)
+- Mark problematic current-state nodes with `⚠` in the label (`flowchart TD` / Before diagram only)
 
 ## Additional Resources
 

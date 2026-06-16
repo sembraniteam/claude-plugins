@@ -9,7 +9,7 @@
     {
       "name": "archimind",
       "description": "Design and review system architectures, database schemas, and feature modules with three-option comparison and visual Mermaid diagrams in a local browser viewer.",
-      "version": "0.7.0",
+      "version": "0.8.0",
       "source": "./archimind",
       "author": {
         "name": "Ahmad Rifa'i",

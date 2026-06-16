@@ -53,13 +53,59 @@ architecture-beta
 - Use `junction` for 4-way splits (fan-out / fan-in patterns)
 - Wrap labels in `[square brackets]`; use icons in `(parentheses)`
 
+### Syntax Errors to Avoid
+
+These patterns reliably cause `Parsing failed` errors in the Mermaid renderer:
+
+**Nested brackets in labels** — the most common error. Never put `[` or `]` inside a label:
+- ❌ `service api(server)[API Gateway [NEW]]` — `[` inside label breaks parsing
+- ✅ `service apiNew(server)[API Gateway NEW]` — append text without inner brackets
+- `[NEW]` / `[UPDATED]` markers are `flowchart TD`-only; never use them inside `architecture-beta` labels
+
+**Spaces in service IDs** — IDs must be camelCase in both declarations and edge references:
+- ❌ `service load balancer(server)[Load Balancer]` → space in declaration
+- ❌ `load balancer:L --> R:api` → space in edge reference
+- ✅ `service loadBalancer(server)[Load Balancer]` + `loadBalancer:L --> R:api`
+
+**Labels ending with standalone "in"** — the parser reads `in` as the placement keyword:
+- ❌ `service auth(server)[Sign in]` → parser treats trailing `in` as `in {groupId}`
+- ✅ `service auth(server)[Sign-In]`
+
+### Overlap Prevention
+
+`architecture-beta` uses a grid-based auto-layout. When too many services share a group or labels are too long, nodes and icons collide. Apply these rules to every diagram:
+
+**Keep labels short — 2 words maximum**
+- ❌ `service lb(server)[Application Load Balancer]` — 3 words, extends into adjacent node
+- ✅ `service lb(server)[Load Balancer]`
+- ❌ `service queue(disk)[Message Queue Service]`
+- ✅ `service queue(disk)[Msg Queue]`
+
+**Limit services per group — max 3 per group**
+- More than 3 services in one group forces the layout engine to stack nodes, causing icon overlap
+- Split large groups into sub-groups (e.g., split `API Layer` into `API Gateway` group + `Services` group)
+- Prefer more groups with fewer services over fewer groups with many services
+
+**Limit edges per service — max 3 edges per node**
+- Each additional edge adds routing lines that cross labels
+- Use `junction` nodes to consolidate fan-out rather than connecting one service to 4+ others
+
+**Prefer one-way edges (`-->`) over bidirectional (`<-->`)**
+- Bidirectional edges in tight groups add label text on both sides of the line, causing collision
+- Use `<-->` only when the data truly flows both ways AND there is visual space
+
+**Total service cap per diagram**
+- Lean: ≤ 5 services total
+- Standard: ≤ 7 services total
+- Advanced: ≤ 10 services total; if more are needed, omit internal implementation details and show only inter-service boundaries
+
 ### Complete Example
 
 ```mermaid
 architecture-beta
   group internet(cloud)[Public Zone]
     service client(internet)[Client Apps] in internet
-    service cdn(disk)[CDN / Static Assets] in internet
+    service cdn(disk)[CDN Assets] in internet
 
   group api(server)[API Layer]
     service gateway(server)[API Gateway] in api
@@ -80,11 +126,11 @@ architecture-beta
 
 ### Per-Tier Guidance
 
-| Tier                     | Typical groups                   | Typical services                     |
-|--------------------------|----------------------------------|--------------------------------------|
-| Lean (Monolith)          | 2–3 groups: Client, App, Data    | 3–5 services; no internal fan-out    |
-| Standard (Modular)       | 3–4 groups; split App by domain  | 5–8 services; one async worker       |
-| Advanced (Microservices) | 5+ groups; separate mesh/gateway | 8–15 services; message queue visible |
+| Tier                     | Typical groups                        | Max services | Notes                                          |
+|--------------------------|---------------------------------------|--------------|------------------------------------------------|
+| Lean (Monolith)          | 2–3 groups: Client, App, Data         | 5 total      | Max 3 per group; no internal fan-out           |
+| Standard (Modular)       | 3–4 groups; split App by domain       | 7 total      | Max 3 per group; one async worker node         |
+| Advanced (Microservices) | 4–5 groups; gateway + service mesh    | 10 total     | Max 3 per group; omit internal service details |
 
 ### Infrastructure Mapping from Requirements
 
@@ -200,7 +246,7 @@ flowchart TD
 
 ## General Rules
 
-- Keep each diagram focused: **8–15 nodes maximum**. Split into multiple diagrams rather than cramming everything in.
+- Keep each diagram focused. For `architecture-beta`: **10 nodes maximum** (see Overlap Prevention above). For `flowchart TD` and `sequenceDiagram`: **8–15 nodes**. Split into multiple diagrams rather than cramming everything in.
 - Label all edges with action verbs: "calls", "publishes to", "reads from", "caches in", "subscribes to"
 - Every node label should be a noun (service, component, or store name)
 - Use groups / subgraphs to cluster related nodes into logical tiers

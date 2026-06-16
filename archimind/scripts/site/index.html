@@ -482,28 +482,34 @@
       }
       pre.parentNode.replaceChild(wrap, pre);
 
-      // Fit diagram to container width on first display
+      // Fit diagram to container on first display.
+      // Deferred into rAF so the browser has performed layout and
+      // clientWidth / getBoundingClientRect() return real values.
       if (pz && svgContainer && svgInner) {
-        const svgEl = svgInner.querySelector('svg');
-        const padding = 40; // 2 × 20px container padding
-        const availW = svgContainer.clientWidth - padding;
-        const vb = svgEl?.viewBox?.baseVal;
-        const natW = (vb && vb.width > 0) ? vb.width : svgInner.offsetWidth;
-
-        if (natW > 0 && availW > 0) {
+        requestAnimationFrame(() => {
+          const svgEl = svgInner.querySelector('svg');
+          if (!svgEl) return;
+          const padding = 40; // 2 × 20px container padding
+          const availW = svgContainer.clientWidth - padding;
+          // Prefer viewBox width; fall back to rendered bbox then explicit attr
+          const vb = svgEl.viewBox?.baseVal;
+          let natW = (vb && vb.width > 0) ? vb.width : 0;
+          if (!natW) natW = svgEl.getBoundingClientRect().width
+                         || parseFloat(svgEl.getAttribute('width')) || 0;
+          if (natW <= 0 || availW <= 0) return;
           if (natW > availW) {
-            // Scale down so diagram fills available width
+            // Scale down to fill available width exactly
             const s = availW / natW;
             pz.scale = s; pz.initScale = s;
             pz.tx = 0; pz.initTx = 0;
           } else {
-            // Diagram fits naturally — center it horizontally
+            // Diagram fits — center it horizontally
             const initTx = Math.floor((availW - natW) / 2);
             pz.initTx = initTx; pz.tx = initTx;
             pz.initScale = 1;
           }
           pz.apply();
-        }
+        });
       }
     }
   }
