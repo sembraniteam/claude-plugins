@@ -78,14 +78,36 @@ sequenceDiagram
 
 > {1–2 sentences: describe the happy-path request traced here and any notable steps such as cache checks or async branches.}
 
-#### Component Flow
+#### Logical Architecture
 
 ```mermaid
 flowchart TD
-  ...
+  subgraph "Presentation"
+    Handler[HTTP Handlers]
+    MW[Auth Middleware]
+  end
+  subgraph "Application"
+    Svc[Application Services]
+  end
+  subgraph "Domain"
+    Entity[Domain Entities]
+    Iface[Repository Interfaces]
+  end
+  subgraph "Infrastructure"
+    Repo[Repo Implementations]
+    DB[(Primary DB)]
+    Cache[(Cache)]
+  end
+  MW --> Handler
+  Handler --> Svc
+  Svc --> Entity
+  Svc --> Iface
+  Iface --> Repo
+  Repo --> DB
+  Repo --> Cache
 ```
 
-> {1–2 sentences: describe the main data paths and how components hand off to each other.}
+> {1–2 sentences: describe the layer structure — how the presentation layer delegates to application services, which call domain logic, which in turn use infrastructure implementations. Name the actual stores and frameworks used.}
 
 #### Key Components
 
@@ -222,14 +244,31 @@ sequenceDiagram
 
 > {1–2 sentences: describe the happy-path request traced here and any notable steps such as cache checks or async branches.}
 
-#### Component Flow
+#### Logical Architecture
 
 ```mermaid
-flowchart TD
-  ...
+flowchart LR
+  subgraph "Domain A"
+    SvcA[Service A]
+    DBA[(Store A)]
+  end
+  subgraph "Domain B"
+    SvcB[Service B]
+    DBB[(Store B)]
+  end
+  subgraph "Shared Infrastructure"
+    Queue[Message Queue]
+    Cache[(Shared Cache)]
+  end
+  SvcA --- DBA
+  SvcB --- DBB
+  SvcA -->|REST| SvcB
+  SvcA -->|publishes DomainEvent| Queue
+  Queue -->|consumed by| SvcB
+  SvcA -->|reads from| Cache
 ```
 
-> {1–2 sentences: describe the main data paths and how components hand off to each other.}
+> {1–2 sentences: describe the bounded context ownership — which domain owns which store, how cross-domain calls happen (REST or async events), and which data is shared via cache or queue. Replace domain names with the actual business domains of the project.}
 
 #### Key Components
 
@@ -371,14 +410,29 @@ sequenceDiagram
 
 > {1–2 sentences: describe the happy-path request traced here and any notable steps such as cache checks or async branches.}
 
-#### Component Flow
+#### Logical Architecture
 
 ```mermaid
-flowchart TD
-  ...
+flowchart LR
+  subgraph "Commerce"
+    OrderSvc[Order Service]
+    PaySvc[Payment Service]
+  end
+  subgraph "Broker"
+    MQ[Message Broker]
+  end
+  subgraph "Platform"
+    NotifySvc[Notification Service]
+    AnalyticsSvc[Analytics Service]
+  end
+  OrderSvc -->|OrderCreated| MQ
+  PaySvc -->|PaymentProcessed| MQ
+  MQ -->|OrderCreated| PaySvc
+  MQ -->|PaymentProcessed| NotifySvc
+  MQ -->|OrderCreated, PaymentProcessed| AnalyticsSvc
 ```
 
-> {1–2 sentences: describe the main data paths and how components hand off to each other.}
+> {1–2 sentences: describe the event/service mesh — which services are upstream publishers, which events flow through the broker, and which downstream services consume them. Replace service and event names with those of the actual project.}
 
 #### Key Components
 
@@ -561,7 +615,7 @@ flowchart TD
 **Chosen:** Option N — {Tier}: {Architecture Name}
 **Reason:** {2–3 sentences on why this option was selected over the alternatives, referencing actual requirements.}
 
-> See the selected `### Option N:` heading above for the full Infrastructure Layout, Request Flow, and Component Flow diagrams.
+> See the selected `### Option N:` heading above for the full Infrastructure Layout, Request Flow, and Logical Architecture diagrams.
 
 ### Technology Stack
 

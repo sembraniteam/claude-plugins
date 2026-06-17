@@ -36,10 +36,10 @@ sequenceDiagram
   (proposed request flow)
 ```
 
-#### Component Flow
+#### Logical Architecture
 ```mermaid
 flowchart TD
-  (proposed component topology — mark [NEW] or [UPDATED] nodes)
+  (proposed structural view — layers / domain map / event mesh depending on tier; mark [NEW] or [UPDATED] nodes for changed components)
 ```
 
 #### What Changes

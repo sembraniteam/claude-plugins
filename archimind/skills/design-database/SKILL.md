@@ -1,6 +1,6 @@
 ---
 name: design-database
-description: This skill should be used when the user asks to "design a database", "create a database schema", "normalize my database", "normalize my schema", "help me with database design", "design database tables", "what indexes should I add", "help me with my ER diagram", "design the data model", "optimize my database schema", "what data types should I use", "design a relational database", "review my SQL schema", "create an ERD", or pastes SQL DDL statements for normalization and improvement.
+description: This skill should be used when the user asks to "design a database", "create a database schema", "normalize my database", "normalize my schema", "help me with database design", "design database tables", "what indexes should I add", "help me with my ER diagram", "design the data model", "help me with data modeling", "optimize my database schema", "what data types should I use", "design a relational database", "review my SQL schema", "create an ERD", "what database engine should I use for my project", or pastes SQL DDL statements for normalization and improvement.
 ---
 
 # Design Database
@@ -60,16 +60,7 @@ Design directly to at least **3NF** (Third Normal Form). Apply BCNF where applic
 
 #### Choose Data Types
 
-For each column, choose the most appropriate data type. Key principles:
-
-- Use the **smallest type that fits** the domain (e.g., `SMALLINT` not `BIGINT` for a status flag)
-- Use `ULID` or `UUID v7` for distributed PKs (ULID preferred — time-sortable, reduces B-tree fragmentation vs. random UUID); use `BIGSERIAL`/`BIGINT AUTO_INCREMENT` for single-node sequential PKs
-- Use `TEXT` over `VARCHAR(n)` in PostgreSQL (no performance difference); use `VARCHAR(n)` in MySQL when length is meaningful
-- Use `TIMESTAMPTZ` (PostgreSQL) or `DATETIME` + UTC convention for timestamps
-- Use `NUMERIC(p,s)` or `DECIMAL` for money, never `FLOAT`/`DOUBLE`
-- Use `JSONB` (PostgreSQL) for semi-structured data only when querying inside the JSON
-
-Refer to `$CLAUDE_PLUGIN_ROOT/skills/design-database/references/data-types-guide.md` for engine-specific recommendations.
+Read `$CLAUDE_PLUGIN_ROOT/skills/design-database/references/data-types-guide.md` for per-engine type recommendations and key principles (PK strategies, TEXT vs VARCHAR, timestamp handling, NUMERIC for money, JSONB usage).
 
 #### Define Indexes
 

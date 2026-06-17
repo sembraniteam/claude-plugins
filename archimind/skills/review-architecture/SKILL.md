@@ -1,6 +1,6 @@
 ---
 name: review-architecture
-description: This skill should be used when the user asks to "review architecture", "analyze my architecture", "audit the architecture", "review my system design", "improve my existing architecture", "refactor architecture", "redesign my system", "what's wrong with my architecture", "critique my design", "help me improve my existing system", "is my architecture good", "identify bottlenecks in my architecture", or provides an existing architecture description, diagram, or codebase structure for evaluation.
+description: This skill should be used when the user asks to "review architecture", "analyze my architecture", "audit the architecture", "review my system design", "improve my existing architecture", "refactor architecture", "redesign my system", "what's wrong with my architecture", "critique my design", "help me improve my existing system", "is my architecture good", "identify bottlenecks in my architecture", "help me migrate to microservices", "help me scale my existing system", "my system is too slow", or provides an existing architecture description, diagram, or codebase structure for evaluation.
 ---
 
 # Review Architecture
@@ -125,7 +125,18 @@ Key structural rules:
 
 Each `### Option N:` section must include **three Mermaid diagrams** and a standard set of subsections. Read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/mermaid-guidelines.md` for review-specific diagram conventions (mark changed nodes with `[NEW]`, problematic nodes with `⚠`).
 
-Each option must include the three Mermaid diagrams (**Infrastructure Layout**, **Request Flow**, **Component Flow**) and the standard subsections listed in `$CLAUDE_PLUGIN_ROOT/skills/review-architecture/references/output-template.md`.
+Each option must include the three Mermaid diagrams (**Infrastructure Layout**, **Request Flow**, **Logical Architecture**) and the following `####` subsections (full scaffold in `$CLAUDE_PLUGIN_ROOT/skills/review-architecture/references/output-template.md`):
+
+- **What Changes** — current state → proposed state, component by component
+- **Key Improvements** — how each identified weakness is addressed
+- **Technology Changes** — table: Component / Current / Proposed / Reason
+- **Data Layer Changes** — store migrations, new stores, removed stores
+- **Observability Changes** — what observability gaps the redesign closes
+- **Technology Decision Rationale** — for each major new technology: why chosen, better than alternatives, required skills, ecosystem
+- **Future Impact** — 6-month / 1-year / 3-year table + scalability ceiling, operational overhead, reversibility, vendor lock-in
+- **Migration Path** — phased steps, Strangler Fig or parallel-run approach, rollback strategy
+- **Risks & Mitigations** — table: Risk / Likelihood / Impact / Mitigation
+- **When to Choose This Option** — 2–3 bullets: team/timeline/budget scenarios
 
 #### Recommendation Section
 
@@ -266,6 +277,8 @@ bash "$CLAUDE_PLUGIN_ROOT/scripts/stop-server.sh"
 
 ## Document Structure Convention
 
+<!-- Keep in sync with design-architecture/SKILL.md and visualize/SKILL.md -->
+
 The viewer parses these heading patterns from `content.md`:
 
 - `## Architecture Diagram` + `### Option N:` subheadings → option tabs
@@ -287,7 +300,7 @@ Read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/mermaid-guidelin
 
 - Current state diagram goes in `## Revision / ### Before`
 - Proposed state diagram goes in `## Revision / ### After` and within each option section
-- Mark changed/new components with `[NEW]` or `[UPDATED]` in `flowchart TD` (Component Flow) node names only — **never inside `architecture-beta` labels** (causes parse errors; append text without brackets instead)
+- Mark changed/new components with `[NEW]` or `[UPDATED]` in `flowchart` (Logical Architecture) node names only — **never inside `architecture-beta` labels** (causes parse errors; append text without brackets instead)
 - Mark problematic current-state nodes with `⚠` in the label (`flowchart TD` / Before diagram only)
 
 ## Additional Resources

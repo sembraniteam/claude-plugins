@@ -1,6 +1,6 @@
 ---
 name: visualize
-description: This skill should be used when the user asks to "visualize the architecture", "open the diagram viewer", "show me the diagrams", "show me the architecture", "let me see the options", "open the viewer", "start the viewer", "reopen this document", "re-visualize", "open this design in the viewer", "update the diagram", "edit the Mermaid code", or "regenerate the diagram", or when the user wants to view, update, or regenerate architecture or database diagrams in the browser. Also trigger on "show me the ERD", "display the diagram", and "can I see the design".
+description: This skill should be used when the user asks to "visualize the architecture", "open the diagram viewer", "show me the diagrams", "show me the architecture", "let me see the options", "open the viewer", "start the viewer", "reopen this document", "re-visualize", "open this design in the viewer", "update the diagram", "edit the Mermaid code", "regenerate the diagram", "show me the ERD", "display the diagram", or "can I see the design", or when the user wants to view, update, or regenerate architecture or database diagrams in the browser.
 ---
 
 # Visualize Architecture

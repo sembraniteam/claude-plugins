@@ -106,6 +106,8 @@ docs/archimind/
 
 The timestamp prefix (Unix milliseconds) makes files sort by creation time.
 
+> **Note:** If you don't want to track AI-generated designs in version control, add `docs/archimind/` to your project's `.gitignore`.
+
 ## Viewer Usage
 
 The static site viewer reads a single `content.md` file served by a local HTTP server:

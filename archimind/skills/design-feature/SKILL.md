@@ -1,6 +1,6 @@
 ---
 name: design-feature
-description: This skill should be used when the user asks to "design a feature", "design a module", "plan a new feature", "how should I implement this feature", "design the implementation for", "architect a new module", "help me design a feature", "plan the implementation of", "what's the best way to implement this feature", "design a plugin", "design a new component for my app", or describes a specific feature or module they want to add to an existing application.
+description: This skill should be used when the user asks to "design a feature", "design a module", "plan a new feature", "how should I implement this feature", "design the implementation for", "architect a new module", "help me design a feature", "plan the implementation of", "what's the best way to implement this feature", "design a plugin for my app", "design a new component for my app", "refactor this module", "redesign this existing component", or describes a specific feature or module they want to add to or redesign within an existing application.
 ---
 
 # Design Feature

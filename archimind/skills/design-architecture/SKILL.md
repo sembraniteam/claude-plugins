@@ -158,7 +158,7 @@ Required `####` subsections for each option — **every option must include thre
 
 - **Infrastructure Layout** (`architecture-beta`) — cloud groups, services with icons, and physical deployment topology. Use the Infrastructure Mapping section of mermaid-guidelines.md to map Q6 → concrete service names (e.g., EKS, RDS, S3 for AWS). Do not use generic placeholders. Follow each diagram with a 1–2 sentence description.
 - **Request Flow** (`sequenceDiagram`) — primary user-facing request end-to-end. Cover: client → API → cache → DB → response. Follow with a 1–2 sentence description.
-- **Component Flow** (`flowchart TD`) — logical data flow between components. Follow with a 1–2 sentence description.
+- **Logical Architecture** (`flowchart TD` for Lean, `flowchart LR` for Standard/Advanced) — structural view: Clean Architecture layers (Lean), bounded context domain map (Standard), or service/event mesh (Advanced). Follow with a 1–2 sentence description. See mermaid-guidelines.md for tier-specific starters.
 - **Key Components** — bulleted list of main services/modules with one-line descriptions
 - **Technology Stack** — table: Layer / Recommended / Alternatives / Reason
 - **Data Layer Design** — all applicable store types; for each: what's stored, why not the primary DB, data flow. See `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/database-selection-guide.md`.
@@ -295,6 +295,8 @@ bash "$CLAUDE_PLUGIN_ROOT/scripts/stop-server.sh"
 
 ## Document Structure Convention
 
+<!-- Keep in sync with review-architecture/SKILL.md and visualize/SKILL.md -->
+
 The viewer parses these heading patterns from `content.md`:
 
 - `## Architecture Diagram` + `### Option N:` subheadings → option tabs
@@ -302,6 +304,8 @@ The viewer parses these heading patterns from `content.md`:
 - `## Revision` + `### Before` / `### After` → Before/After tabs
 
 **Critical**: Use `### Option N:` (level-3) within `## Architecture Diagram`, not `## Option N:` (level-2). The viewer splits on level-3 headings to create option tabs.
+
+**Fresh designs**: Omit the `## Revision` section — it is used only by review-architecture to show Before/After comparisons.
 
 For the full document template (all required sections, headings, placeholder text), see `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/output-template.md` — **read-only; never write to it**.
 

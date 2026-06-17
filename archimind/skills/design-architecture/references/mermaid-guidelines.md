@@ -2,20 +2,22 @@
 
 ## Diagram Type Selection
 
-| Use case                            | Diagram type         |
-|-------------------------------------|----------------------|
-| Component / data flow topology      | `flowchart TD`       |
-| Cloud / infra service layout        | `architecture-beta`  |
-| Database entity-relationship        | `erDiagram`          |
-| Request / event flow                | `sequenceDiagram`    |
+| Use case                                          | Diagram type         |
+|---------------------------------------------------|----------------------|
+| Cloud / infra service layout                      | `architecture-beta`  |
+| Request / event flow                              | `sequenceDiagram`    |
+| Logical structure (layers, domains, event mesh)   | `flowchart TD / LR`  |
+| Database entity-relationship                      | `erDiagram`          |
 
 ## Required Diagrams Per Architecture Option
 
-Each architecture option tab must contain **three diagrams**:
+Each architecture option tab must contain **three diagrams**, each capturing a different architectural view:
 
-1. **Infrastructure Layout** (`architecture-beta`) — cloud services, groups, and physical topology. **Required.**
-2. **Request Flow** (`sequenceDiagram`) — the primary user-facing request end-to-end. **Required.**
-3. **Component Flow** (`flowchart TD`) — logical data flow between components. **Required.**
+1. **Infrastructure Layout** (`architecture-beta`) — *Physical view*: cloud services, groups, and deployment topology. **Required.**
+2. **Request Flow** (`sequenceDiagram`) — *Behavioral view*: the primary user-facing request end-to-end. **Required.**
+3. **Logical Architecture** (`flowchart`) — *Structural view*: how the application is organized internally — layers, domain modules, or service/event contracts — depending on the tier. **Required.**
+
+The three diagrams are complementary and must not overlap: Infrastructure Layout shows WHERE things run; Request Flow shows HOW a request moves through the system; Logical Architecture shows WHAT the internal structure is.
 
 ---
 
@@ -201,35 +203,112 @@ sequenceDiagram
 
 ---
 
-## `flowchart TD` — Component / Data Flow
+## `flowchart` — Logical Architecture
 
-- Show logical data flow and component relationships
-- Include non-relational stores (cache, search, queue, object storage) alongside relational ones
-- Avoid internal implementation detail — only inter-component connections
-- For review workflows: mark changed components with `[NEW]` or `[UPDATED]` node labels
-- For review workflows: mark problematic current-state nodes with `⚠` in the label
+This is the structural view: how the application is organized internally. Choose the orientation and content based on the architecture tier.
+
+### Tier Guidance
+
+| Tier     | What to show                           | Orientation | Key question answered                          |
+|----------|----------------------------------------|-------------|------------------------------------------------|
+| Lean     | Clean Architecture layers              | `TD`        | How is the monolith's codebase structured?     |
+| Standard | Domain modules and their contracts     | `LR`        | Which domain owns what data? How do they talk? |
+| Advanced | Service map with event/sync contracts  | `LR`        | Which service publishes/consumes which event?  |
+
+### Lean — Clean Architecture Layers (`flowchart TD`)
+
+Show the four concentric layers of the monolith. Replace component names with the actual stack (e.g., "Gin Handlers", "GORM Repos").
 
 ```mermaid
 flowchart TD
-  subgraph "External"
-    Client([Client])
+  subgraph "Presentation"
+    Handler[HTTP Handlers]
+    MW[Auth Middleware]
   end
-  subgraph "API Layer"
-    API[API Gateway]
+  subgraph "Application"
+    Svc[Application Services]
   end
-  subgraph "Data"
+  subgraph "Domain"
+    Entity[Domain Entities]
+    Iface[Repository Interfaces]
+  end
+  subgraph "Infrastructure"
+    Repo[Repo Implementations]
     DB[(PostgreSQL)]
     Cache[(Redis)]
   end
-  Client -->|HTTP| API
-  API -->|reads from| DB
-  API -->|caches in| Cache
+  MW --> Handler
+  Handler --> Svc
+  Svc --> Entity
+  Svc --> Iface
+  Iface --> Repo
+  Repo --> DB
+  Repo --> Cache
 ```
 
+### Standard — Domain Module Map (`flowchart LR`)
+
+Show bounded contexts. Each domain owns its own store. Cross-domain communication is explicit — HTTP calls or async events only; no direct DB cross-access.
+
+```mermaid
+flowchart LR
+  subgraph "User Domain"
+    UserSvc[User Service]
+    UserDB[(User DB)]
+  end
+  subgraph "Order Domain"
+    OrderSvc[Order Service]
+    OrderDB[(Order DB)]
+  end
+  subgraph "Shared Infrastructure"
+    Queue[Message Queue]
+    Cache[(Shared Cache)]
+  end
+  UserSvc --- UserDB
+  OrderSvc --- OrderDB
+  UserSvc -->|REST| OrderSvc
+  OrderSvc -->|publishes OrderCreated| Queue
+  UserSvc -->|reads from| Cache
+```
+
+### Advanced — Service Event Mesh (`flowchart LR`)
+
+Show services as publishers and consumers of events. Make the event contract explicit — label each edge with the event name. Group services by ownership domain.
+
+```mermaid
+flowchart LR
+  subgraph "Commerce"
+    OrderSvc[Order Service]
+    PaySvc[Payment Service]
+  end
+  subgraph "Broker"
+    MQ[Message Broker]
+  end
+  subgraph "Platform"
+    NotifySvc[Notification Service]
+    AnalyticsSvc[Analytics Service]
+  end
+  OrderSvc -->|OrderCreated| MQ
+  PaySvc -->|PaymentProcessed| MQ
+  MQ -->|OrderCreated| PaySvc
+  MQ -->|PaymentProcessed| NotifySvc
+  MQ -->|OrderCreated, PaymentProcessed| AnalyticsSvc
+```
+
+### Rules for All Tiers
+
+- Use `subgraph` to group nodes by layer, domain, or ownership — always with a meaningful label
+- Label every edge with an action verb or event name: "reads from", "publishes OrderCreated", "REST: GET /users"
+- Every node label should be a noun (service, module, or store name)
+- Store nodes use cylinder shape: `[(Label)]`
+- Client/user nodes use rounded rectangle: `([Label])`
+- For review workflows: mark changed components with `[NEW]` or `[UPDATED]` node labels
+- For review workflows: mark problematic current-state nodes with `⚠` in the label
+
 **Node shape reference:**
-- `[Label]` — rectangle (services)
+- `[Label]` — rectangle (services, modules)
 - `([Label])` — rounded rectangle (clients, end users)
-- `[(Label)]` — cylinder (databases)
+- `[(Label)]` — cylinder (databases, stores)
 - `{Label}` — diamond (decisions — avoid in topology diagrams)
 - Wrap subgraph labels in double quotes if they contain spaces
 
@@ -241,6 +320,29 @@ flowchart TD
 - Show all relationships with correct cardinality (`||--o{`, `}o--||`, etc.)
 - Annotate primary keys with `PK` and foreign keys with `FK`
 - Place the ERD in the `## ERD` section only — never inside Architecture option tabs
+
+---
+
+## Review Workflow Conventions
+
+These conventions apply only to diagrams generated by the `review-architecture` skill. They must not be used in fresh design diagrams.
+
+### Node Labeling for Changed Components (`flowchart` / Logical Architecture only)
+
+Mark nodes to communicate change status at a glance:
+
+| Convention                    | When to use                                                  | Example                         |
+|-------------------------------|--------------------------------------------------------------|---------------------------------|
+| `[NEW]` appended to label     | Component added by the proposed redesign                     | `CacheLayer[Redis Cache NEW]`   |
+| `[UPDATED]` appended to label | Component significantly changed                              | `AuthSvc[Auth Service UPDATED]` |
+| `⚠` prepended to label        | Problematic component in current state (Before diagram only) | `⚠MonolithDB[(Monolith DB)]`    |
+
+**Critical constraint**: These labels are `flowchart`-only. **Never** put `[NEW]`, `[UPDATED]`, or `⚠` inside `architecture-beta` node labels — the `[` and `]` characters break the `architecture-beta` parser. For `architecture-beta`, append descriptive text without brackets: `service cacheNew(database)[Redis Cache New]`.
+
+### Before / After Diagram Placement
+
+- **Current state** (`⚠` labels, no `[NEW]`): place in `## Revision / ### Before`
+- **Proposed state** (`[NEW]`, `[UPDATED]` labels): place in each `### Option N:` section **and** in `## Revision / ### After` (after the user selects an option)
 
 ---
 
