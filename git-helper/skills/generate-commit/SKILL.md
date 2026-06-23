@@ -20,8 +20,8 @@ Before running any git commands, collect user intent using `AskUserQuestion` in 
   - If no files were provided: Yes — all / No (user can select "Other" to specify custom paths)
 
 **Round 2** — call only if needed, with only the applicable questions:
-- **Checkout** (if New branch = Yes): "After generating the branch name, run `git checkout -b <branch>` automatically?" (Yes / No)
-- **Auto-commit** (if Stage files ≠ No): "After generating the commit message, run `git commit -m "..."` automatically?" (Yes / No)
+- **Checkout** (if New branch = Yes): "Should this skill run `git checkout -b <branch>` automatically?" (Yes / No)
+- **Auto-commit** (if Stage files ≠ No): "Should this skill run `git commit` automatically after generating the message?" (Yes / No)
 
 Skip Round 2 entirely if neither condition is met.
 
@@ -32,6 +32,8 @@ After all answers, display a confirmation to the user (substitute actual selecti
 > - Stage files: Yes (`git add <files>`) / No
 > - Checkout branch: Yes / No / N/A
 > - Execute commit: Yes / No / N/A
+
+Proceed immediately to Analysis & Generation after showing the confirmation — do not wait for further input.
 
 ## Analysis & Generation
 
@@ -97,12 +99,14 @@ EOF
 )"
 ```
 
-Execute confirmed actions in order, showing output for each:
+**IMPORTANT — execution vs display:** A "Yes" answer means RUN the git command and show its output. Do not display the command and wait for the user to run it themselves. Only display-without-running when the user answered "No" or N/A for that action.
 
-1. **Stage files** — `git add <files>` or `git add --all`
-2. **Generate branch name** — invoke the `git-helper:generate-branch` skill using the Skill tool, passing the commit subject as the work description. Pass the commit subject as the work description without prompting the user again.
-3. **Checkout branch** — `git checkout -b <generated-branch-name>`
-4. **Execute commit** — run the commit command using subject + body + BREAKING CHANGE footer. Add `Co-Authored-By` trailer only if the user explicitly requested it.
+Run each step below if and only if its condition is met. Skip steps whose condition is not met:
+
+1. **Stage files** (condition: Stage files ≠ No) — run `git add <files>` or `git add --all`
+2. **Generate branch name** (condition: New branch = Yes) — invoke the `git-helper:generate-branch` skill via the Skill tool, passing the commit subject as work description. After the skill completes, **capture the branch name from its output**: look for it in the fenced code block (e.g., `` `feature/add-login` ``) or the Summary table's Branch field. Store this value for step 3.
+3. **Checkout branch** (condition: New branch = Yes AND Checkout = Yes) — run `git checkout -b <branch-name-captured-in-step-2>`
+4. **Execute commit** (condition: Auto-commit = Yes) — run the commit command using subject + body + BREAKING CHANGE footer. Add `Co-Authored-By` trailer only if the user explicitly requested it.
 
 If no actions were confirmed, inform the user the message is ready to use manually.
 

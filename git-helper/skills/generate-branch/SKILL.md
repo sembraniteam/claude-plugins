@@ -60,7 +60,7 @@ For the `type/scope/slug` three-part format and full naming rules, see **`refere
 
 ## Output
 
-Present the branch name in a code block with the ready-to-run command:
+Present the branch name in a fenced code block, then the ready-to-run command on its own line:
 
 ```
 feature/add-oauth2-login
@@ -76,6 +76,8 @@ If multiple prefixes are valid, show a primary recommendation and one alternativ
 Recommended: bugfix/fix-login-crash
 Alternative: hotfix/fix-login-crash  ← use this if the fix is urgent
 ```
+
+**When invoked via the Skill tool by another skill** (e.g., `generate-commit`): always output the branch name in the fenced code block so the calling skill can extract it. Do not ask the user to confirm checkout — the calling skill owns that step.
 
 ## Summary
 
