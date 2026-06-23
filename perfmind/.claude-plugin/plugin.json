@@ -1,0 +1,16 @@
+{
+  "name": "perfmind",
+  "version": "0.1.0",
+  "description": "Performance investigation assistant for web, mobile, desktop, and API applications",
+  "author": {
+    "name": "Ahmad Rifa'i",
+    "email": "develop.rifai@gmail.com"
+  },
+  "keywords": [
+    "performance",
+    "profiling",
+    "optimization",
+    "bottleneck",
+    "investigation"
+  ]
+}

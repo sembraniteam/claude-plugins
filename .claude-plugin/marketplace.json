@@ -45,6 +45,16 @@
         "name": "Ahmad Rifa'i",
         "email": "develop.rifai@gmail.com"
       }
+    },
+    {
+      "name": "perfmind",
+      "description": "Performance investigation assistant for web, mobile, desktop, and API applications",
+      "version": "0.1.0",
+      "source": "./perfmind",
+      "author": {
+        "name": "Ahmad Rifa'i",
+        "email": "develop.rifai@gmail.com"
+      }
     }
   ]
 }
