@@ -1,6 +1,6 @@
 ---
 name: parallel-debug
-description: This skill should be used when the user invokes /debugging-workflow:parallel-debug, asks to "debug in parallel", "try all hypotheses at once", "spawn multiple agents for this bug", "investigate multiple root causes", "parallel hypothesis testing", "parallel investigation", or reports a complex or intermittent bug where the root cause is unclear and multiple theories need testing simultaneously. It should be preferred over the `debug` skill when the bug is hard to diagnose and would benefit from concurrent exploration.
+description: This skill should be used when the user invokes /debugging-workflow:parallel-debug, asks to "debug in parallel", "try all hypotheses at once", "spawn multiple agents for this bug", "investigate multiple root causes", "parallel hypothesis testing", "parallel investigation", "I can't figure out what's causing this", "investigate from multiple angles", "I have multiple theories about this bug", or reports a complex or intermittent bug where the root cause is unclear and multiple theories need testing simultaneously. It should be preferred over the `debug` skill when the bug is hard to diagnose and would benefit from concurrent exploration.
 argument-hint: "[error message, stack trace, or bug description]"
 allowed-tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "TaskCreate", "TaskUpdate", "Agent"]
 license: MIT
@@ -35,7 +35,7 @@ Create a `TaskCreate` checklist immediately upon invocation:
 Read `.claude/debugging-workflow.local.md` from the project root (if it exists). Parse YAML frontmatter for:
 - `max_parallel_agents` — integer 2–5, default `5`
 - `time_budget_minutes` — integer 1–15, default `5`
-- `hypothesis_count` — integer 3–5, default `5`; must be ≤ `max_parallel_agents`
+- `hypothesis_count` — integer 3–5, default `5`; if greater than `max_parallel_agents`, clamp to `max_parallel_agents` silently
 
 Calculate iteration budget: `max(1, time_budget_minutes // 2)`
 

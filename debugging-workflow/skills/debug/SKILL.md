@@ -1,6 +1,6 @@
 ---
 name: debug
-description: This skill should be used when the user invokes /debugging-workflow:debug, reports an error or bug, pastes a stack trace, says "I have a bug", "this is not working", "fix this error", "debug this", or shares any runtime error, crash report, or unexpected behavior. As opposed to static analysis requests, which should use analyze-code.
+description: This skill should be used when the user invokes /debugging-workflow:debug, reports an error or bug, pastes a stack trace, says "I have a bug", "this is not working", "fix this error", "debug this", "my tests are failing", "it's throwing an exception", "my app keeps crashing", "it worked before", or shares any runtime error, crash report, or unexpected behavior. As opposed to static analysis requests, which should use analyze-code.
 argument-hint: "[error message, stack trace, or bug description — leave blank to inspect current state]"
 allowed-tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "TaskCreate", "TaskUpdate", "Agent"]
 license: MIT
@@ -198,7 +198,13 @@ After completing all steps, display a summary block:
 
 - **`../../references/analyze-tools.md`** — Full language → tool mapping, flags, and common error patterns
 - **`references/debugging-patterns.md`** — Common root cause patterns by error category (null pointer, type mismatch, async race, import cycle, etc.)
-- **`../analyze-code/examples/debugging-workflow.local.md`** — Settings template for `.claude/debugging-workflow.local.md` (configure lint paths, skip verification, custom commands)
+- **`../parallel-debug/examples/debugging-workflow.local.md`** — Settings template for `.claude/debugging-workflow.local.md` (configure lint paths, skip verification, custom commands)
+
+### Example Outputs
+
+Complete worked examples of the strict output format in `examples/`:
+- **`examples/null-dereference.md`** — TypeScript null dereference: silent investigation → root cause / evidence / fix diff
+- **`examples/missing-await.md`** — Flutter missing `await` in `initState`: git diff as key signal, two-point evidence
 
 ### Code Analyzer Agent
 

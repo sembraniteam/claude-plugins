@@ -1,6 +1,6 @@
 ---
 name: analyze-code
-description: This skill should be used when verifying code changes after a bug fix, running static analysis, checking code quality before committing, or when the user asks to "analyze code", "check for errors", "run lint", "verify my changes", "run dart analyze", "run cargo check", "run eslint", "check types", or mentions any language-specific analysis tool. As opposed to runtime errors, crashes, or active bugs, which should use the debug skill.
+description: This skill should be used when the user asks to "analyze code", "check for errors", "run lint", "verify my changes", "check types", "run dart analyze", "run cargo check", "run eslint", "fix lint errors", "apply auto-fix", "set up debugging-workflow settings", "create a settings file", or mentions any language-specific static analysis tool. Use for static analysis, type checking, formatting checks, and pre-commit code quality verification. As opposed to runtime errors, crashes, or active bugs, which should use the debug skill.
 argument-hint: "[file or directory to analyze — leave blank to analyze entire project]"
 license: MIT
 allowed-tools: ["Read", "Write", "Bash", "Grep", "Glob"]
@@ -167,4 +167,4 @@ After completing analysis, display a summary block:
 
 - **`../../references/analyze-tools.md`** — Full per-language tool options, common error patterns, and best practices
 - **`references/language-detection.md`** — Canonical language detection priority table
-- **`examples/debugging-workflow.local.md`** — Basic settings template (analyze-code and debug only); for the complete template including parallel-debug options, see `../parallel-debug/examples/debugging-workflow.local.md`
+- **`../parallel-debug/examples/debugging-workflow.local.md`** — Canonical settings template for all skills (analyze-code, debug, and parallel-debug)
