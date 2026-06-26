@@ -1,7 +1,8 @@
 ---
 name: generate-changelog
-description: This skill should be used when the user asks to "generate changelog", "update changelog", "create changelog", "add changelog entry", "summarize commits for changelog", "prepare a new version", or "bump version". Also trigger when the user mentions updating CHANGELOG.md or documenting recent commits.
-license: MIT
+description: This skill should be used when the user asks to "generate changelog", "update changelog", "create changelog", "add changelog entry", "summarize commits for changelog", "prepare a new version", "bump version", "what changed since last release", "write a release entry", or "tag this version". Also trigger when the user mentions updating CHANGELOG.md or documenting recent commits.
+argument-hint: "[version override]  e.g. v2.0.0"
+allowed-tools: ["Read", "Write", "Bash", "Skill", "AskUserQuestion"]
 ---
 
 # Generate Changelog
@@ -134,3 +135,4 @@ After completing all actions, display a summary block:
 ## Additional Resources
 
 - **`references/keep-a-changelog.md`** — Full Keep a Changelog format specification, section ordering, and versioning examples
+- **`examples/feat-release.md`** — Complete walkthrough: commit list → script JSON output → CHANGELOG.md entry

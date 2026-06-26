@@ -1,7 +1,8 @@
 ---
 name: generate-release-notes
-description: This skill should be used when the user asks to generate release notes, create release notes, prepare an App Store or Play Store release, write a web announcement, produce bilingual release notes, or update store listing copy. Relevant phrases include "generate release notes", "create release notes", "prepare App Store release", "prepare Play Store release", "bilingual release notes", "translate release notes", or references to RELEASE_NOTES, RELEASE_NOTES_APPSTORE, or RELEASE_NOTES_PLAYSTORE files.
-license: MIT
+description: This skill should be used when the user asks to "generate release notes", "create release notes", "prepare App Store release", "prepare Play Store release", "bilingual release notes", "translate release notes", "write what's new section", "update store listing", "draft app update description", or references RELEASE_NOTES, RELEASE_NOTES_APPSTORE, or RELEASE_NOTES_PLAYSTORE files.
+argument-hint: "[platform]  e.g. playstore | appstore | web"
+allowed-tools: ["Read", "Bash"]
 ---
 
 # Generate Release Notes

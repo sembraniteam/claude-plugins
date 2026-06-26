@@ -1,7 +1,8 @@
 ---
 name: changelog-config
-description: This skill should be used when the user asks to "configure changelog", "set changelog languages", "changelog settings", "setup changelog manager", "add a language to release notes", "change release notes language", "update changelog config", or "set platforms for release notes".
-license: MIT
+description: This skill should be used when the user asks to "configure changelog", "set changelog languages", "changelog settings", "setup changelog manager", "add a language to release notes", "change release notes language", "update changelog config", "set platforms for release notes", "show me my changelog settings", "what platforms are configured", or "view my changelog config".
+argument-hint: "[language code] [platform]  e.g. en_US playstore"
+allowed-tools: ["Read", "Write", "Bash"]
 ---
 
 # Changelog Config

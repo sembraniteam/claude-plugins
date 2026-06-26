@@ -19,7 +19,7 @@
     {
       "name": "changelog-manager",
       "description": "Automatically generate and update CHANGELOG and RELEASE_NOTES files from git commit history with bilingual, platform-specific support.",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "source": "./changelog-manager",
       "author": {
         "name": "Ahmad Rifa'i",
