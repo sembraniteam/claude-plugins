@@ -1,6 +1,6 @@
 ---
 name: generate-commit
-description: This skill should be used when the user invokes /git-helper:generate-commit, or asks to "generate a commit message", "write a commit for me", "what should my commit message be", "help me commit my changes", "suggest a commit message", "prepare a commit", "what commit type should I use", "stage and commit my changes", "commit all my changes", or describes a change they just made and needs a commit message for it. Produces a conventional commit with type, scope, subject, optional body, and breaking change footer.
+description: This skill should be used when the user invokes /git-helper:generate-commit, or asks to "generate a commit message", "write a commit for me", "what should my commit message be", "help me commit my changes", "suggest a commit message", "prepare a commit", "what commit type should I use", "stage and commit my changes", "commit all my changes", "I'm done working on this", "commit everything I did", "write a commit for my changes", or describes a change they just made and needs a commit message for it. Produces a conventional commit with type, scope, subject, optional body, and breaking change footer.
 argument-hint: "[file1 file2 ...]"
 allowed-tools: ["Bash", "AskUserQuestion", "Skill"]
 ---
@@ -19,11 +19,12 @@ Before running any git commands, collect user intent using `AskUserQuestion` in 
   - If files were provided as arguments: Yes — all / Yes — provided files / No
   - If no files were provided: Yes — all / No (user can select "Other" to specify custom paths)
 
-**Round 2** — call only if needed, with only the applicable questions:
-- **Checkout** (if New branch = Yes): "Should this skill run `git checkout -b <branch>` automatically?" (Yes / No)
-- **Auto-commit** (if Stage files ≠ No): "Should this skill run `git commit` automatically after generating the message?" (Yes / No)
+**Round 2** — ask only the questions whose condition is met; skip entirely if neither applies:
 
-Skip Round 2 entirely if neither condition is met.
+| Question                                                                         | Condition        | Options  |
+|----------------------------------------------------------------------------------|------------------|----------|
+| "Should this skill run `git checkout -b <branch>` automatically?"                | New branch = Yes | Yes / No |
+| "Should this skill run `git commit` automatically after generating the message?" | Stage files ≠ No | Yes / No |
 
 After all answers, display a confirmation to the user (substitute actual selections from user answers):
 
@@ -125,3 +126,11 @@ After completing all actions, display a summary block:
 ## Additional Resources
 
 - **`references/commit-types.md`** — Detailed type selection guide with examples for ambiguous cases
+
+### Example Outputs
+
+Working commit message examples in `examples/`:
+- **`feat-with-scope.md`** — Standard feature commit with scope
+- **`fix-breaking-change.md`** — Breaking change with `!` and `BREAKING CHANGE` footer
+- **`revert.md`** — Revert commit with hash in body
+- **`chore-multi-scope.md`** — Chore commit touching multiple areas (cross-cutting scope omitted)

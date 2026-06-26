@@ -1,6 +1,6 @@
 ---
 name: generate-branch
-description: This skill should be used when the user invokes /git-helper:generate-branch, asks to "create a branch name", "name my branch", "what should I name this branch", "suggest a branch name", "what prefix should I use", "what branch should I create for this", or describes work they are about to start and needs a branch name for it. Applies team naming conventions with prefix rules (feature/, bugfix/, hotfix/, release/, chore/, bump/).
+description: This skill should be used when the user invokes /git-helper:generate-branch, asks to "create a branch name", "name my branch", "what should I name this branch", "suggest a branch name", "what prefix should I use", "what branch should I create for this", "branch for ticket #123", "I'm working on #456, what branch name?", or describes work they are about to start and needs a branch name for it. Applies team naming conventions with prefix rules (feature/, bugfix/, hotfix/, release/, chore/, bump/).
 argument-hint: "[#ticket] [work description]"
 allowed-tools: ["Bash", "AskUserQuestion"]
 ---
@@ -103,3 +103,7 @@ After generating the branch name, display a summary block:
 ## Additional Resources
 
 - **`references/branch-rules.md`** — Full naming rules with edge cases, regex patterns, and CI/CD compatibility notes
+
+### Scripts
+
+- **`scripts/validate-branch.sh`** — Validates a branch name against team naming rules. Exit 0 = valid, exit 1 = invalid with reasons listed. Run as: `./scripts/validate-branch.sh <branch-name>`
