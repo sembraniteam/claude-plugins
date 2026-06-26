@@ -1,9 +1,11 @@
 ---
 name: investigate
-description: This skill guides a structured performance investigation session when the user invokes /perfmind:investigate, says "investigate this performance issue", "help me debug slow response times", "analyze this profiler output", "why is my app slow", "investigate memory leak", "investigate CPU usage", "my latency jumped", "what's causing high memory usage", or pastes profiler data, GC logs, or metric screenshots for analysis. Accepts evidence from multiple sources and produces structured findings with domain-specific analysis.
+description: This skill should be used when the user invokes /perfmind:investigate, says "investigate this performance issue", "help me debug slow response times", "analyze this profiler output", "why is my app slow", "investigate memory leak", "investigate CPU usage", "my latency jumped", "what's causing high memory usage", "profile my app", "where should I start investigating", "I don't know what's causing this slowness", or pastes profiler data, GC logs, or metric screenshots for analysis. Accepts evidence from multiple sources and produces structured findings with domain-specific analysis.
 argument-hint: "[app-type] [--focus <domain>]  e.g. mobile --focus memory | web | api | desktop"
 allowed-tools: Read, Bash
 ---
+
+# Performance Investigation
 
 ## Performance Investigation Workflow
 
@@ -89,3 +91,16 @@ Produce the following after analysis:
 2. **Summary** — one paragraph describing the primary bottleneck and its likely root cause
 3. **Findings list** — each finding with: description, evidence cited, domain tag
 4. **Next-step prompt** — output: "Run `/perfmind:report` to get role-specific recommendations, or ask the `performance-analyst` agent for a deep dive into one domain."
+
+## Additional Resources
+
+### Related Skills
+
+Consult these skills during Step 3 analysis:
+- **`bottleneck-patterns`** — Domain-specific pattern recognition and diagnostic guidance
+- **`profiler-analysis`** — Expert interpretation of profiler output, flame graphs, and GC logs
+- **`impact-matrix`** — Prioritization when multiple findings are present
+
+### Example Output
+
+- **`examples/api-latency-investigation.md`** — Complete Step 4 output for a Node.js backend latency investigation

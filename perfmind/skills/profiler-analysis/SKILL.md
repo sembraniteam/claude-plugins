@@ -1,9 +1,11 @@
 ---
 name: profiler-analysis
-description: This skill activates when the user shares profiler output, flame graphs, CPU traces, allocation traces, heap dumps, GC logs, call trees, asks "what does this GC log mean", "help me read this flame graph", "what's causing heap growth", "how do I interpret this allocation trace", or pastes runtime diagnostic data for interpretation. Provides expert analysis of profiler artifacts across JVM/Android, Node.js/V8, Python, Go, Dart/Flutter, Swift/iOS, and browser DevTools.
+description: This skill should be used when the user shares profiler output, flame graphs, CPU traces, allocation traces, heap dumps, GC logs, call trees, asks "what does this GC log mean", "help me read this flame graph", "what's causing heap growth", "how do I interpret this allocation trace", "help me read this perf trace", "interpret this pprof output", "what does this OOM error mean", "analyze this heap dump", or pastes runtime diagnostic data for interpretation. Provides expert analysis of profiler artifacts across JVM/Android, Node.js/V8, Python, Go, Dart/Flutter, Swift/iOS, and browser DevTools.
 argument-hint: "[runtime]  e.g. jvm | node | python | go | flutter | ios | browser"
 allowed-tools: Read
 ---
+
+# Profiler Analysis
 
 ## Profiler & GC Log Analysis
 
@@ -86,3 +88,8 @@ When given allocation traces from any runtime, identify:
 4. **Retained paths** (shortest path from GC root to leaked object) → root cause of heap growth
 
 Request a heap diff (snapshot before vs. after a user action) when a leak is suspected but not confirmed.
+
+## Additional Resources
+
+- **`bottleneck-patterns`** — Apply after identifying profiler hotspots to match patterns and find fixes
+- **`investigate`** — Use when profiler data is one of several evidence types in a broader investigation

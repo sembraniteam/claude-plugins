@@ -1,8 +1,11 @@
 ---
 name: impact-matrix
-description: This skill activates when the user asks to prioritize performance issues, says "which fix should I do first", "rank these findings", "what's the highest impact change", "create a priority matrix", "complexity vs impact", "what should we focus on", "help us decide what to fix next sprint", "triage these issues", or provides a list of performance findings that need to be ranked. Applies a structured Complexity × Impact matrix and produces a prioritized action plan.
+description: This skill should be used when the user asks to prioritize performance issues, says "which fix should I do first", "rank these findings", "what's the highest impact change", "create a priority matrix", "complexity vs impact", "what should we focus on", "help us decide what to fix next sprint", "triage these issues", or provides a list of performance findings that need to be ranked. Applies a structured Complexity × Impact matrix and produces a prioritized action plan.
+argument-hint: "[list of findings to prioritize]"
 allowed-tools: Read
 ---
+
+# Impact Matrix
 
 ## Complexity × Impact Prioritization Matrix
 
