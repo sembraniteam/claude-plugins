@@ -46,15 +46,15 @@ For each platform, build and run one command with all language blocks:
 ```bash
 python3 $CLAUDE_PLUGIN_ROOT/scripts/generate-release-notes.py \
   --platform <platform> \
-  --lang <code1> --intro "<intro1>" [--items "<items1>"] [--outro "<outro1>"] \
-  --lang <code2> --intro "<intro2>" [--items "<items2>"] [--outro "<outro2>"]
+  --lang <code1> --intro "<intro1>" [--item "<item1>" --item "<item2>"] [--outro "<outro1>"] \
+  --lang <code2> --intro "<intro2>" [--item "<item1>" --item "<item2>"] [--outro "<outro2>"]
 ```
 
 **`--intro`** — at least 100 characters, capped at 2 sentences, friendly non-technical language. Include the version number or release context. Translate faithfully per language.
 
-**`--items`** (optional) — if omitted, the script auto-extracts from CHANGELOG.md in priority order (Breaking Changes → Added → Changed → Fixed → Reverted), capped at 6. When provided, convert CHANGELOG entries to user-friendly language as `"- First change\n- Second change"`. Max 6 items.
+**`--item`** (optional, repeatable) — if omitted, the script auto-extracts from CHANGELOG.md in priority order (Breaking Changes → Added → Changed → Fixed → Reverted), capped at 6. When provided, pass one `--item` flag per entry with user-friendly language. Max 6 items.
 
-> **Non-English languages:** Always provide `--items` with translated content. Omitting `--items` for a non-English language causes the section to display raw English CHANGELOG text.
+> **Non-English languages:** Always provide `--item` flags with translated content. Omitting `--item` for a non-English language causes the section to display raw English CHANGELOG text.
 
 | Platform    | Recommended Items                                |
 |-------------|--------------------------------------------------|

@@ -67,9 +67,9 @@ Create `.claude/changelog-manager.local.md` in your project (or run `/changelog-
 ```yaml
 ---
 languages:
-  - code: en
+  - code: en_US
     name: English
-  - code: id
+  - code: id_ID
     name: Indonesian
 platforms:
   - playstore

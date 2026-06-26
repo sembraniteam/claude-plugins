@@ -60,9 +60,9 @@ def auto_extract(categories: dict) -> list:
     return items
 
 
-def clean_items(raw: str) -> list:
+def clean_items(raw: list) -> list:
     items = []
-    for line in raw.splitlines():
+    for line in raw:
         line = re.sub(r"^\d+\.\s*|^[-*•]\s*", "", line.strip())
         line = re.sub(r"\.$", "", line).strip()
         if line:
@@ -105,13 +105,18 @@ def parse_args(argv: list):
                 raise RuntimeError(f"Unknown platform '{platform}'. Valid: {', '.join(PLATFORM_LIMITS)}")
             i += 2
         elif arg == "--lang":
-            current = {"code": argv[i + 1], "intro": "", "items": "", "outro": ""}
+            current = {"code": argv[i + 1], "intro": "", "items": [], "outro": ""}
             langs.append(current)
             i += 2
-        elif arg in ("--intro", "--items", "--outro"):
+        elif arg in ("--intro", "--outro"):
             if not current:
                 raise RuntimeError(f"{arg} must come after --lang")
             current[arg[2:]] = argv[i + 1]
+            i += 2
+        elif arg == "--item":
+            if not current:
+                raise RuntimeError("--item must come after --lang")
+            current["items"].append(argv[i + 1])
             i += 2
         else:
             i += 1
@@ -135,10 +140,10 @@ def main():
     content = f"# Release Notes — {PLATFORM_LABELS[platform]}\n\n"
 
     for lang in langs_input:
-        if lang["items"].strip():
+        if lang["items"]:
             items = clean_items(lang["items"])
         else:
-            items = clean_items("\n".join(auto_extract(categories)))
+            items = clean_items(auto_extract(categories))
 
         section = build_section(lang["intro"], items, max_chars, lang.get("outro", ""))
         content += f"## {lang['code'].upper()}\n{section}\n\n"

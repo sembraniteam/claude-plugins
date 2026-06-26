@@ -20,15 +20,15 @@ python3 $CLAUDE_PLUGIN_ROOT/scripts/generate-release-notes.py \
   --platform playstore \
   --lang en_US \
     --intro "We've packed this update with features you've been asking for, plus important fixes to make your experience smoother and more reliable every day." \
-    --items "- You can now switch to dark mode from Settings
-- Notifications arrive faster and more reliably
-- Fixed a crash when opening the app without internet" \
+    --item "You can now switch to dark mode from Settings" \
+    --item "Notifications arrive faster and more reliably" \
+    --item "Fixed a crash when opening the app without internet" \
     --outro "Update now and let us know what you think!" \
   --lang id_ID \
     --intro "Pembaruan ini hadir dengan fitur-fitur yang kalian minta dan perbaikan penting untuk pengalaman yang lebih lancar setiap harinya." \
-    --items "- Kini bisa beralih ke mode gelap dari Pengaturan
-- Notifikasi datang lebih cepat dan andal
-- Perbaikan crash saat membuka aplikasi tanpa internet" \
+    --item "Kini bisa beralih ke mode gelap dari Pengaturan" \
+    --item "Notifikasi datang lebih cepat dan andal" \
+    --item "Perbaikan crash saat membuka aplikasi tanpa internet" \
     --outro "Perbarui sekarang dan beri tahu kami pendapat Anda!"
 ```
 

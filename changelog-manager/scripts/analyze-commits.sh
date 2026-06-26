@@ -87,6 +87,11 @@ while IFS= read -r COMMIT; do
 
 done <<< "$COMMITS"
 
+if [ "$BUMP_MAJOR" -eq 0 ] && [ "$BUMP_MINOR" -eq 0 ] && [ "$BUMP_PATCH" -eq 0 ]; then
+    echo "No changes since last release."
+    exit 0
+fi
+
 if [ "$BUMP_MAJOR" -eq 1 ]; then
     MAJOR=$((MAJOR+1))
     MINOR=0
