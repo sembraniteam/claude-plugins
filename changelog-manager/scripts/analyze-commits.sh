@@ -56,7 +56,7 @@ while IFS= read -r COMMIT; do
             ;;
     esac
 
-    if [ "$CATEGORY" = "ignore" ]; then
+    if [ "$CATEGORY" = "ignore" ] || [ "$CATEGORY" = "other" ]; then
         continue
     fi
 

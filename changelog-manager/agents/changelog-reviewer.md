@@ -71,8 +71,8 @@ If `RELEASE_NOTES`, `RELEASE_NOTES_APPSTORE`, or `RELEASE_NOTES_PLAYSTORE` exist
 
 - **Intro length**: Must be ≥ 100 characters, ≤ 2 sentences
 - **Tone**: Friendly, non-technical, written for general users
-- **Play Store** (`RELEASE_NOTES_PLAYSTORE`): Each language section must be ≤ 500 characters
-- **App Store** (`RELEASE_NOTES_APPSTORE`): Each language section must be ≤ 4,000 characters
+- **Play Store** (`RELEASE_NOTES_PLAYSTORE`): Each language section must be ≤ 500 characters — if over, suggest invoking `release-notes-validator`
+- **App Store** (`RELEASE_NOTES_APPSTORE`): Each language section must be ≤ 4,000 characters — if over, suggest invoking `release-notes-validator`
 - **Translation consistency**: Items across languages should convey the same meaning
 - **User-friendliness**: Entries should describe user benefit, not implementation detail
 

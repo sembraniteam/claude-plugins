@@ -27,10 +27,10 @@ bash $CLAUDE_PLUGIN_ROOT/scripts/analyze-commits.sh
   "next_version": "v1.2.0",
   "date": "2025-06-15",
   "commits": [
-    { "category": "added", "message": "add OAuth2 login support", "pr": "47", "breaking": false },
-    { "category": "added", "message": "add avatar upload with crop", "pr": "44", "breaking": false },
-    { "category": "fixed", "message": "prevent crash on empty password field", "pr": "45", "breaking": false },
-    { "category": "fixed", "message": "retry on 503 with exponential backoff", "pr": "46", "breaking": false }
+    { "category": "added", "message": "Add OAuth2 login support", "pr": "47", "breaking": false },
+    { "category": "added", "message": "Add avatar upload with crop", "pr": "44", "breaking": false },
+    { "category": "fixed", "message": "Prevent crash on empty password field", "pr": "45", "breaking": false },
+    { "category": "fixed", "message": "Retry on 503 with exponential backoff", "pr": "46", "breaking": false }
   ]
 }
 ```
@@ -43,12 +43,12 @@ bash $CLAUDE_PLUGIN_ROOT/scripts/analyze-commits.sh
 ## [v1.2.0] - 2025-06-15
 
 ### Added
-- add OAuth2 login support (#47)
-- add avatar upload with crop (#44)
+- Add OAuth2 login support (#47)
+- Add avatar upload with crop (#44)
 
 ### Fixed
-- prevent crash on empty password field (#45)
-- retry on 503 with exponential backoff (#46)
+- Prevent crash on empty password field (#45)
+- Retry on 503 with exponential backoff (#46)
 ```
 
 ## CHANGELOG.md After Update
@@ -66,12 +66,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [v1.2.0] - 2025-06-15
 
 ### Added
-- add OAuth2 login support (#47)
-- add avatar upload with crop (#44)
+- Add OAuth2 login support (#47)
+- Add avatar upload with crop (#44)
 
 ### Fixed
-- prevent crash on empty password field (#45)
-- retry on 503 with exponential backoff (#46)
+- Prevent crash on empty password field (#45)
+- Retry on 503 with exponential backoff (#46)
 
 ## [v1.1.0] - 2025-05-01
 

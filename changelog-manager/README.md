@@ -42,11 +42,11 @@ Creates bilingual, platform-specific release notes from the latest `CHANGELOG.md
 
 **Output files:**
 
-| Platform | File | Char Limit |
-|----------|------|------------|
-| Play Store | `RELEASE_NOTES_PLAYSTORE` | 500 / language |
-| App Store | `RELEASE_NOTES_APPSTORE` | 4,000 / language |
-| Web | `RELEASE_NOTES` | No limit |
+| Platform   | File                      | Char Limit       |
+|------------|---------------------------|------------------|
+| Play Store | `RELEASE_NOTES_PLAYSTORE` | 500 / language   |
+| App Store  | `RELEASE_NOTES_APPSTORE`  | 4,000 / language |
+| Web        | `RELEASE_NOTES`           | No limit         |
 
 **Requires:** `CHANGELOG.md` to exist. Run `generate-changelog` first.
 
@@ -80,7 +80,7 @@ platforms:
 
 This file is gitignored automatically.
 
-## Agent
+## Agents
 
 ### `changelog-reviewer`
 
@@ -96,17 +96,34 @@ Reviews changelog and release notes quality on request.
 - Release notes character limits per platform
 - Intro length (minimum 100 characters)
 
+---
+
+### `release-notes-validator`
+
+Auto-trims release notes to fit platform character limits. Invoked automatically by `generate-release-notes` on character limit errors, or on demand.
+
+**Triggers:** character limit error from the script, "trim release notes to fit", "validate release note lengths", "fix character count", "auto-trim items"
+
+**What it does:**
+1. Parses the planned `generate-release-notes.py` command from context
+2. Calculates per-language character counts
+3. Removes lowest-priority items from the end until the section fits
+4. Appends a translated closing phrase ("And many more improvements inside!") when items are dropped
+5. Re-runs the adjusted command and reports what changed
+
+**Supported platforms:** Play Store (500 chars/lang), App Store (4,000 chars/lang)
+
 ## Commit Type Mapping
 
-| Conventional Commit | CHANGELOG Section | Version Bump |
-|--------------------|------------------|-------------|
-| `feat:` | Added | MINOR |
-| `fix:` | Fixed | PATCH |
-| `perf:` | Changed | PATCH |
-| `refactor:` | Changed | PATCH |
-| `revert:` | Reverted | PATCH |
-| `feat!:` / `BREAKING CHANGE` | Breaking Changes | MAJOR |
-| `bump:`, `test:`, `ci:`, `chore:`, `docs:` | *(ignored)* | — |
+| Conventional Commit                        | CHANGELOG Section | Version Bump |
+|--------------------------------------------|-------------------|--------------|
+| `feat:`                                    | Added             | MINOR        |
+| `fix:`                                     | Fixed             | PATCH        |
+| `perf:`                                    | Changed           | PATCH        |
+| `refactor:`                                | Changed           | PATCH        |
+| `revert:`                                  | Reverted          | PATCH        |
+| `feat!:` / `BREAKING CHANGE`               | Breaking Changes  | MAJOR        |
+| `bump:`, `test:`, `ci:`, `chore:`, `docs:` | *(ignored)*       | —            |
 
 ## Installation
 

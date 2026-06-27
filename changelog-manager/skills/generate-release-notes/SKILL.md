@@ -62,7 +62,7 @@ python3 $CLAUDE_PLUGIN_ROOT/scripts/generate-release-notes.py \
 | `appstore`  | 5–6 (can expand on key features)                 |
 | `web`       | Up to 6 significant changes, in full detail      |
 
-For Play Store, prioritize: Breaking Changes > Added > Fixed > Changed > Reverted.
+For Play Store, prioritize: Breaking Changes > Added > Changed > Fixed > Reverted.
 
 **`--outro`** (optional, strongly recommended) — 1-sentence closing appended after items with a blank line. Use for calls to action, thank-you notes, or support links. Translate per language. Omit for Play Store only if near 500 chars.
 
@@ -73,6 +73,14 @@ For tone guidelines, language examples, and localization tips, see **`references
 ## Error Handling
 
 **Character limit exceeded** (Play Store / App Store):
+
+Delegate to the **`release-notes-validator`** agent — pass it the full command you attempted. It will:
+1. Calculate per-language character counts
+2. Remove lowest-priority items from the end (items are ordered by priority, so the last ones are lowest)
+3. Append a closing phrase ("and many more improvements") if items were removed
+4. Re-run the adjusted command and report what changed
+
+Only handle manually if the agent is unavailable:
 1. Remove the outro if present
 2. Shorten intro to 1 sentence (~110–120 chars)
 3. Remove lowest-priority items (Reverted → Changed → Fixed)
@@ -98,3 +106,4 @@ After generating, display a summary block:
 
 - **`references/platform-guide.md`** — Tone guidelines, writing examples per platform, and localization tips
 - **`examples/playstore-bilingual.md`** — Complete worked example: Play Store with English + Indonesian output
+- **`agents/release-notes-validator`** — Auto-trims items and appends closing phrases when char limits are exceeded
