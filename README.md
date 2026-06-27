@@ -24,12 +24,13 @@ Design and review system architectures, database schemas, and feature modules wi
 
 Generates and maintains `CHANGELOG.md` and platform-specific release notes from git commit history.
 
-| Component                                   | Description                                                         |
-|---------------------------------------------|---------------------------------------------------------------------|
-| `/changelog-manager:generate-changelog`     | Generate or update `CHANGELOG.md` with automatic semver bumping     |
-| `/changelog-manager:generate-release-notes` | Create bilingual release notes for App Store, Play Store, or Web    |
-| `/changelog-manager:changelog-config`       | Configure languages and platforms for your project                  |
-| `changelog-reviewer` agent                  | Review changelog quality, semver accuracy, and release notes limits |
+| Component                                   | Description                                                                  |
+|---------------------------------------------|------------------------------------------------------------------------------|
+| `/changelog-manager:generate-changelog`     | Generate or update `CHANGELOG.md` with automatic semver bumping              |
+| `/changelog-manager:generate-release-notes` | Create bilingual release notes for App Store, Play Store, or Web             |
+| `/changelog-manager:changelog-config`       | Configure languages and platforms for your project                           |
+| `changelog-reviewer` agent                  | Review changelog quality, semver accuracy, and release notes limits          |
+| `release-notes-validator` agent             | Auto-trim release note items and append a closing phrase when limits are hit |
 
 **Prerequisites:** Git, `jq`, Python 3
 
@@ -37,17 +38,37 @@ Generates and maintains `CHANGELOG.md` and platform-specific release notes from 
 
 ### [debugging-workflow](./debugging-workflow)
 
-Systematic debugging plugin with a structured 8-step process: pre-flight checklist, context gathering, git diff analysis, test discovery, root cause analysis, targeted fix, multi-language verification, and test execution.
+Systematic debugging plugin with a structured 9-step process: pre-flight checklist, error parsing, context gathering, git diff analysis, test discovery, root cause analysis, targeted fix, multi-language verification, and test execution.
 
-| Component                           | Description                                                |
-|-------------------------------------|------------------------------------------------------------|
-| `/debugging-workflow:debug [error]` | Run the full debugging workflow from error to verified fix |
-| `analyze-code` skill                | Auto-detect language and run appropriate analysis tools    |
-| `code-analyzer` agent               | Autonomous full-project static analysis reporter           |
+| Component                              | Description                                                            |
+|----------------------------------------|------------------------------------------------------------------------|
+| `/debugging-workflow:debug [error]`    | Run the full debugging workflow from error to verified fix             |
+| `/debugging-workflow:parallel-debug`   | Spawn parallel hypothesis-investigator agents for complex root causes  |
+| `analyze-code` skill                   | Auto-detect language and run appropriate analysis tools                |
+| `code-analyzer` agent                  | Autonomous full-project static analysis reporter                       |
+| `hypothesis-investigator` agent        | Investigates a single root-cause hypothesis, fixes, and reports back   |
 
 **Supported languages:** Dart/Flutter, Rust, TypeScript, JavaScript, Python, Go, Java, Kotlin, Swift, Ruby, C/C++
 
 **Prerequisites:** Git, plus the analyze tool for your language (`dart`, `cargo`, `npx`, `ruff`, `go`, etc.)
+
+---
+
+### [perfmind](./perfmind)
+
+Performance investigation assistant for web, mobile, desktop, and API applications. Guides structured investigations from raw evidence (profiler output, GC logs, screenshots, metrics) to prioritized, role-tailored recommendations.
+
+| Component                          | Description                                                                         |
+|------------------------------------|-------------------------------------------------------------------------------------|
+| `/perfmind:investigate [app-type]` | Start a structured investigation — accepts flame graphs, GC logs, metrics, traces   |
+| `/perfmind:report [role]`          | Generate a role-tailored report (developer / DevOps / perf-engineer / leadership)   |
+| `profiler-analysis` skill          | Auto-activates when flame graphs, allocation traces, or heap dumps are shared       |
+| `bottleneck-patterns` skill        | Auto-activates on slow response times, high CPU, memory leaks, jank, or ANR reports |
+| `impact-matrix` skill              | Auto-activates when asked to prioritize or rank performance findings                |
+| `performance-analyst` agent        | Hypothesis-driven deep-dive into a single performance domain                        |
+| `report-generator` agent           | Generates polished, role-tailored reports from investigation findings               |
+
+**Supported platforms:** Web (Core Web Vitals), Android, iOS, Flutter, desktop, API/backend
 
 ---
 
@@ -77,8 +98,9 @@ Or install a single plugin by pointing to its directory:
 ```bash
 cc plugin install https://github.com/sembraniteam/claude-plugins/archimind
 cc plugin install https://github.com/sembraniteam/claude-plugins/changelog-manager
-cc plugin install https://github.com/sembraniteam/claude-plugins/git-helper
 cc plugin install https://github.com/sembraniteam/claude-plugins/debugging-workflow
+cc plugin install https://github.com/sembraniteam/claude-plugins/git-helper
+cc plugin install https://github.com/sembraniteam/claude-plugins/perfmind
 ```
 
 ---
@@ -137,7 +159,13 @@ Creates `.claude/changelog-manager.local.md` with your preferred languages and p
 /debugging-workflow:debug <error message or stack trace>
 ```
 
-Runs a structured 8-step debugging session: parses the error, reads relevant files, checks `git diff`, finds related tests, concludes the root cause, applies a fix, verifies with the appropriate language tool, and runs tests.
+Runs a structured 9-step debugging session: parses the error, reads relevant files, checks `git diff`, finds related tests, concludes the root cause, applies a fix, verifies with the appropriate language tool, and runs tests.
+
+For complex bugs with multiple plausible causes, use parallel mode to investigate hypotheses concurrently:
+
+```
+/debugging-workflow:parallel-debug
+```
 
 ### First-time setup for debugging-workflow
 
@@ -146,6 +174,20 @@ Runs a structured 8-step debugging session: parses the error, reads relevant fil
 ```
 
 On first run, if no `.claude/debugging-workflow.local.md` exists, Claude will offer to create one and walk you through setting `lint_config_path`, `skip_verification`, and an optional `analyze_command`.
+
+### Performance investigation workflow
+
+```
+/perfmind:investigate
+```
+
+Paste in profiler output, GC logs, screenshots, or metrics. Claude gathers evidence across multiple performance domains (response time, CPU, memory, GC, database, networking, battery) and produces a prioritized findings list.
+
+```
+/perfmind:report developer
+```
+
+Generates a role-tailored report from the current investigation. Available roles: `developer`, `perf-engineer`, `devops`, `leadership`.
 
 ---
 
@@ -174,7 +216,8 @@ On first run, if no `.claude/debugging-workflow.local.md` exists, Claude will of
 │   ├── .claude-plugin/
 │   │   └── plugin.json
 │   ├── agents/
-│   │   └── changelog-reviewer.md
+│   │   ├── changelog-reviewer.md
+│   │   └── release-notes-validator.md
 │   ├── scripts/
 │   │   ├── analyze-commits.sh
 │   │   └── generate-release-notes.py
@@ -186,20 +229,46 @@ On first run, if no `.claude/debugging-workflow.local.md` exists, Claude will of
 │   ├── .claude-plugin/
 │   │   └── plugin.json
 │   ├── agents/
-│   │   └── code-analyzer.md
+│   │   ├── code-analyzer.md
+│   │   └── hypothesis-investigator.md
 │   └── skills/
 │       ├── analyze-code/
 │       │   ├── SKILL.md
-│       │   └── examples/
-│       └── debug/
+│       │   └── references/
+│       ├── debug/
+│       │   ├── SKILL.md
+│       │   ├── examples/
+│       │   └── references/
+│       └── parallel-debug/
 │           ├── SKILL.md
+│           ├── examples/
 │           └── references/
-└── git-helper/
+├── git-helper/
+│   ├── .claude-plugin/
+│   │   └── plugin.json
+│   └── skills/
+│       ├── generate-branch/
+│       └── generate-commit/
+└── perfmind/
     ├── .claude-plugin/
     │   └── plugin.json
+    ├── agents/
+    │   ├── performance-analyst.md
+    │   └── report-generator.md
     └── skills/
-        ├── generate-branch/
-        └── generate-commit/
+        ├── bottleneck-patterns/
+        │   ├── SKILL.md
+        │   └── references/
+        ├── impact-matrix/
+        │   └── SKILL.md
+        ├── investigate/
+        │   ├── SKILL.md
+        │   └── examples/
+        ├── profiler-analysis/
+        │   └── SKILL.md
+        └── report/
+            ├── SKILL.md
+            └── references/
 ```
 
 ---
