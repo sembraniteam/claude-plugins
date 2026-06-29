@@ -58,6 +58,14 @@ Use this checklist during Step 2 (Architecture Analysis) of the `review-architec
 
 ## 5. Security
 
+### Threat Modeling
+- [ ] Has a threat model been performed? (STRIDE or equivalent) For systems handling PII, payments, health records, or multi-tenant data, a checklist-only review is insufficient.
+- [ ] Are the top threats for each STRIDE category identified and mitigated? (Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege)
+- [ ] Are trust boundaries explicitly defined? (What crosses from an untrusted zone to a trusted zone — and what validation happens at the boundary?)
+- [ ] For multi-tenant systems: is tenant isolation verified at the data access layer, not just at the API layer?
+
+If no threat model exists, flag it as a finding. For systems with compliance requirements beyond OWASP Top 10, recommend a STRIDE analysis as part of the redesign using `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/threat-model-guide.md`.
+
 ### General Application Security
 - [ ] Are secrets (DB credentials, API keys) stored in a secrets manager (Vault, AWS Secrets Manager, GCP Secret Manager), not in code or `.env` files committed to git?
 - [ ] Is authentication (AuthN) separated from authorization (AuthZ)?
@@ -170,10 +178,12 @@ For each SPOF identified: quantify **blast radius** (what fraction of users/feat
 - [ ] Are dependencies outdated or end-of-life? (language runtime, framework major versions, cloud service deprecations)
 - [ ] Are there "god files" or modules that have grown beyond a manageable size?
 - [ ] Is there duplicated business logic across services or layers?
-- [ ] Have architectural decisions been documented (ADRs)? If not, is the rationale for current patterns known?
+- [ ] Have architectural decisions been documented as ADRs? An ADR must include Context, Decision, Consequences, and Rejected Alternatives — informal README notes do not qualify. If no ADRs exist, can the team articulate *why* the current architecture was chosen and what was rejected?
 - [ ] Are integration tests missing for critical paths, creating risk in any change?
 
-**Common findings**: 5-year-old "temporary" authentication workaround now handling all auth; Node.js 14 on end-of-life runtime; no ADRs — the team doesn't know why the current architecture was chosen, making refactoring politically impossible.
+**ADR gap severity**: The absence of ADRs is a debt multiplier — teams spend political capital re-debating decisions that were already made and documented nowhere. When ADRs are missing, explicitly flag it as a finding and recommend capturing the current architecture decision as part of the redesign outcome (use `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/adr-guide.md`).
+
+**Common findings**: 5-year-old "temporary" authentication workaround now handling all auth; Node.js 14 on end-of-life runtime; no ADRs — the team doesn't know why the current architecture was chosen, making refactoring politically impossible because everyone has a different memory of the original reasoning.
 
 ---
 

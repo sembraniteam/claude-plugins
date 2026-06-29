@@ -13,17 +13,17 @@ Core behaviors:
 - Identify SPOFs, bottlenecks, security risks, and technical debt in every option
 - Explain the technical rationale and risk level behind every decision
 
-Follow the **Spec → Plan → Review → Ship** workflow strictly — gather requirements first, generate all three options and write them to content.md, present a compact summary for user confirmation, then open the visual viewer for final selection. **Never output the full architecture options in the chat response** — the viewer is the display surface. Keep chat responses brief status updates.
+Follow the **Spec → Plan → Review → Ship** workflow strictly — gather requirements first, generate a direct recommendation and write it to content.md, present a compact summary for user confirmation, then open the visual viewer for review. **Never output the full architecture content in the chat response** — the viewer is the display surface. Keep chat responses brief status updates.
 
 ## Workflow
 
 At the very start, call **TaskCreate** to create one task per step:
 1. Spec — Identify and gather missing requirements
 2. Spec — Confirm requirements summary
-3. Plan — Generate 3 architecture options, ERD, and Recommendation → write content.md
-4. Review — Present plan summary, confirm or iterate
-5. Ship — Open viewer and await option selection
-6. Ship — Write final documentation
+3. Plan — Generate architecture recommendation, ERD, and Design Rationale → write content.md
+4. Review — Present recommendation summary, confirm or adjust
+5. Ship — Open viewer, await confirmation
+6. Ship — Write ADR and Final Documentation
 7. Ship — Save permanent docs and stop server
 
 Mark each task `in_progress` when starting it and `completed` when done.
@@ -117,7 +117,7 @@ After collecting all answers, display a structured summary **before** generating
 | Observability tier | {basic / full / SRE-grade}     | Q2 + Q4 (inferred) |
 
 **Key inferences:**
-- {1–3 bullets summarizing constraints inferred from the combination of answers — e.g., "High volume + small team → Lean is the safest starting point"}
+- {1–3 bullets summarizing constraints inferred from the combination of answers — e.g., "High volume + small team → a managed monolith is the safest starting point"}
 
 > Does this accurately capture your requirements? Reply with any corrections, or say **"Yes, proceed"** to generate the architecture options.
 
@@ -127,57 +127,39 @@ Wait for the user to confirm or correct. If the user provides corrections, updat
 
 ---
 
-### Stage 2: Plan — Generate Architecture Options
+### Stage 2: Plan — Generate Architecture Recommendation
 
-After confirmation, compose the full design document — all 3 options, ERD, and Recommendation — **directly into `/tmp/archimind-viewer/content.md`** using the Write tool. Print a short status line like "Planning 3 options…" while writing. **Do not open the viewer yet — that happens in Stage 4: Ship.**
+After confirmation, compose the full design document **directly into `/tmp/archimind-viewer/content.md`** using the Write tool. Print a short status line like "Planning…" while writing. **Do not open the viewer yet — that happens in Stage 4: Ship.**
 
-Design **exactly 3 options**: Lean, Standard, and Advanced. For canonical pattern names and per-tier constraints, read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/architecture-patterns.md`.
+**Choose and commit**: Map each stated requirement to the tier it demands (read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/architecture-patterns.md` for tier definitions). Then commit to the architecture that satisfies all requirements with the minimum viable complexity. Don't hedge — a clear recommendation with honest trade-offs is more useful than a comparison. The user can push back in Stage 3 if they want something different.
 
-**Anti-over-engineering check before generating options**: Map each stated requirement to the tier that satisfies it. If the Lean tier satisfies all stated requirements, make this explicit in the Recommendation — do not default to Standard or Advanced because they "seem more professional." Complexity must be justified by a specific, named requirement, not by preference for modern patterns.
+**C4 Context diagram — write first**: Before the architecture, write the `## System Context` section with a C4 Level 1 diagram. Read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/mermaid-guidelines.md` (C4 Context Diagram section) for format.
 
-#### Option 1: Lean
-- Proven, well-understood patterns. Minimal infrastructure complexity.
-- Typical: Monolith, Modular Monolith, Simple REST + Single DB.
-- Best for MVPs, small teams, tight deadlines.
+**Write the recommendation directly under `## Architecture Diagram`** — open with the pattern name (e.g., "Layered Monolith with PostgreSQL") in the intro paragraph. Use `####` for subsections. The scaffold is in `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/output-template.md` — read-only.
 
-#### Option 2: Standard
-- Balanced between pragmatism and scalability. Some distributed elements where justified.
-- Typical: Modular Monolith with service boundaries, BFF + separate services for key domains.
-- Best for growing products with 6–18 month horizon.
+Required `####` subsections — **three Mermaid diagrams are mandatory**. Read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/mermaid-guidelines.md` for syntax and per-pattern guidance:
 
-#### Option 3: Advanced
-- Full distributed architecture optimized for scale or flexibility.
-- Typical: Microservices, Event-Driven + CQRS, Serverless-first, Hexagonal.
-- Best for teams with operational maturity and long investment horizon.
-
-#### Required Sections Per Option
-
-Structure each option in the document under `## Architecture Diagram` using `### Option N:` subheadings. Use `####` for subsections. The full blank scaffold is in `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/output-template.md` — **read it for structure only; never write to it**.
-
-Required `####` subsections for each option — **every option must include three Mermaid diagrams**. Read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/mermaid-guidelines.md` for syntax and per-tier guidance:
-
-- **Infrastructure Layout** (`architecture-beta`) — cloud groups, services with icons, and physical deployment topology. Use the Infrastructure Mapping section of mermaid-guidelines.md to map Q6 → concrete service names (e.g., EKS, RDS, S3 for AWS). Do not use generic placeholders. Follow each diagram with a 1–2 sentence description.
-- **Request Flow** (`sequenceDiagram`) — primary user-facing request end-to-end. Cover: client → API → cache → DB → response. Follow with a 1–2 sentence description.
-- **Logical Architecture** (`flowchart TD` for Lean, `flowchart LR` for Standard/Advanced) — structural view: Clean Architecture layers (Lean), bounded context domain map (Standard), or service/event mesh (Advanced). Follow with a 1–2 sentence description. See mermaid-guidelines.md for tier-specific starters.
+- **Infrastructure Layout** (`architecture-beta`) — cloud groups, services with icons, physical deployment topology. Map Q6 → concrete service names (e.g., EKS, RDS, S3 for AWS). No generic placeholders. 1–2 sentence description after the diagram.
+- **Request Flow** (`sequenceDiagram`) — primary user-facing request end-to-end: client → API → cache → DB → response. 1–2 sentence description.
+- **Logical Architecture** (`flowchart TD` for single-service / layered; `flowchart LR` for multi-domain / event mesh) — structural view. 1–2 sentence description. See mermaid-guidelines.md for pattern-specific starters.
 - **Key Components** — bulleted list of main services/modules with one-line descriptions
 - **Technology Stack** — table: Layer / Recommended / Alternatives / Reason
 - **Data Layer Design** — all applicable store types; for each: what's stored, why not the primary DB, data flow. See `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/database-selection-guide.md`.
-- **Object Storage** — only if relevant to user's answers: solution, what's stored, bucket org, access control, encryption, self-hosted vs. managed trade-offs
+- **Object Storage** — only if relevant: solution, what's stored, bucket org, access control, encryption, self-hosted vs. managed trade-offs
 - **Observability Strategy** — OTel-first; pillars: Instrumentation, Logs, Metrics, Distributed Traces, Alerting. See `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/observability-guide.md`.
 - **Technology Decision Rationale** — for each major choice: why chosen, better-than-alternatives, required skills, ecosystem longevity
 - **SPOF Analysis** — every single point of failure: blast radius, detection time, and mitigation
 - **Disaster Recovery** — RTO, RPO, backup strategy, failover approach, DR tier proportionate to stated scale and compliance
 - **Future Impact** — 6-month / 1-year / 3-year table + scalability ceiling, operational overhead, reversibility, vendor lock-in
 - **Risks & Mitigations** — table: Risk / Likelihood / Impact / Mitigation
-- **When to Choose This Option** — 2–3 bullets
 
 #### ERD Section
 
-After all options, add `## ERD` with a Mermaid `erDiagram` covering the primary data model. Include table specifications for key entities (PK, columns, types, key indexes).
+After the option, add `## ERD` with a Mermaid `erDiagram` covering the primary data model. Include table specifications for key entities (PK, columns, types, key indexes).
 
-#### Recommendation Section
+#### Design Rationale Section
 
-Add `## Recommendation` with a **Narrative** — 4–6 sentences stating which option is recommended and why, referencing actual requirements (team size, timeline, scale, team constraints). Acknowledge the main trade-off between the options.
+Add `## Design Rationale` — 4–6 sentences: why this specific architecture, what simpler or more complex alternatives were considered and ruled out, what the key trade-off is. Be specific: cite team size, scale targets, compliance requirements, timeline.
 
 Save the complete document with the Write tool. **Do not call start-server.sh at this stage.**
 
@@ -185,77 +167,71 @@ Save the complete document with the Write tool. **Do not call start-server.sh at
 
 ### Stage 3: Review — Confirm Before Shipping
 
-After writing content.md, present a compact **Plan Summary** in chat to let the user verify the direction before opening the viewer:
+After writing content.md, present a compact **Recommendation Summary** in chat:
 
 ---
 
-**Plan Summary**
+**Recommendation**
 
-| Option | Tier     | Architecture Name | Key Stack                                   |
-|--------|----------|-------------------|---------------------------------------------|
-| 1      | Lean     | {Name}            | {e.g., Monolith + PostgreSQL}               |
-| 2      | Standard | {Name}            | {e.g., Modular Monolith + Redis + RabbitMQ} |
-| 3      | Advanced | {Name}            | {e.g., Microservices + Kafka + ClickHouse}  |
-
-**Recommended:** Option N — {1–2 sentence rationale citing the key requirements that drove this recommendation.}
+**Architecture**: {Name} — {1-sentence description of the pattern}
+**Stack**: {key technologies in brief}
+**Why**: {2–3 sentences citing the specific requirements that drove this choice and what alternatives were ruled out}
 
 ---
 
 Use **AskUserQuestion** to ask the user what to do next:
 
 ```
-question: "Three architecture options are ready. What would you like to do?"
+question: "The architecture recommendation is ready. What would you like to do?"
 header: "Next Step"
 options:
   - label: "Ship — open the visual viewer"
-    description: "Open the interactive viewer to compare all three options side by side and make your final choice"
-  - label: "Iterate — adjust before viewing"
-    description: "Request changes to the options, tech stack, or recommendation before opening the viewer"
+    description: "Open the interactive viewer to review the full design"
+  - label: "Adjust — I have suggestions"
+    description: "Request changes to the architecture, tech stack, or rationale before viewing"
 ```
 
-If the user chooses **Iterate**: apply the requested changes to `/tmp/archimind-viewer/content.md`, update the Plan Summary table, and re-present Stage 3. Repeat until the user chooses **Ship**.
+If the user chooses **Adjust**: apply the requested changes to `/tmp/archimind-viewer/content.md`, update the Recommendation Summary, and re-present Stage 3. Repeat until the user chooses **Ship**.
 
 ---
 
-### Stage 4: Ship — Visual Selection and Final Documentation
+### Stage 4: Ship — Visual Review and Final Documentation
 
-Open the viewer and invite the user to compare options visually:
+Open the viewer:
 
 ```bash
 open "$(bash "$CLAUDE_PLUGIN_ROOT/scripts/start-server.sh")"
 ```
 
-Post a brief chat message: "Viewer is open at http://localhost:PORT — use **Architecture Diagram** to compare options side by side and **ERD** to view the data model. Select an option when ready."
+Post a brief chat message: "Viewer is open at http://localhost:PORT — review the full design in **Architecture Diagram** and the data model in **ERD**. Tell me when you're ready to finalize, or request any last adjustments."
 
-**Option Selection**
+**Review and Confirm**
 
-Use **AskUserQuestion** to ask the user to choose:
+Use **AskUserQuestion**:
 
 ```
-question: "Which architecture would you like to proceed with?"
-header: "Select Option"
+question: "Ready to finalize this architecture?"
+header: "Finalize"
 options:
-  - label: "Option 1 — Lean"
-    description: <one-line summary of Option 1 name/pattern>
-  - label: "Option 2 — Standard"
-    description: <one-line summary of Option 2 name/pattern>
-  - label: "Option 3 — Advanced"
-    description: <one-line summary of Option 3 name/pattern>
+  - label: "Proceed — finalize this design"
+    description: "Write the final documentation and save the permanent record"
+  - label: "Adjust — one more change"
+    description: "Request a change; I'll update the viewer and you can reload"
 ```
 
-Allow iterations if the user wants adjustments (e.g., "swap MongoDB for PostgreSQL in Option 2"). After each adjustment, update `/tmp/archimind-viewer/content.md` and re-present AskUserQuestion. The user can click **↺ Reload** in the viewer sidebar to see updated content. Do not proceed until the user makes an explicit choice.
+If the user adjusts: apply to `/tmp/archimind-viewer/content.md`, tell the user to click **↺ Reload** in the viewer sidebar, then re-present. Repeat until the user proceeds.
 
-**Mark Selected Option and Write Final Documentation**
+**Confirm and Write Final Documentation**
 
-Once the user has chosen, complete all the following in sequence — these are one continuous step, not multiple:
+Once the user confirms, complete all the following in sequence — one continuous step:
 
 1. Read the saved document
 2. Insert decision header after the document title:
    ```markdown
-   **Selected:** Option N — {Tier}: {Architecture Name}
+   **Confirmed:** {Architecture Name}
    **Decision date:** {ISO date}
    ```
-3. Append a `## Decision Notes` section capturing user-requested adjustments, migration timing, and next steps
+3. Write the `## Architecture Decision Record` section — read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/adr-guide.md` for the required format. The ADR must include: Context (requirements active at decision time), Decision (what was chosen and why), Consequences (positive + trade-offs accepted + watch list), Rejected Alternatives (what simpler or more complex approaches were ruled out, with specific reasons), and a Review Trigger.
 
 **Append Final Documentation** — each section must be substantive, no placeholders:
 
@@ -271,7 +247,11 @@ Once the user has chosen, complete all the following in sequence — these are o
 ### Trade-offs & Next Steps
 ```
 
-For field-level guidance on each section, read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/output-template.md`. For the `### Security` section specifically, read `$CLAUDE_PLUGIN_ROOT/skills/design-database/references/security-guide.md` — it covers DB roles, TLS, connection pooling, secrets management, SQL injection prevention, audit logging, and compliance controls.
+For field-level guidance on each section, read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/output-template.md`.
+
+For the `### Security` section:
+- Read `$CLAUDE_PLUGIN_ROOT/skills/design-database/references/security-guide.md` for DB roles, TLS, connection pooling, secrets management, SQL injection prevention, audit logging, and compliance controls.
+- **STRIDE threat model**: Include the STRIDE table (read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/threat-model-guide.md`) when compliance requirement (Q8) is SOC 2, GDPR, PCI DSS, or HIPAA, **or** when the system is multi-tenant. For standard OWASP-only systems, write "STRIDE analysis not performed at this compliance tier — revisit if requirements change." and omit the table.
 
 **Save Permanent Documentation and Stop Server**
 
@@ -283,7 +263,7 @@ For field-level guidance on each section, read `$CLAUDE_PLUGIN_ROOT/skills/desig
 mkdir -p docs/archimind/architecture
 ```
 
-Then use the **Write tool** to write `docs/archimind/architecture/{timestamp_ms}-{topic}.md`. **This file must contain only the selected option** — not all three. Structure it using the scaffold in `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/output-template.md` — include only the selected `### Option N:` section, ERD, Recommendation, Decision Notes, and Final Documentation. Omit the other two options entirely. To re-visualize later: `bash "$CLAUDE_PLUGIN_ROOT/scripts/open-doc.sh" docs/archimind/architecture/{timestamp_ms}-{topic}.md`.
+Then use the **Write tool** to write `docs/archimind/architecture/{timestamp_ms}-{topic}.md`. Structure it using the scaffold in `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/output-template.md` — include the `## Architecture Diagram` section, ERD, Design Rationale, Architecture Decision Record, and Final Documentation. To re-visualize later: `bash "$CLAUDE_PLUGIN_ROOT/scripts/open-doc.sh" docs/archimind/architecture/{timestamp_ms}-{topic}.md`.
 
 4. Stop the viewer server:
 
@@ -299,11 +279,9 @@ bash "$CLAUDE_PLUGIN_ROOT/scripts/stop-server.sh"
 
 The viewer parses these heading patterns from `content.md`:
 
-- `## Architecture Diagram` + `### Option N:` subheadings → option tabs
+- `## Architecture Diagram` → content renders directly as the main view (no tab bar)
 - `## ERD` → ERD nav view
 - `## Revision` + `### Before` / `### After` → Before/After tabs
-
-**Critical**: Use `### Option N:` (level-3) within `## Architecture Diagram`, not `## Option N:` (level-2). The viewer splits on level-3 headings to create option tabs.
 
 **Fresh designs**: Omit the `## Revision` section — it is used only by review-architecture to show Before/After comparisons.
 
@@ -323,4 +301,14 @@ Read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/mermaid-guidelin
 
 ## Additional Resources
 
-All reference paths are cited inline throughout the workflow — follow the `read` directives in each stage for the relevant file. The full reference set lives under `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/` (architecture-patterns, database-selection-guide, observability-guide, engineering-principles, output-template, mermaid-guidelines) and `$CLAUDE_PLUGIN_ROOT/skills/design-database/references/security-guide.md`.
+All reference paths are cited inline throughout the workflow — follow the `read` directives in each stage for the relevant file. The full reference set lives under `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/`:
+
+- **`architecture-patterns.md`** — canonical pattern names and per-tier constraints
+- **`engineering-principles.md`** — 10 guiding principles; read at session start
+- **`database-selection-guide.md`** — read when selecting data stores
+- **`observability-guide.md`** — read when writing observability strategy
+- **`mermaid-guidelines.md`** — diagram type selection, node limits, C4 context diagram format
+- **`output-template.md`** — full document scaffold; read-only
+- **`adr-guide.md`** — ADR format; read during Stage 4 when writing the Architecture Decision Record
+- **`threat-model-guide.md`** — STRIDE methodology; read during Stage 4 for compliance-sensitive systems
+- **`$CLAUDE_PLUGIN_ROOT/skills/design-database/references/security-guide.md`** — DB-level security controls

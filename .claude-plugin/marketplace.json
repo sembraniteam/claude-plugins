@@ -8,8 +8,8 @@
   "plugins": [
     {
       "name": "archimind",
-      "description": "Design and review system architectures, database schemas, and feature modules with three-option comparison and visual Mermaid diagrams in a local browser viewer.",
-      "version": "0.9.0",
+      "description": "Design and review system architectures, database schemas, and feature modules with a direct recommendation workflow and visual Mermaid diagrams in a local browser viewer.",
+      "version": "0.10.0",
       "source": "./archimind",
       "author": {
         "name": "Ahmad Rifa'i",

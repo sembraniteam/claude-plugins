@@ -14,20 +14,18 @@ Use this template as a scaffold when generating the review document. Replace all
 
 **Generated:** {ISO date}
 
-<!-- Fill in after user selects: -->
-<!-- **Selected:** Option N — {Label}: {Short Title} -->
+<!-- Fill in after user confirms: -->
+<!-- **Confirmed:** {Short Title} -->
 <!-- **Decision date:** {ISO date} -->
 
 ## Architecture Diagram
 
-### Option 1: Conservative Refactor — {Title}
-
-{One paragraph describing the core approach and what minimal changes are made.}
+{One paragraph: the recommended redesign approach — what changes, what stays, and why this level of intervention is the right fit for the identified pain points and team constraints.}
 
 #### Infrastructure Layout
 ```mermaid
 architecture-beta
-  (proposed infrastructure — mark new components)
+  (proposed infrastructure — mark new components without brackets in architecture-beta labels)
 ```
 
 #### Request Flow
@@ -39,7 +37,7 @@ sequenceDiagram
 #### Logical Architecture
 ```mermaid
 flowchart TD
-  (proposed structural view — layers / domain map / event mesh depending on tier; mark [NEW] or [UPDATED] nodes for changed components)
+  (proposed structural view — mark [NEW] or [UPDATED] nodes for changed components)
 ```
 
 #### What Changes
@@ -50,6 +48,7 @@ flowchart TD
 
 #### Technology Changes
 | Component | Current | Proposed | Reason |
+|-----------|---------|----------|--------|
 
 #### Data Layer Changes
 {Which databases are added, removed, or replaced and why.}
@@ -71,26 +70,11 @@ flowchart TD
 | 3 years   | ...    |
 
 #### Migration Path
-{Step-by-step approach. Rollback strategy.}
+{Step-by-step approach — prefer Strangler Fig or parallel run over big bang. Rollback strategy.}
 
 #### Risks & Mitigations
 | Risk | Likelihood | Impact | Mitigation |
-
-#### When to Choose This Option
-- {Ideal scenario 1}
-- {Ideal scenario 2}
-
----
-
-### Option 2: Moderate Redesign — {Title}
-
-{Same subsection structure as Option 1}
-
----
-
-### Option 3: Full Overhaul — {Title}
-
-{Same subsection structure as Option 1. Specify migration approach: Strangler Fig, parallel run, or big bang — and justify.}
+|------|------------|--------|------------|
 
 ---
 
@@ -125,11 +109,36 @@ flowchart TD
 **Key Improvements:**
 - {How identified weaknesses are addressed}
 
-## Recommendation
+## Design Rationale
 
-{4–6 sentences: which option is recommended and why, citing the specific weaknesses it addresses and the constraints that drove the decision.}
+{4–6 sentences: why this specific redesign was chosen — what pain points it addresses, what less invasive or more aggressive alternatives were considered and ruled out, and what the key trade-off is. Be specific about the constraints that made more drastic change unwarranted (or necessary).}
 
-## Decision Notes
+## Architecture Decision Record
 
-{User-requested adjustments, migration timing, next steps.}
+<!-- Read $CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/adr-guide.md for format guidance. -->
+
+**ADR ID:** {timestamp_ms}-{topic}-review
+**Date:** {ISO date}
+**Status:** Accepted
+
+### Context
+{What drove this review — the pain points, their root causes, and the constraints (team, compliance, timeline) that shaped the solution space.}
+
+### Decision
+**Chosen:** {Short Title}
+{What was decided — the specific redesign approach and its key changes.}
+
+### Consequences
+**Positive:** {Pain points addressed, risks reduced}
+**Trade-offs accepted:** {Migration effort, new operational burden}
+**Watch list:** {When to revisit}
+
+### Rejected Alternatives
+| Alternative                          | Reason Rejected                                                   |
+|--------------------------------------|-------------------------------------------------------------------|
+| Less invasive (e.g., patch fixes)    | {Specific reason — why it wouldn't have addressed the root cause} |
+| More aggressive (e.g., full rewrite) | {Specific reason — why the team/timeline/risk didn't justify it}  |
+
+### Review Trigger
+{Signal that should prompt revisiting this decision.}
 ```

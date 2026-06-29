@@ -13,17 +13,17 @@ Core behaviors:
 - Identify coupling risks, testability concerns, and extension points in every option
 - Explain the technical rationale and trade-offs behind every design decision
 
-Follow the **Spec → Plan → Review → Ship** workflow strictly — gather requirements and application context first, generate all three options and write them to content.md, present a compact summary for user confirmation, then open the visual viewer for final selection. **Never output the full design options in the chat response** — the viewer is the display surface. Keep chat responses brief status updates.
+Follow the **Spec → Plan → Review → Ship** workflow strictly — gather requirements and application context first, generate a direct design recommendation and write it to content.md, present a compact summary for user confirmation, then open the visual viewer for final review. **Never output the full design content in the chat response** — the viewer is the display surface. Keep chat responses brief status updates.
 
 ## Workflow
 
 At the very start, call **TaskCreate** to create one task per step:
 1. Spec — Identify and gather missing requirements
 2. Spec — Confirm requirements summary
-3. Plan — Generate 3 feature design options → write content.md
-4. Review — Present plan summary, confirm or iterate
-5. Ship — Open viewer and await option selection
-6. Ship — Write final documentation
+3. Plan — Generate feature design recommendation → write content.md
+4. Review — Present recommendation summary, confirm or adjust
+5. Ship — Open viewer, await confirmation
+6. Ship — Write ADR and Final Documentation
 7. Ship — Save permanent docs and stop server
 
 Mark each task `in_progress` when starting it and `completed` when done.
@@ -114,7 +114,7 @@ After collecting all answers, display a structured summary **before** generating
 | Abstraction level     | {Minimal / Moderate / High}            | Q7 + Q8 (inferred) |
 
 **Key inferences:**
-- {1–3 bullets summarizing constraints inferred from the combination of answers — e.g., "Solo team + speed priority → Option 1 (Inline) is the safest default"}
+- {1–3 bullets summarizing constraints inferred from the combination of answers — e.g., "Solo team + speed priority → a direct inline approach is the safest default"}
 
 > Does this accurately capture your requirements? Reply with any corrections, or say **"Yes, proceed"** to generate the feature design options.
 
@@ -124,53 +124,33 @@ Wait for the user to confirm or correct. Only proceed to Stage 2 when the user e
 
 ---
 
-### Stage 2: Plan — Generate Feature Design Options
+### Stage 2: Plan — Generate Feature Design Recommendation
 
-After confirmation, compose the full design document — all 3 options, optional ERD, and Recommendation — **directly into `/tmp/archimind-viewer/content.md`** using the Write tool. Print a short status line like "Planning 3 options…" while writing. **Do not open the viewer yet — that happens in Stage 4: Ship.**
+After confirmation, compose the feature design document **directly into `/tmp/archimind-viewer/content.md`** using the Write tool. Print "Planning…" while writing. **Do not open the viewer yet — that happens in Stage 4: Ship.**
 
-Design **exactly 3 options**: Inline, Modular, and Decoupled.
+**Choose and commit**: Map each stated requirement to the implementation approach it demands, then commit to the one that satisfies all requirements with the minimum viable complexity. The design space for feature implementation runs from a direct inline approach (fast, low coupling, low testability) through a modular approach (clean boundaries, testable, reusable) to a fully decoupled approach (event-driven, extensible, higher complexity). Choose where the requirements actually land — don't default to the middle or the most sophisticated option. The user can push back in Stage 3.
 
-**Anti-over-engineering check before generating options**: Map each stated requirement to the simplest option that satisfies it. If Inline satisfies all requirements, say so explicitly in the Recommendation. Complexity must be justified by a specific, named requirement — not by preference for clean patterns.
+**Write the recommendation directly under `## Architecture Diagram`** — open with the approach name (e.g., "Inline Notification Handler", "Modular Payment Module", "Event-Driven Export Pipeline") in the intro paragraph. Use `####` for subsections. Scaffold: `$CLAUDE_PLUGIN_ROOT/skills/design-feature/references/output-template.md` — read-only.
 
-#### Option 1: Inline
-- Add the feature directly within the existing code structure with minimal new abstractions.
-- Typical approach: New functions/methods within existing files or a single new file, no new layers, direct calls.
-- Best for: Solo/small teams, tight deadlines, low integration complexity, features unlikely to change significantly.
+Required `####` subsections — **two Mermaid diagrams required** (no `architecture-beta`). Read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/mermaid-guidelines.md` for syntax:
 
-#### Option 2: Modular
-- Encapsulate the feature as a distinct module with clear public boundaries (interface/contract) and proper internal layering.
-- Typical approach: Dedicated feature module/package with controller → service → repository layers, clean integration contracts.
-- Best for: Teams that need testability and maintainability, features that other parts of the codebase will depend on.
-
-#### Option 3: Decoupled
-- Design the feature for maximum decoupling and extensibility — event-driven integration, plugin pattern, or abstraction interfaces.
-- Typical approach: Domain events, abstract interfaces, dependency inversion, optional background processing.
-- Best for: Features that will be extended by multiple teams, features on critical paths needing independent testing, or features that may need to be extracted into a separate service later.
-
-#### Required Sections Per Option
-
-Structure each option under `## Architecture Diagram` using `### Option N:` subheadings. Use `####` for subsections. The full scaffold is in `$CLAUDE_PLUGIN_ROOT/skills/design-feature/references/output-template.md` — **read it for structure only; never write to it**.
-
-Required `####` subsections for each option — **every option must include two Mermaid diagrams** (no `architecture-beta`). Read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/mermaid-guidelines.md` for diagram syntax:
-
-- **Feature Integration** (`flowchart TD`) — how the new feature/module connects to existing components in the application. Show existing components as-is; mark the new feature's components with `[NEW]`. Follow with a 1–2 sentence description.
-- **Feature Flow** (`sequenceDiagram`) — the primary end-to-end workflow of the feature (main user action through all layers to persistence). Label each arrow with the method name or event name. Follow with a 1–2 sentence description.
-- **Module Structure** (`flowchart TD`) — *Optional, include only if the option introduces internal layering complex enough to warrant it.* Internal breakdown of the feature module: layers, sub-components, and their relationships. Follow with a 1–2 sentence description.
-- **Key Components** — bulleted list of new files/classes/modules introduced, with one-line descriptions
+- **Feature Integration** (`flowchart TD`) — how the new feature connects to existing components. Mark new components with `[NEW]`. 1–2 sentence description.
+- **Feature Flow** (`sequenceDiagram`) — primary end-to-end workflow from user action to persistence. Label each arrow. 1–2 sentence description.
+- **Module Structure** (`flowchart TD`) — *Optional, only if internal layering is complex enough to warrant it.* 1–2 sentence description.
+- **Key Components** — new files/classes/modules with one-line descriptions
 - **Technology Stack** — table: Layer / Approach / Reason (only new choices; existing stack is assumed)
-- **Data Layer Design** — which existing tables/entities are read from or written to; what schema changes (if any) are required
-- **Testing Strategy** — unit test surface, integration test boundaries, mocking strategy for the new feature
-- **Extension Points** — how other modules can hook into or extend this feature (empty for Option 1, more detailed in Options 2 and 3)
+- **Data Layer Design** — existing tables read/written; schema changes if any
+- **Testing Strategy** — unit test surface, integration test boundaries, mocking strategy
+- **Extension Points** — how other modules can build on this feature later (or note that the approach is intentionally minimal)
 - **Risks & Mitigations** — table: Risk / Likelihood / Impact / Mitigation
-- **When to Choose This Option** — 2–3 bullets
 
 #### ERD Section (Conditional)
 
-Include `## ERD` **only if** the requirements summary indicates schema changes are needed (Q4 answered A or B). Add a Mermaid `erDiagram` covering the new tables and relationships with existing entities. Include column specifications for new tables (PK, columns, types, key indexes). If no schema changes are needed, omit the `## ERD` section entirely.
+Include `## ERD` **only if** Q4 was answered A or B (schema changes needed). Add a Mermaid `erDiagram` covering new tables and relationships with existing entities, with column specifications. Omit entirely if no schema changes are needed.
 
-#### Recommendation Section
+#### Design Rationale Section
 
-Add `## Recommendation` with a **Narrative** — 4–6 sentences stating which option is recommended and why, referencing actual requirements (team size, quality priority, integration complexity, timeline). Acknowledge the main trade-off between the options.
+Add `## Design Rationale` — 4–6 sentences: why this approach, what simpler or more complex alternatives were considered and ruled out, what the key trade-off is.
 
 Save the complete document with the Write tool. **Do not call start-server.sh at this stage.**
 
@@ -178,39 +158,35 @@ Save the complete document with the Write tool. **Do not call start-server.sh at
 
 ### Stage 3: Review — Confirm Before Shipping
 
-After writing content.md, present a compact **Plan Summary** in chat:
+After writing content.md, present a compact **Recommendation Summary** in chat:
 
 ---
 
-**Plan Summary**
+**Recommendation**
 
-| Option | Tier      | Approach Name | Key Pattern                                   |
-|--------|-----------|---------------|-----------------------------------------------|
-| 1      | Inline    | {Name}        | {e.g., Direct functions in existing service}  |
-| 2      | Modular   | {Name}        | {e.g., Feature module with service layer}     |
-| 3      | Decoupled | {Name}        | {e.g., Domain events + abstract interfaces}   |
-
-**Recommended:** Option N — {1–2 sentence rationale citing the key requirements that drove this recommendation.}
+**Approach**: {Name} — {1-sentence description}
+**Pattern**: {e.g., Direct inline handler / Feature module with service layer / Event-driven with ports}
+**Why**: {2–3 sentences citing specific requirements and what alternatives were ruled out}
 
 ---
 
-Use **AskUserQuestion** to ask the user what to do next:
+Use **AskUserQuestion**:
 
 ```
-question: "Three feature design options are ready. What would you like to do?"
+question: "The feature design recommendation is ready. What would you like to do?"
 header: "Next Step"
 options:
   - label: "Ship — open the visual viewer"
-    description: "Open the interactive viewer to compare all three options side by side and make your final choice"
-  - label: "Iterate — adjust before viewing"
-    description: "Request changes to the options, tech approach, or recommendation before opening the viewer"
+    description: "Open the interactive viewer to review the full design"
+  - label: "Adjust — I have suggestions"
+    description: "Request changes to the approach, implementation pattern, or rationale"
 ```
 
-If the user chooses **Iterate**: apply the requested changes to `/tmp/archimind-viewer/content.md`, update the Plan Summary table, and re-present Stage 3. Repeat until the user chooses **Ship**.
+If **Adjust**: apply changes to `/tmp/archimind-viewer/content.md`, update summary, re-present Stage 3. Repeat until **Ship**.
 
 ---
 
-### Stage 4: Ship — Visual Selection and Final Documentation
+### Stage 4: Ship — Visual Review and Final Documentation
 
 Open the viewer:
 
@@ -218,37 +194,35 @@ Open the viewer:
 open "$(bash "$CLAUDE_PLUGIN_ROOT/scripts/start-server.sh")"
 ```
 
-Post a brief chat message: "Viewer is open at http://localhost:PORT — use **Architecture Diagram** to compare options side by side. Select an option when ready."
+Post: "Viewer is open at http://localhost:PORT — review the full feature design. Tell me when you're ready to finalize, or request any last adjustments."
 
-**Option Selection**
+**Review and Confirm**
 
-Use **AskUserQuestion** to ask the user to choose:
+Use **AskUserQuestion**:
 
 ```
-question: "Which feature design would you like to proceed with?"
-header: "Select Option"
+question: "Ready to finalize this feature design?"
+header: "Finalize"
 options:
-  - label: "Option 1 — Inline"
-    description: <one-line summary of Option 1 approach>
-  - label: "Option 2 — Modular"
-    description: <one-line summary of Option 2 approach>
-  - label: "Option 3 — Decoupled"
-    description: <one-line summary of Option 3 approach>
+  - label: "Proceed — finalize this design"
+    description: "Write the final documentation and save the permanent record"
+  - label: "Adjust — one more change"
+    description: "Request a change; I'll update the viewer and you can reload"
 ```
 
-Allow iterations if the user wants adjustments. Re-present AskUserQuestion after each change. Do not proceed until the user makes an explicit choice.
+If adjust: apply to `/tmp/archimind-viewer/content.md`, tell user to click **↺ Reload**, re-present. Repeat until proceed.
 
-**Mark Selected Option and Write Final Documentation**
+**Confirm and Write Final Documentation**
 
-Once the user has chosen, complete all the following in sequence:
+Once confirmed, complete all the following in sequence:
 
 1. Read the saved document
 2. Insert decision header after the document title:
    ```markdown
-   **Selected:** Option N — {Tier}: {Approach Name}
+   **Confirmed:** {Approach Name}
    **Decision date:** {ISO date}
    ```
-3. Append a `## Decision Notes` section capturing user-requested adjustments and next steps
+3. Write the `## Architecture Decision Record` section — read `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/adr-guide.md` for the required format. Include: Context (requirements at decision time), Decision (what was chosen), Consequences (positive + trade-offs + watch list), Rejected Alternatives (with specific reasons), and Review Trigger.
 
 **Append Final Documentation** — each section must be substantive, no placeholders:
 
@@ -276,7 +250,7 @@ For field-level guidance on each section, read `$CLAUDE_PLUGIN_ROOT/skills/desig
 mkdir -p docs/archimind/features
 ```
 
-Write `docs/archimind/features/{timestamp_ms}-{topic}.md` using the **Write tool**. **This file must contain only the selected option** — not all three. Include: selected `### Option N:` section, ERD (if applicable), Recommendation, Decision Notes, and Final Documentation. Omit the other two options entirely. To re-visualize later: `bash "$CLAUDE_PLUGIN_ROOT/scripts/open-doc.sh" docs/archimind/features/{timestamp_ms}-{topic}.md`.
+Write `docs/archimind/features/{timestamp_ms}-{topic}.md` using the **Write tool**. Include: `## Architecture Diagram` section, ERD (if applicable), Design Rationale, Architecture Decision Record, and Final Documentation. To re-visualize later: `bash "$CLAUDE_PLUGIN_ROOT/scripts/open-doc.sh" docs/archimind/features/{timestamp_ms}-{topic}.md`.
 
 4. Stop the viewer server:
 
@@ -288,12 +262,12 @@ bash "$CLAUDE_PLUGIN_ROOT/scripts/stop-server.sh"
 
 ## Document Structure Convention
 
+<!-- Keep in sync with design-architecture/SKILL.md, review-architecture/SKILL.md, and visualize/SKILL.md -->
+
 The viewer parses these heading patterns from `content.md`:
 
-- `## Architecture Diagram` + `### Option N:` subheadings → option tabs
+- `## Architecture Diagram` → content renders directly as the main view (no tab bar)
 - `## ERD` → ERD nav view (omit entirely if no schema changes)
-
-**Critical**: Use `### Option N:` (level-3) within `## Architecture Diagram`, not `## Option N:` (level-2). The viewer splits on level-3 headings to create option tabs.
 
 ## Mermaid Diagram Guidelines
 

@@ -26,12 +26,12 @@ bash "$CLAUDE_PLUGIN_ROOT/scripts/stop-server.sh"
 
 ## When to Open the Viewer
 
-Open the viewer **before asking the user to select** an option:
+Open the viewer **before confirming the recommendation** with the user:
 
-1. After drafting architecture options (design-architecture skill) — open so the user can compare all three options with rendered Mermaid diagrams
+1. After drafting the architecture recommendation (design-architecture skill) — open so the user can review the full design with rendered Mermaid diagrams
 2. After completing a database design (design-database skill) — open so the user can inspect the ERD
-3. After drafting architecture review options (review-architecture skill) — open so the user can compare options and the Before/After revision
-4. After drafting feature design options (design-feature skill) — open so the user can compare Inline / Modular / Decoupled options side by side
+3. After drafting the architecture redesign recommendation (review-architecture skill) — open so the user can review the proposal and the Before/After comparison in the Revision section
+4. After drafting the feature design recommendation (design-feature skill) — open so the user can review the integration and flow diagrams
 5. When the user explicitly asks to view or reopen the diagrams
 
 ## Re-opening a Saved Document
@@ -79,8 +79,8 @@ If the server is not running, start it first using the same single command from 
 The viewer provides:
 
 - **Sidebar (left)**: Document title header + **Sections** navigation (Architecture Diagram, ERD, Revision). ERD and Revision nav items are disabled when those sections are absent from the document.
-- **Content area**: Option tabs (Option 1 / Option 2 / Option 3) for the Architecture Diagram section, or Before/After tabs for the Revision section.
-- **Architecture Diagram view**: Each option tab renders the full option content with Mermaid diagrams. Options are parsed from `### Option N:` subheadings within `## Architecture Diagram`.
+- **Content area**: Architecture Diagram content renders as a single view, or Before/After tabs for the Revision section. If a document uses `### Option N:` subheadings (legacy format), the viewer creates a tab per option.
+- **Architecture Diagram view**: Renders the content under `## Architecture Diagram` with all Mermaid diagrams.
 - **ERD view**: Renders the `## ERD` section.
 - **Revision view**: Before/After tabs parsed from `### Before` and `### After` within `## Revision`.
 - **Download button**: Every rendered Mermaid diagram has a **↓ PNG** button (2× retina quality).
@@ -93,13 +93,11 @@ The viewer provides:
 
 The viewer parses these heading patterns from `content.md`:
 
-- `## Architecture Diagram` + `### Option N:` subheadings → option tabs
+- `## Architecture Diagram` → content renders as a single scrollable view (no tab bar)
 - `## ERD` → ERD nav view
 - `## Revision` + `### Before` / `### After` → Before/After tabs
 
-**Critical**: Use `### Option N:` (level-3) within `## Architecture Diagram`, not `## Option N:` (level-2). The viewer splits on level-3 headings to render option tabs.
-
-For database design documents (no option tabs), the Architecture Diagram view renders as a single scrollable view.
+Legacy documents using `### Option N:` (level-3) within `## Architecture Diagram` render as tabbed option views — the viewer creates one tab per option for backward compatibility.
 
 For the full document template, see `$CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/output-template.md`.
 
@@ -166,4 +164,4 @@ diff docs/archimind/architecture/{file1}.md docs/archimind/architecture/{file2}.
 
 **Browser opens before server is ready (connection refused)**: If the browser shows "Connection Refused" or a blank tab immediately after the start command, the Python HTTP server may still be initializing. Click **↺ Reload** in the sidebar after 1–2 seconds. If the problem persists, run `bash "$CLAUDE_PLUGIN_ROOT/scripts/stop-server.sh"` and rerun the start command.
 
-**Option tabs not appearing**: If the viewer renders content as a single scrollable page instead of option tabs (Option 1 / Option 2 / Option 3), the architecture options are using the wrong heading level. The viewer splits on `### Option N:` (level-3) within `## Architecture Diagram` only — `## Option N:` (level-2) is not recognized. Correct the heading levels in `content.md` using the Edit tool, then click **↺ Reload**.
+**Content not showing in Architecture view**: If the architecture content is blank, verify that `## Architecture Diagram` is present as a level-2 heading. Content goes directly under this heading — no `### Option N:` subheading is needed. Click **↺ Reload** after correcting `content.md`.

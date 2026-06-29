@@ -4,10 +4,47 @@
 
 | Use case                                          | Diagram type         |
 |---------------------------------------------------|----------------------|
+| System context (actors + external systems)        | `flowchart TD`       |
 | Cloud / infra service layout                      | `architecture-beta`  |
 | Request / event flow                              | `sequenceDiagram`    |
 | Logical structure (layers, domains, event mesh)   | `flowchart TD / LR`  |
 | Database entity-relationship                      | `erDiagram`          |
+
+## C4 Context Diagram (Document-Level)
+
+The C4 Level 1 (Context) diagram is written **once per document** — not per option — because the system's external actors and integrations do not change between architecture tiers. Place it in the `## System Context` section before `## Architecture Diagram`.
+
+This diagram answers the stakeholder question: "Who uses this system and what does it talk to?" It shows the system as a black box, its human users, and the external systems it integrates with. It is the right diagram to share with non-technical stakeholders before drilling into options.
+
+### C4 Context diagram rules
+
+- The system under design is a single box: `System[{SystemName}]`
+- Human actors use rounded rectangles: `User([{Role}])`
+- External systems use regular rectangles: `Stripe[Stripe API]`
+- Edges show the interaction intent, not the protocol: `User -->|places orders| System`
+- Keep it to ≤ 8 nodes total — if more actors or systems exist, group minor ones into a single "Other External Systems" node
+
+### Example
+
+```mermaid
+flowchart TD
+  Customer([Customer])
+  Admin([Admin User])
+  System[Payment Platform]
+  Stripe[Stripe API]
+  Email[SendGrid]
+  Bank[Banking API]
+
+  Customer -->|places orders, checks status| System
+  Admin -->|manages products, views reports| System
+  System -->|tokenizes payments| Stripe
+  System -->|sends receipts & alerts| Email
+  System -->|reconciles transactions| Bank
+```
+
+> **Why separate from per-option diagrams?** The per-option Infrastructure Layout (C4 L2) and Logical Architecture (C4 L3) diagrams vary between options. The context (C4 L1) is fixed — all options solve the same external integration problem. Separating the levels ensures the viewer can navigate from a high stakeholder view (context) into each technical option independently.
+
+---
 
 ## Required Diagrams Per Architecture Option
 
@@ -342,7 +379,7 @@ Mark nodes to communicate change status at a glance:
 ### Before / After Diagram Placement
 
 - **Current state** (`⚠` labels, no `[NEW]`): place in `## Revision / ### Before`
-- **Proposed state** (`[NEW]`, `[UPDATED]` labels): place in each `### Option N:` section **and** in `## Revision / ### After` (after the user selects an option)
+- **Proposed state** (`[NEW]`, `[UPDATED]` labels): place in `## Architecture Diagram` **and** in `## Revision / ### After` (after the user confirms)
 
 ---
 

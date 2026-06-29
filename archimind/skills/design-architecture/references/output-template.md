@@ -17,8 +17,8 @@ Use this template as a scaffold when generating the design file. Replace all pla
 **Generated:** {ISO date}
 **Summary:** {One-sentence description of the system}
 
-<!-- Fill in after user selects: -->
-<!-- **Selected:** Option N — {Tier}: {Architecture Name} -->
+<!-- Fill in after user confirms: -->
+<!-- **Confirmed:** {Architecture Name} -->
 <!-- **Decision date:** {ISO date} -->
 
 ## Project Overview
@@ -36,11 +36,31 @@ Use this template as a scaffold when generating the design file. Replace all pla
 
 ---
 
+## System Context
+
+> C4 Level 1 — drawn once for the whole document. Shows who uses the system and what external systems it integrates with. This view is audience-agnostic: share it with stakeholders before showing any architecture option.
+
+```mermaid
+flowchart TD
+  User([{Primary User Role}])
+  Admin([{Admin / Internal Role}])
+  System[{System Name}]
+  ExtSystem1[{External System 1}]
+  ExtSystem2[{External System 2}]
+
+  User -->|{primary action}| System
+  Admin -->|{management action}| System
+  System -->|{integration purpose}| ExtSystem1
+  System -->|{integration purpose}| ExtSystem2
+```
+
+> {1–2 sentences: name the primary users, what they do with the system, and which external integrations are in scope.}
+
+---
+
 ## Architecture Diagram
 
-### Option 1: Lean — {Architecture Name}
-
-{One paragraph describing the core approach and why it is appropriate for the conservative tier.}
+{One paragraph: the recommended pattern, why it fits the stated requirements, and the key trade-off accepted by choosing this approach over a simpler or more complex alternative.}
 
 #### Infrastructure Layout
 
@@ -194,339 +214,11 @@ flowchart TD
 |--------------------------|------------|--------|---------------------------------|
 |                          | Low        | Low    |                                 |
 
-#### When to Choose This Option
-
-- {Bullet 1: team/timeline scenario}
-- {Bullet 2: scale/budget scenario}
-- {Bullet 3: specific use case}
-
 ---
 
-### Option 2: Standard — {Architecture Name}
+## Design Rationale
 
-{One paragraph for the balanced tier.}
-
-#### Infrastructure Layout
-
-```mermaid
-architecture-beta
-  group internet(cloud)[Public Zone]
-    service client(internet)[Client Apps] in internet
-
-  group api(server)[API Layer]
-    service gateway(server)[API Gateway] in api
-
-  group data(database)[Data Layer]
-    service db(database)[Primary DB] in data
-    service cache(database)[Cache] in data
-    service queue(server)[Message Queue] in data
-
-  client:R --> L:gateway
-  gateway:B --> T:db
-  gateway:B --> T:cache
-  gateway:R --> L:queue
-```
-
-> {1–2 sentences: describe the zones, traffic entry point, and key data stores shown in this diagram.}
-
-#### Request Flow
-
-```mermaid
-sequenceDiagram
-  participant Client
-  participant API
-  participant DB
-  Client->>API: {Primary request}
-  API->>DB: {Query or write}
-  DB-->>API: {Result}
-  API-->>Client: {Response}
-```
-
-> {1–2 sentences: describe the happy-path request traced here and any notable steps such as cache checks or async branches.}
-
-#### Logical Architecture
-
-```mermaid
-flowchart LR
-  subgraph "Domain A"
-    SvcA[Service A]
-    DBA[(Store A)]
-  end
-  subgraph "Domain B"
-    SvcB[Service B]
-    DBB[(Store B)]
-  end
-  subgraph "Shared Infrastructure"
-    Queue[Message Queue]
-    Cache[(Shared Cache)]
-  end
-  SvcA --- DBA
-  SvcB --- DBB
-  SvcA -->|REST| SvcB
-  SvcA -->|publishes DomainEvent| Queue
-  Queue -->|consumed by| SvcB
-  SvcA -->|reads from| Cache
-```
-
-> {1–2 sentences: describe the bounded context ownership — which domain owns which store, how cross-domain calls happen (REST or async events), and which data is shared via cache or queue. Replace domain names with the actual business domains of the project.}
-
-#### Key Components
-
-- **{Component}**: {One-line description}
-
-#### Technology Stack
-
-| Layer           | Recommended       | Alternatives      | Reason                                   |
-|-----------------|-------------------|-------------------|------------------------------------------|
-| Language        |                   |                   |                                          |
-| Backend         |                   |                   |                                          |
-| Frontend        |                   |                   |                                          |
-| Primary DB      |                   |                   |                                          |
-| Cache           |                   |                   |                                          |
-| Search          |                   |                   |                                          |
-| Analytics DB    |                   |                   |                                          |
-| Message Queue   |                   |                   |                                          |
-| Infra/Deploy    |                   |                   |                                          |
-| Observability   |                   |                   |                                          |
-
-#### Data Layer Design
-
-- **Transactional store**: {Engine + category + reasoning}
-- **Cache**: {Redis — what's cached, TTL}
-- **Search**: {Engine if added — why at this tier}
-- **Analytics / OLAP**: {Engine if added}
-- **Message queue**: {Engine if added}
-- **Object storage**: {see Object Storage section or "Not needed"}
-- **Why NOT alternatives**: {Ruled-out options}
-
-#### Object Storage
-
-<!-- Omit if not needed -->
-- **Solution**: ...
-- **What is stored**: ...
-- **Access control**: ...
-- **Lifecycle**: ...
-
-#### Observability Strategy
-
-- **Instrumentation**: {OTel SDK — language + auto-instrumentation}
-- **Logs**: {Loki / ELK — agent, why}
-- **Metrics**: {Prometheus + Grafana / VictoriaMetrics}
-- **Distributed tracing**: {Tempo / Jaeger — sampling strategy}
-- **Unified backend**: {SigNoz / Grafana Stack / Datadog}
-- **Alerting**: {Alertmanager / Grafana}
-
-#### Technology Decision Rationale
-
-**{Technology}**
-- *Why chosen*: ...
-- *Better than alternatives*: ...
-- *Required skills*: ...
-- *Ecosystem*: ...
-
-{Repeat for each major technology}
-
-#### Future Impact
-
-| Timeframe | Impact |
-|-----------|--------|
-| 6 months  |        |
-| 1 year    |        |
-| 3 years   |        |
-
-- **Scalability ceiling**: ...
-- **Operational overhead**: ...
-- **Reversibility**: ...
-- **Vendor lock-in**: ...
-
-#### Risks & Mitigations
-
-| Risk | Likelihood | Impact | Mitigation |
-|------|------------|--------|------------|
-
-#### When to Choose This Option
-
-- {Bullet 1}
-- {Bullet 2}
-
----
-
-### Option 3: Advanced — {Architecture Name}
-
-{One paragraph for the ambitious tier.}
-
-#### Infrastructure Layout
-
-```mermaid
-architecture-beta
-  group internet(cloud)[Public Zone]
-    service client(internet)[Client Apps] in internet
-    service cdn(disk)[CDN] in internet
-
-  group gateway(server)[API Gateway Layer]
-    service gw(server)[API Gateway] in gateway
-    service mesh(server)[Service Mesh] in gateway
-
-  group services(server)[Microservices]
-    service svcA(server)[Service A] in services
-    service svcB(server)[Service B] in services
-    service worker(server)[Worker] in services
-
-  group data(database)[Data Layer]
-    service db(database)[Primary DB] in data
-    service cache(database)[Cache] in data
-    service queue(server)[Message Broker] in data
-    service storage(disk)[Object Storage] in data
-
-  client:R --> L:gw
-  cdn:B --> T:client
-  gw:R --> L:svcA
-  gw:R --> L:svcB
-  svcA:B --> T:db
-  svcA:B --> T:cache
-  svcA:R --> L:queue
-  queue:R --> L:worker
-```
-
-> {1–2 sentences: describe the zones, traffic entry point, and key data stores shown in this diagram.}
-
-#### Request Flow
-
-```mermaid
-sequenceDiagram
-  participant Client
-  participant Gateway
-  participant ServiceA
-  participant ServiceB
-  participant DB
-  Client->>Gateway: {Primary request}
-  Gateway->>ServiceA: {Route}
-  ServiceA->>DB: {Query}
-  DB-->>ServiceA: {Result}
-  ServiceA->>ServiceB: {Async event or call}
-  ServiceA-->>Gateway: {Response}
-  Gateway-->>Client: {Response}
-```
-
-> {1–2 sentences: describe the happy-path request traced here and any notable steps such as cache checks or async branches.}
-
-#### Logical Architecture
-
-```mermaid
-flowchart LR
-  subgraph "Commerce"
-    OrderSvc[Order Service]
-    PaySvc[Payment Service]
-  end
-  subgraph "Broker"
-    MQ[Message Broker]
-  end
-  subgraph "Platform"
-    NotifySvc[Notification Service]
-    AnalyticsSvc[Analytics Service]
-  end
-  OrderSvc -->|OrderCreated| MQ
-  PaySvc -->|PaymentProcessed| MQ
-  MQ -->|OrderCreated| PaySvc
-  MQ -->|PaymentProcessed| NotifySvc
-  MQ -->|OrderCreated, PaymentProcessed| AnalyticsSvc
-```
-
-> {1–2 sentences: describe the event/service mesh — which services are upstream publishers, which events flow through the broker, and which downstream services consume them. Replace service and event names with those of the actual project.}
-
-#### Key Components
-
-- **{Component}**: {One-line description}
-
-#### Technology Stack
-
-| Layer              | Recommended       | Alternatives      | Reason                                   |
-|--------------------|-------------------|-------------------|------------------------------------------|
-| Language           |                   |                   |                                          |
-| Backend            |                   |                   |                                          |
-| Frontend           |                   |                   |                                          |
-| Primary DB         |                   |                   |                                          |
-| Cache              |                   |                   |                                          |
-| Search             |                   |                   |                                          |
-| Analytics DB       |                   |                   |                                          |
-| Message Broker     |                   |                   |                                          |
-| Service Mesh       |                   |                   |                                          |
-| Object Storage     |                   |                   |                                          |
-| Observability      |                   |                   |                                          |
-| Infra/Deploy       |                   |                   |                                          |
-
-#### Data Layer Design
-
-- **Transactional store**: {Engine + category + reasoning}
-- **Cache**: {Redis — scope and TTL strategy}
-- **Search**: {Engine — why needed at this scale}
-- **Analytics / OLAP**: {ClickHouse / BigQuery — why over simpler approach}
-- **Message queue / stream**: {Kafka / Pulsar — why at this scale}
-- **Object storage**: {see Object Storage section}
-- **Graph store**: {Neo4j / Neptune or "Not needed"}
-- **Polyglot persistence rationale**: {justify each additional DB — why the primary DB cannot handle this workload}
-- **Why NOT alternatives**: {Ruled-out options}
-
-#### Object Storage
-
-- **Solution**: {MinIO / RustFS / Ceph / AWS S3 / GCS}
-- **What is stored**: ...
-- **Bucket organization**: ...
-- **Access control**: ...
-- **Encryption**: ...
-- **Lifecycle management**: ...
-- **Replication strategy**: ...
-- **Self-hosted vs. managed trade-off**: {total cost, ops complexity}
-
-#### Observability Strategy
-
-- **Instrumentation**: OTel SDK + OTel Collector — {tail-based or head-based sampling, ratio}
-- **Logs**: {Loki / ELK / ClickHouse — high-volume choice, log shipping agent}
-- **Metrics**: {VictoriaMetrics / Mimir — long-term storage, multiservice dashboards}
-- **Distributed tracing**: {Jaeger / Tempo — full trace sampling for microservices}
-- **Unified backend**: {SigNoz / Grafana Stack / Datadog — self-hosted vs. managed, cost at scale}
-- **Alerting**: {Alertmanager + PagerDuty — multichannel incident response}
-- **Profiling** (optional): {Pyroscope / Parca for continuous CPU/memory profiling}
-
-#### Technology Decision Rationale
-
-**{Technology}**
-- *Why chosen*: ...
-- *Better than alternatives*: ...
-- *Required skills*: ...
-- *Ecosystem*: ...
-
-{Repeat for EVERY major technology — this tier requires the most justification}
-
-#### Future Impact
-
-| Timeframe | Impact                                  |
-|-----------|-----------------------------------------|
-| 6 months  | {High upfront investment}               |
-| 1 year    | {First distributed systems pain points} |
-| 3 years   | {ROI realized or not, evolution needed} |
-
-- **Scalability ceiling**: {Near-infinite if designed correctly — remaining limits?}
-- **Operational overhead**: {High — team/tooling required?}
-- **Reversibility**: {Low — outline cost of unwinding}
-- **Vendor lock-in**: {Multiple vendors — each dependency and escape hatch}
-
-#### Risks & Mitigations
-
-| Risk | Likelihood | Impact | Mitigation |
-|------|------------|--------|------------|
-|      | High       | High   |            |
-
-#### When to Choose This Option
-
-- {Bullet 1}
-- {Bullet 2}
-
----
-
-## Recommendation
-
-{4–6 sentences stating which option is recommended and why, referencing actual requirements (team size, scale, data characteristics). Acknowledge the main trade-off.}
+{4–6 sentences: why this specific architecture was chosen — what requirements drove it, what simpler or more complex alternatives were considered and ruled out, and what the key trade-off is. Be specific: cite team size, scale targets, compliance requirements, and timeline rather than generic "balancing" language. This section becomes the rationale in the ADR.}
 
 ---
 
@@ -594,13 +286,47 @@ flowchart TD
 
 ---
 
-## Decision Notes
+## Architecture Decision Record
 
-<!-- Fill in after user selects an option -->
-- **Chosen option:** Option N — {Tier}: {Architecture Name}
-- **User-requested adjustments:** {if any}
-- **Prioritized next steps:** {first implementation milestones}
-- **Open questions:** {anything to revisit during implementation}
+<!-- Fill in after user confirms. Read $CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/adr-guide.md for format guidance. -->
+
+**ADR ID:** {timestamp_ms}-{topic}
+**Date:** {ISO date}
+**Status:** Accepted
+
+### Context
+
+{2–4 sentences: the problem being solved, the stakeholders, and the key constraints active at the time of the decision — team size, timeline, scale, compliance. Future readers need this to judge whether the decision still applies.}
+
+### Decision
+
+**Chosen:** {Architecture Name}
+
+{2–3 sentences on exactly what was decided — the specific pattern chosen and its key characteristics.}
+
+### Consequences
+
+**Positive:**
+- {Benefit 1}
+- {Benefit 2}
+
+**Trade-offs accepted:**
+- {Scalability ceiling: what breaks first at 10× load}
+- {Operational overhead or reversibility cost}
+
+**Watch list:**
+- {Signal to revisit this decision — e.g., "reconsider caching layer when DAU exceeds 50k"}
+
+### Rejected Alternatives
+
+| Alternative | Reason Rejected                                                              |
+|-------------|------------------------------------------------------------------------------|
+| {Name}      | {Specific reason citing the constraint that made it unsuitable at this time} |
+| {Name}      | {Specific reason}                                                            |
+
+### Review Trigger
+
+{One sentence: the metric or event that should prompt re-opening this ADR.}
 
 ---
 
@@ -612,10 +338,10 @@ flowchart TD
 
 ### Architecture Decision
 
-**Chosen:** Option N — {Tier}: {Architecture Name}
-**Reason:** {2–3 sentences on why this option was selected over the alternatives, referencing actual requirements.}
+**Architecture:** {Architecture Name}
+**Reason:** {2–3 sentences on why this approach was chosen, referencing actual requirements (team size, scale, compliance).}
 
-> See the selected `### Option N:` heading above for the full Infrastructure Layout, Request Flow, and Logical Architecture diagrams.
+> See `## Architecture Diagram` above for the full Infrastructure Layout, Request Flow, and Logical Architecture diagrams.
 
 ### Technology Stack
 
@@ -661,6 +387,21 @@ erDiagram
 - **Authorization**: {model — e.g., RBAC, ABAC, policy-as-code}
 - **Secrets management**: {Vault / AWS Secrets Manager / GCP Secret Manager — never env vars in code}
 - **OWASP coverage**: {input validation, XSS protection, CSRF tokens, rate limiting, dependency scanning}
+
+#### Threat Model (STRIDE)
+
+<!-- Include for systems with compliance requirements beyond OWASP Top 10 (SOC 2, GDPR, PCI DSS, HIPAA, multi-tenant).
+     For standard OWASP-only systems, replace this table with: "STRIDE analysis not performed at this compliance tier."
+     Read $CLAUDE_PLUGIN_ROOT/skills/design-architecture/references/threat-model-guide.md for methodology. -->
+
+| Threat                     | Attack Vector                     | Affected Components       | Likelihood     | Impact         | Mitigation         |
+|----------------------------|-----------------------------------|---------------------------|----------------|----------------|--------------------|
+| **Spoofing**               | {e.g., stolen session token}      | {e.g., Auth Service, API} | {Low/Med/High} | {Low/Med/High} | {concrete control} |
+| **Tampering**              | {e.g., MITM request modification} | {e.g., All API endpoints} | {Low/Med/High} | {Low/Med/High} | {concrete control} |
+| **Repudiation**            | {e.g., user denies action}        | {e.g., Order Service}     | {Low/Med/High} | {Low/Med/High} | {concrete control} |
+| **Info Disclosure**        | {e.g., verbose error messages}    | {e.g., All services}      | {Low/Med/High} | {Low/Med/High} | {concrete control} |
+| **DoS**                    | {e.g., auth endpoint flood}       | {e.g., Auth Service}      | {Low/Med/High} | {Low/Med/High} | {concrete control} |
+| **Elevation of Privilege** | {e.g., IDOR on resource}          | {e.g., Resource API, DB}  | {Low/Med/High} | {Low/Med/High} | {concrete control} |
 
 #### Database Connectivity Security
 - **DB users**: Separate roles — `app_rw` (application), `app_ro` (analytics), `migrator` (schema changes only), `backup_user`; superuser never used from application code

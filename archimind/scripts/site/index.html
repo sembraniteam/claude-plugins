@@ -262,7 +262,7 @@
   function parseDocument(markdown) {
     const lines = markdown.split('\n');
     const doc = {
-      preamble: [], arch: [], erd: [], revision: [], recommendation: [],
+      preamble: [], arch: [], erd: [], revision: [],
       has_arch: false, has_erd: false, has_revision: false, title: ''
     };
     let mode = 'preamble';
@@ -272,16 +272,15 @@
       if (/^## Architecture Diagram\b/.test(line)) { mode = 'arch'; doc.has_arch = true; continue; }
       if (/^## ERD\b/.test(line)) { mode = 'erd'; doc.has_erd = true; doc.erd.push(line); continue; }
       if (/^## Revision\b/.test(line)) { mode = 'revision'; doc.has_revision = true; doc.revision.push(line); continue; }
-      if (/^## Recommendation\b/.test(line)) { mode = 'rec'; doc.recommendation.push(line); continue; }
       if (/^## /.test(line) && mode !== 'preamble') { mode = 'skip'; continue; }
-      const targets = { preamble: doc.preamble, arch: doc.arch, erd: doc.erd, revision: doc.revision, rec: doc.recommendation };
+      const targets = { preamble: doc.preamble, arch: doc.arch, erd: doc.erd, revision: doc.revision };
       if (targets[mode]) targets[mode].push(line);
     }
     return doc;
   }
 
   function parseSubOptions(content) {
-    const pat = /^(### (?:Option \d+:|Conservative|Moderate|Full).*)$/gm;
+    const pat = /^(### Option \d+:.*)$/gm;
     const opts = []; let last_i = 0, last_t = null, m;
     while ((m = pat.exec(content)) !== null) {
       if (last_t !== null) opts.push({ title: last_t, content: content.slice(last_i, m.index).trim() });
@@ -345,7 +344,6 @@
     } else {
       opts = [{ title: 'Overview', content: parsedDoc.preamble.join('\n') }];
     }
-    if (doc.recommendation.length > 0) opts.push({ title: 'Recommendation', content: doc.recommendation.join('\n') });
     optionContents = opts;
 
     const tb = document.getElementById('tab-bar');
