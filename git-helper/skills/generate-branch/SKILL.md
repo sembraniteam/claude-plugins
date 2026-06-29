@@ -1,13 +1,13 @@
 ---
 name: generate-branch
 description: This skill should be used when the user invokes /git-helper:generate-branch, asks to "create a branch name", "name my branch", "what should I name this branch", "suggest a branch name", "what prefix should I use", "what branch should I create for this", "branch for ticket #123", "I'm working on #456, what branch name?", or describes work they are about to start and needs a branch name for it. Applies team naming conventions with prefix rules (feature/, bugfix/, hotfix/, release/, chore/, bump/).
-argument-hint: "[#ticket] [work description]"
+argument-hint: "[work description]"
 allowed-tools: ["Bash", "AskUserQuestion"]
 ---
 
 # Generate Branch Name
 
-Generate a valid git branch name following team naming conventions. This skill generates and displays the branch name only — running `git checkout -b` is always the caller's responsibility (either the user directly, or the `generate-commit` skill when invoking this skill via the Skill tool).
+Generate a valid git branch name following team naming conventions. When invoked directly by the user, this skill will ask to create and switch to the branch after generating the name. When invoked via the Skill tool by `generate-commit`, it outputs the branch name only — the calling skill owns the checkout step.
 
 ## Input Collection
 
@@ -87,6 +87,17 @@ After generating the branch name, display a summary block:
 |------------|----------------------------|-------------------------------|
 | **Branch** | `feature/add-oauth2-login` | N/A                           |
 | **Prefix** | `feature/`                 | Why this prefix was selected  |
+
+## Execution
+
+**When invoked directly by the user** (not via the Skill tool): after displaying the branch name and summary, use `AskUserQuestion` to ask:
+
+> "Do you want me to create and switch to this branch now?"
+> Options: Yes / No
+
+If the user answers **Yes**, run `git checkout -b <branch-name>` immediately and display its output. Do not re-display the command for the user to run — just run it.
+
+If the user answers **No**, leave the command displayed for the user to run manually.
 
 ## Examples
 

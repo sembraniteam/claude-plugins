@@ -24,7 +24,7 @@ Before running any git commands, collect user intent using `AskUserQuestion` in 
 | Question                                                                         | Condition        | Options  |
 |----------------------------------------------------------------------------------|------------------|----------|
 | "Should this skill run `git checkout -b <branch>` automatically?"                | New branch = Yes | Yes / No |
-| "Should this skill run `git commit` automatically after generating the message?" | Stage files ≠ No | Yes / No |
+| "Should this skill run `git commit` automatically after generating the message?" | Always           | Yes / No |
 
 After all answers, display a confirmation to the user (substitute actual selections from user answers):
 
@@ -32,7 +32,7 @@ After all answers, display a confirmation to the user (substitute actual selecti
 > - New branch: Yes / No
 > - Stage files: Yes (`git add <files>`) / No
 > - Checkout branch: Yes / No / N/A
-> - Execute commit: Yes / No / N/A
+> - Execute commit: Yes / No
 
 Proceed immediately to Analysis & Generation after showing the confirmation — do not wait for further input.
 
@@ -83,10 +83,15 @@ If both diffs are empty and status shows no changes, inform the user and stop.
 
 ## Output & Execution
 
-Display the final commit message in a code block, then show the ready-to-run command:
+Always display the final commit message in a fenced code block so the user can verify it.
 
-- **Subject only** — use the inline form: `git commit -m "feat(auth): add OAuth2 login support"`
-- **With body or BREAKING CHANGE footer** — use the heredoc form:
+Then, based on what the user chose in Round 2:
+- **Execute commit = No** — also display the ready-to-run command so the user can copy and run it manually. Stop here.
+- **Execute commit = Yes** — do not print the command. Proceed directly to the execution steps below and run it via Bash. Show the command output, not the command text.
+
+Command formats for reference (used internally or shown when Execute = No):
+- **Subject only**: `git commit -m "feat(auth): add OAuth2 login support"`
+- **With body or BREAKING CHANGE footer** — heredoc form:
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -99,8 +104,6 @@ BREAKING CHANGE: removed /api/v1/auth/basic endpoint. Use /api/v2/auth instead.
 EOF
 )"
 ```
-
-**IMPORTANT — execution vs display:** A "Yes" answer means RUN the git command and show its output. Do not display the command and wait for the user to run it themselves. Only display-without-running when the user answered "No" or N/A for that action.
 
 Run each step below if and only if its condition is met. Skip steps whose condition is not met:
 

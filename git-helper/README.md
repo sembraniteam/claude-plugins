@@ -57,62 +57,43 @@ Generates a branch name following the team's branch naming conventions.
 5. Displays the branch name and the ready-to-run `git checkout -b` command
 
 **Arguments:**
-- `[#ticket]` — optional ticket number in `#123` format
+- `[work description]` — optional description of the planned work
 
 **Example:**
 ```bash
-/git-helper:generate-branch #42
-# Describe your work: "Add dark mode toggle to settings"
-# Output: feature/42-add-dark-mode-toggle
+/git-helper:generate-branch "Add dark mode toggle to settings"
+# Output: feature/add-dark-mode-toggle
 ```
 
 ---
 
 ## Commit Types
 
-| Type | When to use |
-|------|-------------|
-| `feat` | New feature for the user |
-| `fix` | Bug fix for the user |
-| `docs` | Documentation changes |
+| Type       | When to use                                      |
+|------------|--------------------------------------------------|
+| `feat`     | New feature for the user                         |
+| `fix`      | Bug fix for the user                             |
+| `docs`     | Documentation changes                            |
 | `refactor` | Production code restructured, no behavior change |
-| `test` | Tests added or refactored |
-| `chore` | Non-production maintenance |
-| `ci` | CI configuration changes |
-| `perf` | Performance improvement |
-| `revert` | Reverting a previous commit |
-| `bump` | Dependency version update |
+| `test`     | Tests added or refactored                        |
+| `chore`    | Non-production maintenance                       |
+| `ci`       | CI configuration changes                         |
+| `perf`     | Performance improvement                          |
+| `revert`   | Reverting a previous commit                      |
+| `bump`     | Dependency version update                        |
 
 ## Branch Prefixes
 
-| Prefix | Alias | Use case |
-|--------|-------|----------|
-| `feature/` | `feat/` | New feature |
-| `bugfix/` | `fix/` | Non-urgent bug fix |
-| `hotfix/` | — | Urgent production fix |
-| `release/` | — | Release preparation |
-| `chore/` | — | Non-code tasks |
-| `bump/` | — | Dependency update |
+| Prefix     | Alias   | Use case              |
+|------------|---------|-----------------------|
+| `feature/` | `feat/` | New feature           |
+| `bugfix/`  | `fix/`  | Non-urgent bug fix    |
+| `hotfix/`  | —       | Urgent production fix |
+| `release/` | —       | Release preparation   |
+| `chore/`   | —       | Non-code tasks        |
+| `bump/`    | —       | Dependency update     |
 
-**Format:** `type/description` or `type/scope/description` or `type/ticket-description`
-
-## Configuration (Optional)
-
-Create `.claude/git-helper.local.md` in your project to configure default behavior:
-
-```yaml
----
-default_scope: "api"          # fallback commit scope when not inferrable from files
-default_branch_prefix: "feature"  # fallback prefix for generate-branch
----
-```
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `default_scope` | string | *(none)* | Fallback commit message scope when scope cannot be inferred from changed files |
-| `default_branch_prefix` | string | *(none)* | Fallback branch prefix when work type is ambiguous |
-
-This file is gitignored (`.claude/*.local.md`). Do not commit it.
+**Format:** `type/description` or `type/scope/description`
 
 ## Installation
 
