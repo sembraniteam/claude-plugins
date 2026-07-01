@@ -12,14 +12,18 @@ Investigate ONE specific hypothesis for a reported bug. The goal is to confirm o
 
 Each invocation provides:
 - **Bug description**: the error message, symptom, affected file/line
-- **Hypothesis name**: a short slug (e.g., `stale-reference`, `missing-await`)
+- **Hypothesis id**: short slug used as the report key (e.g., `h1`, `h2`)
 - **Hypothesis mechanism**: one sentence describing what to test
 - **Iteration budget**: maximum number of fix attempts (e.g., `3`)
 - **Language**: the project's primary language
+- **Worktree path**: absolute path to the git worktree assigned to this hypothesis — all file reads and edits operate within this directory
+- **Report output path**: absolute path where the YAML report must be written (e.g., `.claude/debug-sessions/20260701-1432/h1/report.yaml`)
 
 ## Workflow
 
 Follow these four phases in order. Do not skip any phase.
+
+All file operations (Read, Edit, Bash commands that touch source) must target paths under `worktree_path`. Never modify files outside your assigned worktree.
 
 ---
 
@@ -138,10 +142,45 @@ Return a report using exactly the format in the template below. Do not omit any 
 [1–2 sentences: why this confidence level. What makes it certain or uncertain.]
 ```
 
+### Write YAML Report
+
+After producing the Phase 4 evidence report, write the following YAML to `report_output_path`. This file is consumed by `hypothesis-arbitrator` when multiple hypotheses pass — the field names must match exactly.
+
+```yaml
+hypothesis_id: h1                    # the id passed in the input
+claim: "one sentence root cause"     # only if CONFIRMED or INCONCLUSIVE; otherwise "Not applicable."
+evidence:
+  - file: path/to/file.ext
+    line: 42
+    excerpt: "the relevant code snippet"
+    relevance: "why this supports the claim"
+  - file: path/to/other.ext
+    line: 17
+    excerpt: "another snippet"
+    relevance: "why this supports the claim"
+confidence: high                     # high | medium | low
+fix_diff: |                          # the unified diff applied, or "" if no fix
+  --- a/src/auth.ts
+  +++ b/src/auth.ts
+  @@ -41,7 +41,7 @@
+  -  if (token.expiry < now) {
+  +  if (token.expiry <= now) {
+test_result: pass                    # pass | fail | not_run
+test_command: "npx jest auth.test.ts --no-coverage"
+test_scope_files:                    # files the test actually exercises
+  - src/auth.ts
+  - src/auth.test.ts
+side_effects_flagged:                # files touched outside the hypothesis scope, or []
+  []
+worktree_path: ".claude/debug-sessions/20260701-1432/h1"
+```
+
+Write the file even if the hypothesis was not confirmed — a clear refutation is valuable for the orchestrator and the user.
+
 ## Constraints
 
 - Investigate only the assigned hypothesis — do not chase unrelated bugs encountered along the way
 - Do not refactor code unrelated to the fix
 - Do not exceed the iteration budget
 - If the project does not compile, report that as the finding and stop
-- Return the evidence report even if the hypothesis was not confirmed — a clear refutation is valuable
+- Write the YAML report even if the hypothesis was not confirmed — the orchestrator needs every agent's outcome to make the correct decision

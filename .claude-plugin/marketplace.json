@@ -28,8 +28,8 @@
     },
     {
       "name": "debugging-workflow",
-      "description": "Systematic debugging workflow — pre-flight checklist, context gathering, root cause analysis, fix, multi-language verification, and parallel hypothesis investigation",
-      "version": "0.6.0",
+      "description": "Parallel hypothesis debugging — generates multiple root-cause hypotheses and investigates them concurrently via autonomous agents",
+      "version": "0.7.0",
       "source": "./debugging-workflow",
       "author": {
         "name": "Ahmad Rifa'i",

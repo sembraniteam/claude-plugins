@@ -98,7 +98,7 @@ The parallel-debug skill assembles all agent reports into this final format.
 1. [hypothesis #1 fix] — resolves [symptom aspect]
 2. [hypothesis #2 fix] — resolves [symptom aspect]
 
-**Inconclusive only**: No hypothesis was confirmed. The most promising lead is `[hypothesis name]` ([confidence reasoning]). Recommend a sequential deep-dive using the `debug` skill focused on [specific area].
+**Inconclusive only**: No hypothesis was confirmed. The most promising lead is `[hypothesis name]` ([confidence reasoning]). Recommend a targeted sequential investigation focused on [specific area] — add instrumentation or narrow the hypothesis space before retrying in parallel.
 
 **All unconfirmed**: No hypothesis reproduced the bug. The bug may require direct reproduction with additional logging. Recommended next steps: [1–2 specific suggestions].
 

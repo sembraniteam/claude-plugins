@@ -1,30 +1,20 @@
 # debugging-workflow
 
-Systematic debugging plugin for Claude Code. Guides Claude through a structured debugging process: pre-flight checklist → context gathering → git diff analysis → test discovery → root cause analysis → targeted fix → multi-language verification.
+Systematic debugging plugin for Claude Code. Investigates hard-to-diagnose bugs by generating multiple root-cause hypotheses and exploring them concurrently via autonomous agents.
 
 ## Features
 
-- **`/debugging-workflow:debug`** — Full debugging workflow triggered as a slash command
-- **`analyze-code` skill** — Auto-activating code analysis with language detection
-- **`code-analyzer` agent** — Autonomous multi-language static analysis reporter
+- **`/debugging-workflow:parallel-debug`** — Orchestrates the full parallel debug session: session setup, git worktree isolation, agent spawning, arbitration gating, fix application, and cleanup
+- **`hypothesis-investigator` agent** — Autonomous per-hypothesis agent: works in an isolated git worktree, writes a failing test, applies a targeted fix, iterates until the test passes, and emits a structured YAML report
+- **`hypothesis-arbitrator` agent** — Conflict-resolution agent invoked only when two or more investigators both pass. Re-verifies evidence citations, checks for fix-diff overlap, and returns `ONE_WINNER`, `MERGE_FIXES`, or `ESCALATE_TO_USER`
 
-## Supported Languages
+## When to Use
 
-Auto-detects and runs analysis for:
-
-| Language       | Tools                                            |
-|----------------|--------------------------------------------------|
-| Dart / Flutter | `dart analyze`, `flutter analyze`, `dart format` |
-| Rust           | `cargo check`, `cargo clippy`, `rustfmt`         |
-| TypeScript     | `tsc --noEmit`, `eslint`, `prettier`             |
-| JavaScript     | `eslint`, `prettier`                             |
-| Go             | `go vet`, `gofmt`                                |
-| Python         | `ruff`, `pylint`, `mypy`                         |
-| Java           | `mvn compile`                                    |
-| Kotlin         | `ktlint`, `./gradlew check`                      |
-| Swift          | `swiftlint`                                      |
-| Ruby           | `rubocop`                                        |
-| C/C++          | `clang-tidy`, `cppcheck`                         |
+Use `parallel-debug` when:
+- The root cause is genuinely unclear (multiple plausible theories coexist)
+- The bug is intermittent or hard to reproduce consistently
+- A previous debug pass was inconclusive
+- Time pressure demands concurrent investigation over sequential elimination
 
 ## Installation
 
@@ -46,34 +36,19 @@ cc --plugin-dir /path/to/debugging-workflow
 
 ## Usage
 
-### Debug a specific error
+### Parallel debug
 
 ```
-/debugging-workflow:debug Null pointer exception at UserRepository.dart:42:
-E/flutter (1234): #0      UserRepository.getUser (package:myapp/data/user_repository.dart:42:15)
+/debugging-workflow:parallel-debug TypeError: Cannot read properties of undefined at auth.ts:87
 ```
 
-### Debug without an error message
+### With vague description
 
 ```
-/debugging-workflow:debug
-```
-Claude will ask what's misbehaving and investigate from there.
-
-### Standalone code analysis
-
-```
-Analyze my code before I commit.
-Run dart analyze on this project.
-Check for TypeScript errors.
+/debugging-workflow:parallel-debug My login flow is broken on staging but works locally
 ```
 
-### Full project audit via agent
-
-```
-Run a full code analysis on this project.
-Check everything before I open a PR.
-```
+Claude will generate hypotheses, spawn parallel investigation agents, and return a ranked evidence report.
 
 ## Configuration (optional)
 
@@ -81,33 +56,33 @@ Create `.claude/debugging-workflow.local.md` in your project root to customize b
 
 ```markdown
 ---
-lint_config_path: "config/analysis_options.yaml"
-skip_verification: false
+max_parallel_agents: 5
+time_budget_minutes: 5
+hypothesis_count: 5
 ---
 ```
 
-| Field               | Type    | Default | Description                                                                                                    |
-|---------------------|---------|---------|----------------------------------------------------------------------------------------------------------------|
-| `lint_config_path`  | string  | `""`    | Path to a custom lint/analysis config, relative to project root. Passed to the language tool as a config flag. |
-| `skip_verification` | boolean | `false` | Set `true` to skip the static analysis step (Step 7) entirely.                                                 |
+| Field                 | Type    | Default | Description                                                       |
+|-----------------------|---------|---------|-------------------------------------------------------------------|
+| `max_parallel_agents` | integer | `5`     | Maximum number of hypothesis agents to spawn concurrently (2–5). |
+| `time_budget_minutes` | integer | `5`     | Total time budget; each agent gets `time_budget // 2` iterations. |
+| `hypothesis_count`    | integer | `5`     | Number of hypotheses to generate (3–5, clamped to max_parallel_agents). |
 
-A template is at `skills/analyze-code/examples/debugging-workflow.local.md`.
+A template is at `skills/parallel-debug/examples/debugging-workflow.local.md`.
 
 > This file should not be committed — it's already in `.gitignore` via `.claude/*.local.md`.
 
 ---
 
-## Debugging Workflow Steps
+## Parallel Debug Workflow Steps
 
-1. **Pre-flight checklist** — Creates a visible todo list for the full session
-2. **Parse error** — Extracts file, line, error type from stack trace
-3. **Gather context** — Reads source files at error origin and upstream dependencies
-4. **Git diff** — Inspects recent changes that may have introduced the bug
-5. **Find tests** — Locates related test files for the affected code
-6. **Root cause** — States the exact cause before touching any code
-7. **Fix** — Applies a targeted fix following language best practices
-8. **Verify** — Runs language-appropriate analyze/lint tools until clean
-9. **Run tests** — Executes related tests to confirm the fix holds
+1. **Session setup** — Create `.claude/debug-sessions/{id}/`, verify clean working tree, record base SHA
+2. **Generate hypotheses** — Produce 2–4 distinct, falsifiable hypotheses using the error message and hypothesis catalog
+3. **Create worktrees** — Each hypothesis gets an isolated git worktree and branch
+4. **Spawn investigators** — All `hypothesis-investigator` agents launch in parallel; each writes a YAML report
+5. **Gate arbitration** — If exactly one hypothesis passes, apply directly; if multiple pass, invoke `hypothesis-arbitrator`
+6. **Apply fix** — Cherry-pick the winning diff onto the original branch and re-run tests
+7. **Cleanup** — Remove all worktrees and branches; keep YAML reports for audit
 
 ## Plugin Structure
 
@@ -116,16 +91,15 @@ debugging-workflow/
 ├── .claude-plugin/
 │   └── plugin.json
 ├── skills/
-│   ├── debug/
-│   │   ├── SKILL.md                          # Main slash command
-│   │   └── references/
-│   │       ├── analyze-tools.md              # Language → tool mapping
-│   │       └── debugging-patterns.md         # Root cause pattern library
-│   └── analyze-code/
-│       ├── SKILL.md                          # Auto-activating analysis skill
-│       └── examples/
-│           └── debugging-workflow.local.md   # Settings template (copy to .claude/)
+│   └── parallel-debug/
+│       ├── SKILL.md                          # Orchestration workflow
+│       ├── examples/
+│       │   └── debugging-workflow.local.md   # Settings template
+│       └── references/
+│           ├── hypothesis-catalog.md         # Hypothesis library by symptom
+│           └── report-format.md              # Evidence report spec and ranking algorithm
 ├── agents/
-│   └── code-analyzer.md                      # Autonomous analysis agent
+│   ├── hypothesis-investigator.md            # Per-hypothesis: test → fix → YAML report
+│   └── hypothesis-arbitrator.md             # Conflict resolution when multiple fixes pass
 └── README.md
 ```

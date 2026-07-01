@@ -38,19 +38,15 @@ Generates and maintains `CHANGELOG.md` and platform-specific release notes from 
 
 ### [debugging-workflow](./debugging-workflow)
 
-Systematic debugging plugin with a structured 9-step process: pre-flight checklist, error parsing, context gathering, git diff analysis, test discovery, root cause analysis, targeted fix, multi-language verification, and test execution.
+Parallel hypothesis debugging — generates multiple root-cause hypotheses, investigates them concurrently in isolated git worktrees, arbitrates when fixes conflict, and applies the winning diff to the original branch.
 
-| Component                              | Description                                                            |
-|----------------------------------------|------------------------------------------------------------------------|
-| `/debugging-workflow:debug [error]`    | Run the full debugging workflow from error to verified fix             |
-| `/debugging-workflow:parallel-debug`   | Spawn parallel hypothesis-investigator agents for complex root causes  |
-| `analyze-code` skill                   | Auto-detect language and run appropriate analysis tools                |
-| `code-analyzer` agent                  | Autonomous full-project static analysis reporter                       |
-| `hypothesis-investigator` agent        | Investigates a single root-cause hypothesis, fixes, and reports back   |
+| Component                            | Description                                                                                                                             |
+|--------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|
+| `/debugging-workflow:parallel-debug` | Orchestrate a full parallel debug session: session setup, worktree isolation, agent spawning, arbitration, fix application, and cleanup |
+| `hypothesis-investigator` agent      | Works in an isolated git worktree, writes a failing test, applies a targeted fix, and emits a structured YAML report                    |
+| `hypothesis-arbitrator` agent        | Invoked only when multiple investigators pass — re-verifies evidence and returns `ONE_WINNER`, `MERGE_FIXES`, or `ESCALATE_TO_USER`     |
 
-**Supported languages:** Dart/Flutter, Rust, TypeScript, JavaScript, Python, Go, Java, Kotlin, Swift, Ruby, C/C++
-
-**Prerequisites:** Git, plus the analyze tool for your language (`dart`, `cargo`, `npx`, `ruff`, `go`, etc.)
+**Prerequisites:** Git
 
 ---
 
@@ -153,27 +149,15 @@ Reads your git history since the last tag, writes a new version block to `CHANGE
 
 Creates `.claude/changelog-manager.local.md` with your preferred languages and platforms.
 
-### Debugging workflow
+### Parallel debugging workflow
 
 ```
-/debugging-workflow:debug <error message or stack trace>
+/debugging-workflow:parallel-debug <error message or stack trace>
 ```
 
-Runs a structured 9-step debugging session: parses the error, reads relevant files, checks `git diff`, finds related tests, concludes the root cause, applies a fix, verifies with the appropriate language tool, and runs tests.
+Creates a session directory, confirms the working tree is clean, generates 2–4 root-cause hypotheses, spins up isolated git worktrees for each, and spawns `hypothesis-investigator` agents in parallel. When multiple investigators produce passing fixes, `hypothesis-arbitrator` re-verifies evidence and decides whether to merge, pick one winner, or escalate to you. The winning diff is applied to your original branch and re-verified before the session worktrees are cleaned up.
 
-For complex bugs with multiple plausible causes, use parallel mode to investigate hypotheses concurrently:
-
-```
-/debugging-workflow:parallel-debug
-```
-
-### First-time setup for debugging-workflow
-
-```
-/debugging-workflow:debug
-```
-
-On first run, if no `.claude/debugging-workflow.local.md` exists, Claude will offer to create one and walk you through setting `lint_config_path`, `skip_verification`, and an optional `analyze_command`.
+To tune the number of hypotheses, time budget, or agent parallelism, create `.claude/debugging-workflow.local.md` — a template is at `debugging-workflow/skills/parallel-debug/examples/debugging-workflow.local.md`.
 
 ### Performance investigation workflow
 
@@ -229,16 +213,9 @@ Generates a role-tailored report from the current investigation. Available roles
 │   ├── .claude-plugin/
 │   │   └── plugin.json
 │   ├── agents/
-│   │   ├── code-analyzer.md
+│   │   ├── hypothesis-arbitrator.md
 │   │   └── hypothesis-investigator.md
 │   └── skills/
-│       ├── analyze-code/
-│       │   ├── SKILL.md
-│       │   └── references/
-│       ├── debug/
-│       │   ├── SKILL.md
-│       │   ├── examples/
-│       │   └── references/
 │       └── parallel-debug/
 │           ├── SKILL.md
 │           ├── examples/
