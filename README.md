@@ -6,7 +6,7 @@ A collection of [Claude Code](https://claude.ai/code) plugins for automating git
 
 ### [archimind](./archimind)
 
-Design and review system architectures, database schemas, and feature modules with three-option comparison and visual Mermaid diagrams in a local browser viewer.
+Design and review system architectures, database schemas, and feature modules with direct recommendations and visual Mermaid diagrams in a local browser viewer.
 
 | Component                        | Description                                                                                                                     |
 |----------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
@@ -307,6 +307,7 @@ Regenerates and saves `SECURITY-AUDIT.md` from the current session's findings.
     ├── hooks/
     │   └── hooks.json                # PostToolUse hook — warns on high-risk patterns
     ├── scripts/
+    │   ├── run-server.sh             # Login-shell wrapper — ensures uv is on PATH for MCP launch
     │   ├── security-lint.py          # Hook script — CWE-89/78/798/502/94 pattern detection
     │   ├── vuln_server.py            # MCP server: NVD + OSV.dev + MITRE CWE + GitHub Advisory
     │   └── requirements.txt
