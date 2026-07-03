@@ -59,7 +59,7 @@
     {
       "name": "security-auditor",
       "description": "Structured security audit for development and production codebases: SAST analysis, CWE mapping, CVE verification via NVD/OSV, and OWASP Top 10 coverage.",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "source": "./security-auditor",
       "author": {
         "name": "Ahmad Rifa'i",
