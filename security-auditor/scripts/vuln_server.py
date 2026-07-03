@@ -1,20 +1,17 @@
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#   "fastmcp>=2.0",
-#   "httpx>=0.27",
-# ]
-# ///
-
-import asyncio
+#!/usr/bin/env python3
+"""
+vuln-lookup MCP server — stdlib only, no external dependencies.
+Implements the MCP stdio transport with JSON-RPC 2.0.
+"""
+import json
 import os
+import sys
+import threading
 import time
-from typing import Any, Optional
-
-import httpx
-from fastmcp import FastMCP
-
-mcp = FastMCP("vuln-lookup")
+import urllib.error
+import urllib.parse
+import urllib.request
+from typing import Any, Dict, List, Optional
 
 # --- Configuration ---
 NVD_API_KEY = os.getenv("NVD_API_KEY")
@@ -26,8 +23,8 @@ CWE_API_BASE = "https://cwe-api.mitre.org/api/v1/cwe"
 GITHUB_GRAPHQL = "https://api.github.com/graphql"
 
 # --- In-memory cache ---
-_cache: dict[str, tuple[Any, float]] = {}
-CACHE_TTL = 600  # 10 minutes
+_cache: Dict[str, tuple] = {}
+CACHE_TTL = 600
 
 
 def _cache_get(key: str) -> Optional[Any]:
@@ -44,48 +41,60 @@ def _cache_set(key: str, data: Any) -> None:
 
 
 # --- NVD rate limiter ---
-# Without API key: 5 requests / 30 seconds
-# With API key:   50 requests / 30 seconds
-class _TokenBucket:
-    def __init__(self, capacity: int, refill_period: float):
-        self.capacity = capacity
-        self.refill_period = refill_period
-        self._tokens = capacity
-        self._last_refill = time.monotonic()
-        self._lock: asyncio.Lock | None = None  # lazy: created on first use inside event loop
-
-    async def acquire(self):
-        if self._lock is None:
-            self._lock = asyncio.Lock()
-        async with self._lock:
-            now = time.monotonic()
-            elapsed = now - self._last_refill
-            if elapsed >= self.refill_period:
-                self._tokens = self.capacity
-                self._last_refill = now
-            if self._tokens <= 0:
-                wait = self.refill_period - elapsed
-                await asyncio.sleep(max(wait, 0))
-                self._tokens = self.capacity
-                self._last_refill = time.monotonic()
-            self._tokens -= 1
+_nvd_lock = threading.Lock()
+_nvd_capacity = 50 if NVD_API_KEY else 5
+_nvd_tokens = _nvd_capacity
+_nvd_last_refill = time.monotonic()
 
 
-_nvd_limiter = _TokenBucket(
-    capacity=50 if NVD_API_KEY else 5,
-    refill_period=30.0,
-)
+def _nvd_acquire() -> None:
+    global _nvd_tokens, _nvd_last_refill
+    with _nvd_lock:
+        now = time.monotonic()
+        elapsed = now - _nvd_last_refill
+        if elapsed >= 30.0:
+            _nvd_tokens = _nvd_capacity
+            _nvd_last_refill = now
+        if _nvd_tokens <= 0:
+            wait = 30.0 - elapsed
+            if wait > 0:
+                time.sleep(wait)
+            _nvd_tokens = _nvd_capacity
+            _nvd_last_refill = time.monotonic()
+        _nvd_tokens -= 1
 
 
-# --- NVD helpers ---
-def _nvd_headers() -> dict:
+# --- HTTP helpers ---
+def _http_get(url: str, headers: Optional[Dict] = None, params: Optional[Dict] = None) -> Any:
+    if params:
+        url = url + "?" + urllib.parse.urlencode(params)
+    req = urllib.request.Request(url, headers=headers or {})
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            return json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"HTTP {e.code}: {e.read()[:200].decode(errors='replace')}")
+
+
+def _http_post(url: str, data: Any, headers: Optional[Dict] = None) -> Any:
+    body = json.dumps(data).encode()
+    all_headers = {"Content-Type": "application/json", **(headers or {})}
+    req = urllib.request.Request(url, data=body, headers=all_headers)
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            return json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"HTTP {e.code}: {e.read()[:200].decode(errors='replace')}")
+
+
+# --- NVD parse helpers ---
+def _nvd_headers() -> Dict:
     return {"apiKey": NVD_API_KEY} if NVD_API_KEY else {}
 
 
-def _parse_nvd_item(item: dict) -> dict:
+def _parse_nvd_item(item: Dict) -> Dict:
     cve = item.get("cve", {})
     cve_id = cve.get("id", "unknown")
-
     metrics = cve.get("metrics", {})
     cvss_score = None
     severity = None
@@ -97,10 +106,8 @@ def _parse_nvd_item(item: dict) -> dict:
             cvss_score = cvss_data.get("baseScore")
             severity = m.get("baseSeverity") or cvss_data.get("baseSeverity")
             break
-
     descs = cve.get("descriptions", [])
     description = next((d["value"] for d in descs if d.get("lang") == "en"), "")
-
     weaknesses = cve.get("weaknesses", [])
     cwes = []
     for w in weaknesses:
@@ -108,7 +115,6 @@ def _parse_nvd_item(item: dict) -> dict:
             val = desc.get("value", "")
             if val.startswith("CWE-"):
                 cwes.append(val)
-
     return {
         "cve_id": cve_id,
         "description": description[:600],
@@ -121,19 +127,18 @@ def _parse_nvd_item(item: dict) -> dict:
     }
 
 
-def _parse_osv_vuln(v: dict) -> dict:
+def _parse_osv_vuln(v: Dict) -> Dict:
     aliases = v.get("aliases", [])
     cve_ids = [a for a in aliases if a.startswith("CVE-")]
     severity = v.get("severity", [])
     cvss_score = None
-    if severity:
-        for preferred_type in ("CVSS_V4", "CVSS_V3", "CVSS_V2"):
-            for s in severity:
-                if s.get("type") == preferred_type:
-                    cvss_score = s.get("score")
-                    break
-            if cvss_score is not None:
+    for preferred_type in ("CVSS_V4", "CVSS_V3", "CVSS_V2"):
+        for s in severity:
+            if s.get("type") == preferred_type:
+                cvss_score = s.get("score")
                 break
+        if cvss_score is not None:
+            break
     affected = v.get("affected", [])
     ranges = []
     for pkg in affected:
@@ -151,60 +156,42 @@ def _parse_osv_vuln(v: dict) -> dict:
     }
 
 
-# --- MCP Tools ---
+# --- MCP tool implementations ---
 
-@mcp.tool()
-async def get_cve(cve_id: str) -> dict:
+def get_cve(cve_id: str) -> Dict:
     """Look up a specific CVE by ID from NVD. Returns CVSS score, severity, description, and CWEs."""
     cve_id = cve_id.upper().strip()
     key = f"cve:{cve_id}"
-    if (cached := _cache_get(key)) is not None:
+    cached = _cache_get(key)
+    if cached is not None:
         return cached
-
-    await _nvd_limiter.acquire()
+    _nvd_acquire()
     try:
-        async with httpx.AsyncClient(timeout=15) as client:
-            resp = await client.get(NVD_BASE, headers=_nvd_headers(), params={"cveId": cve_id})
-            resp.raise_for_status()
-            data = resp.json()
-    except httpx.HTTPStatusError as e:
-        return {"found": False, "cve_id": cve_id, "error": f"NVD HTTP {e.response.status_code}: {e.response.text[:200]}"}
-    except httpx.RequestError as e:
-        return {"found": False, "cve_id": cve_id, "error": f"NVD request failed: {e}"}
-
+        data = _http_get(NVD_BASE, headers=_nvd_headers(), params={"cveId": cve_id})
+    except Exception as e:
+        return {"found": False, "cve_id": cve_id, "error": str(e)}
     vulns = data.get("vulnerabilities", [])
-    if not vulns:
-        result = {"found": False, "cve_id": cve_id, "error": "CVE not found in NVD"}
-    else:
-        result = {"found": True, **_parse_nvd_item(vulns[0])}
-
+    result = (
+        {"found": False, "cve_id": cve_id, "error": "CVE not found in NVD"}
+        if not vulns
+        else {"found": True, **_parse_nvd_item(vulns[0])}
+    )
     _cache_set(key, result)
     return result
 
 
-@mcp.tool()
-async def search_cve(keyword: str, limit: int = 10) -> dict:
+def search_cve(keyword: str, limit: int = 10) -> Dict:
     """Search CVEs by keyword from NVD. Returns a list of matching CVEs with CVSS scores."""
     limit = min(max(1, limit), 20)
     key = f"search:{keyword}:{limit}"
-    if (cached := _cache_get(key)) is not None:
+    cached = _cache_get(key)
+    if cached is not None:
         return cached
-
-    await _nvd_limiter.acquire()
+    _nvd_acquire()
     try:
-        async with httpx.AsyncClient(timeout=15) as client:
-            resp = await client.get(
-                NVD_BASE,
-                headers=_nvd_headers(),
-                params={"keywordSearch": keyword, "resultsPerPage": limit},
-            )
-            resp.raise_for_status()
-            data = resp.json()
-    except httpx.HTTPStatusError as e:
-        return {"keyword": keyword, "error": f"NVD HTTP {e.response.status_code}: {e.response.text[:200]}", "vulnerabilities": []}
-    except httpx.RequestError as e:
-        return {"keyword": keyword, "error": f"NVD request failed: {e}", "vulnerabilities": []}
-
+        data = _http_get(NVD_BASE, headers=_nvd_headers(), params={"keywordSearch": keyword, "resultsPerPage": limit})
+    except Exception as e:
+        return {"keyword": keyword, "error": str(e), "vulnerabilities": []}
     results = [_parse_nvd_item(v) for v in data.get("vulnerabilities", [])]
     result = {
         "keyword": keyword,
@@ -216,33 +203,21 @@ async def search_cve(keyword: str, limit: int = 10) -> dict:
     return result
 
 
-@mcp.tool()
-async def query_osv(ecosystem: str, package: str, version: str) -> dict:
+def query_osv(ecosystem: str, package: str, version: str) -> Dict:
     """Query OSV.dev for vulnerabilities affecting a specific package version.
 
     Ecosystem values: npm, PyPI, Go, Maven, crates.io, Packagist, RubyGems, NuGet, Hex
     For Maven, use groupId:artifactId format for package name.
     """
     key = f"osv:{ecosystem}:{package}:{version}"
-    if (cached := _cache_get(key)) is not None:
+    cached = _cache_get(key)
+    if cached is not None:
         return cached
-
-    payload = {
-        "version": version,
-        "package": {"name": package, "ecosystem": ecosystem},
-    }
+    payload = {"version": version, "package": {"name": package, "ecosystem": ecosystem}}
     try:
-        async with httpx.AsyncClient(timeout=15) as client:
-            resp = await client.post(f"{OSV_BASE}/query", json=payload)
-            resp.raise_for_status()
-            data = resp.json()
-    except httpx.HTTPStatusError as e:
-        return {"package": package, "version": version, "ecosystem": ecosystem,
-                "error": f"OSV HTTP {e.response.status_code}: {e.response.text[:200]}", "vulnerabilities": []}
-    except httpx.RequestError as e:
-        return {"package": package, "version": version, "ecosystem": ecosystem,
-                "error": f"OSV request failed: {e}", "vulnerabilities": []}
-
+        data = _http_post(f"{OSV_BASE}/query", data=payload)
+    except Exception as e:
+        return {"package": package, "version": version, "ecosystem": ecosystem, "error": str(e), "vulnerabilities": []}
     vulns = data.get("vulns", [])
     parsed = [_parse_osv_vuln(v) for v in vulns]
     result = {
@@ -257,41 +232,32 @@ async def query_osv(ecosystem: str, package: str, version: str) -> dict:
     return result
 
 
-@mcp.tool()
-async def get_cwe(cwe_id: str) -> dict:
+def get_cwe(cwe_id: str) -> Dict:
     """Look up CWE details from MITRE CWE API, with fallback to a local dictionary."""
     clean_id = cwe_id.upper().replace("CWE-", "").strip()
     key = f"cwe:{clean_id}"
-    if (cached := _cache_get(key)) is not None:
+    cached = _cache_get(key)
+    if cached is not None:
         return cached
-
-    # Try MITRE API first
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.get(f"{CWE_API_BASE}/{clean_id}")
-            if resp.status_code == 200:
-                data = resp.json()
-                # MITRE API may return a list or dict depending on version
-                item = data[0] if isinstance(data, list) else data
-                result = {
-                    "id": f"CWE-{clean_id}",
-                    "name": item.get("Name", item.get("name", "")),
-                    "description": item.get("Description", item.get("description", ""))[:500],
-                    "url": f"https://cwe.mitre.org/data/definitions/{clean_id}.html",
-                    "source": "MITRE CWE API",
-                }
-                _cache_set(key, result)
-                return result
+        data = _http_get(f"{CWE_API_BASE}/{clean_id}")
+        item = data[0] if isinstance(data, list) else data
+        result = {
+            "id": f"CWE-{clean_id}",
+            "name": item.get("Name", item.get("name", "")),
+            "description": item.get("Description", item.get("description", ""))[:500],
+            "url": f"https://cwe.mitre.org/data/definitions/{clean_id}.html",
+            "source": "MITRE CWE API",
+        }
+        _cache_set(key, result)
+        return result
     except Exception:
         pass
-
-    # Fallback: local dictionary of 35 most common CWEs
     fallback = _CWE_FALLBACK.get(clean_id)
     if fallback:
         result = {**fallback, "source": "local-fallback"}
         _cache_set(key, result)
         return result
-
     return {
         "id": f"CWE-{clean_id}",
         "name": "Unknown",
@@ -301,8 +267,7 @@ async def get_cwe(cwe_id: str) -> dict:
     }
 
 
-@mcp.tool()
-async def get_advisory(package: str, ecosystem: str) -> dict:
+def get_advisory(package: str, ecosystem: str) -> Dict:
     """Query GitHub Advisory Database for package vulnerabilities (requires GITHUB_TOKEN env var)."""
     if not GITHUB_TOKEN:
         return {
@@ -310,39 +275,23 @@ async def get_advisory(package: str, ecosystem: str) -> dict:
             "hint": "Set GITHUB_TOKEN to enable GitHub Advisory Database queries",
             "advisories": [],
         }
-
     key = f"ghsa:{ecosystem}:{package}"
-    if (cached := _cache_get(key)) is not None:
+    cached = _cache_get(key)
+    if cached is not None:
         return cached
-
     gh_ecosystem_map = {
-        "npm": "NPM",
-        "pypi": "PIP",
-        "pip": "PIP",
-        "maven": "MAVEN",
-        "go": "GO",
-        "cargo": "RUST",
-        "crates.io": "RUST",
-        "rubygems": "RUBYGEMS",
-        "nuget": "NUGET",
-        "composer": "COMPOSER",
-        "packagist": "COMPOSER",
-        "hex": "ERLANG",
+        "npm": "NPM", "pypi": "PIP", "pip": "PIP", "maven": "MAVEN", "go": "GO",
+        "cargo": "RUST", "crates.io": "RUST", "rubygems": "RUBYGEMS", "nuget": "NUGET",
+        "composer": "COMPOSER", "packagist": "COMPOSER", "hex": "ERLANG",
     }
     gh_ecosystem = gh_ecosystem_map.get(ecosystem.lower(), ecosystem.upper())
-
     query = """
     query($package: String!, $ecosystem: SecurityAdvisoryEcosystem!) {
       securityVulnerabilities(first: 10, ecosystem: $ecosystem, package: $package,
                                orderBy: {field: UPDATED_AT, direction: DESC}) {
         nodes {
           advisory {
-            ghsaId
-            summary
-            severity
-            cvss { score vectorString }
-            publishedAt
-            updatedAt
+            ghsaId summary severity cvss { score vectorString } publishedAt updatedAt
           }
           vulnerableVersionRange
           firstPatchedVersion { identifier }
@@ -350,23 +299,14 @@ async def get_advisory(package: str, ecosystem: str) -> dict:
       }
     }
     """
-
     try:
-        async with httpx.AsyncClient(timeout=15) as client:
-            resp = await client.post(
-                GITHUB_GRAPHQL,
-                json={"query": query, "variables": {"package": package, "ecosystem": gh_ecosystem}},
-                headers={"Authorization": f"Bearer {GITHUB_TOKEN}"},
-            )
-            resp.raise_for_status()
-            data = resp.json()
-    except httpx.HTTPStatusError as e:
-        return {"package": package, "ecosystem": ecosystem,
-                "error": f"GitHub API HTTP {e.response.status_code}: {e.response.text[:200]}", "advisories": []}
-    except httpx.RequestError as e:
-        return {"package": package, "ecosystem": ecosystem,
-                "error": f"GitHub API request failed: {e}", "advisories": []}
-
+        data = _http_post(
+            GITHUB_GRAPHQL,
+            data={"query": query, "variables": {"package": package, "ecosystem": gh_ecosystem}},
+            headers={"Authorization": f"Bearer {GITHUB_TOKEN}"},
+        )
+    except Exception as e:
+        return {"package": package, "ecosystem": ecosystem, "error": str(e), "advisories": []}
     nodes = data.get("data", {}).get("securityVulnerabilities", {}).get("nodes", [])
     advisories = []
     for n in nodes:
@@ -381,7 +321,6 @@ async def get_advisory(package: str, ecosystem: str) -> dict:
             "fixed_version": (n.get("firstPatchedVersion") or {}).get("identifier", "no fix available"),
             "published": adv.get("publishedAt", ""),
         })
-
     result = {
         "package": package,
         "ecosystem": ecosystem,
@@ -393,8 +332,130 @@ async def get_advisory(package: str, ecosystem: str) -> dict:
     return result
 
 
-# --- CWE Fallback Dictionary ---
-_CWE_FALLBACK: dict[str, dict] = {
+# --- MCP protocol ---
+
+_TOOLS = [
+    {
+        "name": "get_cve",
+        "description": "Look up a specific CVE by ID from NVD. Returns CVSS score, severity, description, and CWEs.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"cve_id": {"type": "string", "description": "CVE ID, e.g. CVE-2021-44906"}},
+            "required": ["cve_id"],
+        },
+    },
+    {
+        "name": "search_cve",
+        "description": "Search CVEs by keyword from NVD. Returns a list of matching CVEs with CVSS scores.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "keyword": {"type": "string"},
+                "limit": {"type": "integer", "default": 10},
+            },
+            "required": ["keyword"],
+        },
+    },
+    {
+        "name": "query_osv",
+        "description": (
+            "Query OSV.dev for vulnerabilities affecting a specific package version. "
+            "Ecosystem values: npm, PyPI, Go, Maven, crates.io, Packagist, RubyGems, NuGet, Hex. "
+            "For Maven, use groupId:artifactId format for package name."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "ecosystem": {"type": "string"},
+                "package": {"type": "string"},
+                "version": {"type": "string"},
+            },
+            "required": ["ecosystem", "package", "version"],
+        },
+    },
+    {
+        "name": "get_cwe",
+        "description": "Look up CWE details from MITRE CWE API, with fallback to a local dictionary.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"cwe_id": {"type": "string", "description": "CWE ID, e.g. CWE-89 or 89"}},
+            "required": ["cwe_id"],
+        },
+    },
+    {
+        "name": "get_advisory",
+        "description": "Query GitHub Advisory Database for package vulnerabilities (requires GITHUB_TOKEN env var).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "package": {"type": "string"},
+                "ecosystem": {"type": "string"},
+            },
+            "required": ["package", "ecosystem"],
+        },
+    },
+]
+
+_TOOL_FNS = {
+    "get_cve": get_cve,
+    "search_cve": search_cve,
+    "query_osv": query_osv,
+    "get_cwe": get_cwe,
+    "get_advisory": get_advisory,
+}
+
+
+def _send(obj: Dict) -> None:
+    sys.stdout.write(json.dumps(obj) + "\n")
+    sys.stdout.flush()
+
+
+def _handle(msg: Dict) -> None:
+    method = msg.get("method", "")
+    params = msg.get("params") or {}
+    id_ = msg.get("id")
+
+    if method == "initialize":
+        _send({"jsonrpc": "2.0", "id": id_, "result": {
+            "protocolVersion": "2024-11-05",
+            "capabilities": {"tools": {}},
+            "serverInfo": {"name": "vuln-lookup", "version": "1.0.0"},
+        }})
+    elif method == "tools/list":
+        _send({"jsonrpc": "2.0", "id": id_, "result": {"tools": _TOOLS}})
+    elif method == "tools/call":
+        name = params.get("name", "")
+        args = params.get("arguments") or {}
+        fn = _TOOL_FNS.get(name)
+        if fn is None:
+            _send({"jsonrpc": "2.0", "id": id_, "error": {"code": -32601, "message": f"Unknown tool: {name}"}})
+            return
+        try:
+            result = fn(**args)
+            _send({"jsonrpc": "2.0", "id": id_, "result": {
+                "content": [{"type": "text", "text": json.dumps(result, indent=2)}],
+            }})
+        except Exception as e:
+            _send({"jsonrpc": "2.0", "id": id_, "error": {"code": -32603, "message": str(e)}})
+    elif id_ is not None:
+        _send({"jsonrpc": "2.0", "id": id_, "error": {"code": -32601, "message": f"Method not found: {method}"}})
+    # Notifications (no id) need no response
+
+
+def main() -> None:
+    for line in sys.stdin:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            msg = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        _handle(msg)
+
+
+# --- CWE fallback dictionary ---
+_CWE_FALLBACK: Dict[str, Dict] = {
     "20":   {"id": "CWE-20",   "name": "Improper Input Validation",                    "url": "https://cwe.mitre.org/data/definitions/20.html",   "description": "The product receives input or data, but it does not validate that the input has the properties that are required to process the data safely."},
     "22":   {"id": "CWE-22",   "name": "Path Traversal",                               "url": "https://cwe.mitre.org/data/definitions/22.html",   "description": "The software uses external input to construct a pathname but does not properly neutralize special elements that can cause the path to resolve outside the restricted directory."},
     "78":   {"id": "CWE-78",   "name": "OS Command Injection",                         "url": "https://cwe.mitre.org/data/definitions/78.html",   "description": "The software constructs all or part of an OS command using externally-influenced input."},
@@ -403,7 +464,7 @@ _CWE_FALLBACK: dict[str, dict] = {
     "94":   {"id": "CWE-94",   "name": "Code Injection",                               "url": "https://cwe.mitre.org/data/definitions/94.html",   "description": "The software constructs all or part of a code segment using externally-influenced input."},
     "98":   {"id": "CWE-98",   "name": "PHP Remote File Inclusion",                    "url": "https://cwe.mitre.org/data/definitions/98.html",   "description": "The PHP application does not restrict input before using it in require/include functions."},
     "117":  {"id": "CWE-117",  "name": "Log Injection",                                "url": "https://cwe.mitre.org/data/definitions/117.html",  "description": "Failure to sanitize log entries allows attackers to forge log entries or inject malicious content."},
-    "190":  {"id": "CWE-190",  "name": "Integer Overflow",                             "url": "https://cwe.mitre.org/data/definitions/190.html",  "description": "The software performs a calculation that can produce an integer overflow when the logic assumes the result will always be larger than the initial value."},
+    "190":  {"id": "CWE-190",  "name": "Integer Overflow",                             "url": "https://cwe.mitre.org/data/definitions/190.html",  "description": "The software performs a calculation that can produce an integer overflow."},
     "200":  {"id": "CWE-200",  "name": "Exposure of Sensitive Information",            "url": "https://cwe.mitre.org/data/definitions/200.html",  "description": "The product exposes sensitive information to an actor not explicitly authorized to have access."},
     "209":  {"id": "CWE-209",  "name": "Information Exposure via Error Messages",      "url": "https://cwe.mitre.org/data/definitions/209.html",  "description": "The software generates an error message that includes sensitive information about its environment."},
     "287":  {"id": "CWE-287",  "name": "Improper Authentication",                      "url": "https://cwe.mitre.org/data/definitions/287.html",  "description": "When an actor claims a given identity, the software does not sufficiently prove the claim is correct."},
@@ -435,4 +496,4 @@ _CWE_FALLBACK: dict[str, dict] = {
 
 
 if __name__ == "__main__":
-    mcp.run()
+    main()

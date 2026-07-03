@@ -95,7 +95,7 @@ Structured security audit for development and production codebases. Maps every f
 | `secure-code-review` skill    | OWASP Top 10 checklist, 35+ CWE mappings, severity scale, and report template                        |
 | PostToolUse hook              | Warns when edited files contain high-risk patterns (SQL injection, eval, hardcoded secrets)           |
 
-**Prerequisites:** Python 3.11+, `uv`
+**Prerequisites:** Python 3
 
 **Optional:** `NVD_API_KEY` (raises NVD rate limit 5→50 req/30s), `GITHUB_TOKEN` (enables GitHub Advisory Database)
 
@@ -307,10 +307,8 @@ Regenerates and saves `SECURITY-AUDIT.md` from the current session's findings.
     ├── hooks/
     │   └── hooks.json                # PostToolUse hook — warns on high-risk patterns
     ├── scripts/
-    │   ├── run-server.sh             # Login-shell wrapper — ensures uv is on PATH for MCP launch
     │   ├── security-lint.py          # Hook script — CWE-89/78/798/502/94 pattern detection
-    │   ├── vuln_server.py            # MCP server: NVD + OSV.dev + MITRE CWE + GitHub Advisory
-    │   └── requirements.txt
+    │   └── vuln_server.py            # MCP server: NVD + OSV.dev + MITRE CWE + GitHub Advisory
     ├── skills/
     │   └── secure-code-review/
     │       └── SKILL.md              # OWASP Top 10, 35+ CWE mappings, report template

@@ -42,25 +42,6 @@ git clone https://github.com/sembraniteam/claude-plugins.git
 /plugin install security-auditor@sembraniteam-claude-plugins
 ```
 
-### MCP Server setup
-
-The vulnerability lookup MCP server requires Python 3.11+ and `uv`:
-
-```bash
-# Install uv (if not already installed)
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# uv automatically installs dependencies on first run — no manual pip install needed
-# Verify the server works:
-uv run ~/.claude/plugins/security-auditor/scripts/vuln_server.py --help
-```
-
-If you prefer pip:
-```bash
-pip install -r ~/.claude/plugins/security-auditor/scripts/requirements.txt
-# Then edit .mcp.json: change "command" from "uv" + "run" args to "python3"
-```
-
 ---
 
 ## Environment Variables
@@ -192,8 +173,7 @@ security-auditor/
 │       └── SKILL.md          # OWASP checklist, CWE mapping, report template
 ├── scripts/
 │   ├── vuln_server.py         # MCP server: NVD + OSV.dev + MITRE CWE + GitHub Advisory
-│   ├── security-lint.py       # PostToolUse hook script
-│   └── requirements.txt
+│   └── security-lint.py       # PostToolUse hook script
 ├── hooks/
 │   └── hooks.json             # PostToolUse hook definition
 └── .mcp.json                  # MCP server registration
