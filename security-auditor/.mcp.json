@@ -1,7 +1,7 @@
 {
   "vuln-lookup": {
     "type": "stdio",
-    "command": "uv",
-    "args": ["run", "${CLAUDE_PLUGIN_ROOT}/scripts/vuln_server.py"]
+    "command": "bash",
+    "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/run-server.sh"]
   }
 }
