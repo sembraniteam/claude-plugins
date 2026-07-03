@@ -83,10 +83,12 @@ For every route that accesses sensitive data or performs state-changing operatio
 
 ## How to report findings
 
+Assign each finding a **stable finding-ID** in the format `SA-NNN` (e.g., `SA-001`, `SA-002`). These IDs are referenced by `security-fixer` and `fix-reviewer` — use them consistently throughout the report so fixes and verdicts can be traced back to specific findings.
+
 For EACH finding, use this exact format:
 
 ```
-### [VULN-N] <Short descriptive title>
+### [SA-NNN] <Short descriptive title>
 
 - **CWE**: CWE-XXX — <CWE Name>
 - **Severity**: Critical | High | Medium | Low  (see severity guidelines below)

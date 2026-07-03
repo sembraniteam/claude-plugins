@@ -41,7 +41,7 @@ Work through the OWASP Top 10 + extended checklist from the `secure-code-review`
 For EACH finding, output:
 
 ```
-### [VULN-N] <Title>
+### [SA-NNN] <Title>
 
 - **CWE**: CWE-XXX — <CWE Name>
 - **Severity**: Critical / High / Medium / Low (estimated, see CVSS note in skill)
@@ -63,3 +63,5 @@ If you found a third-party library used in this file that you suspect has a CVE,
 ## Step 5 — Summary
 
 End with a one-paragraph summary: how many confirmed findings, how many needs-review, the highest severity, and the top recommendation.
+
+> To automatically fix findings from this report, run `/audit-fix` (or `/audit-fix SA-001` for a specific finding).

@@ -80,3 +80,5 @@ In **production mode**: sort all findings by CVSS score descending; group Critic
 In **development mode**: for each finding, include a concrete code fix example. Verbose is good here.
 
 Output the full report in the chat. If the user runs `/audit-report` afterwards, they can regenerate it as a standalone `SECURITY-AUDIT.md` file.
+
+> To automatically fix findings from this report, run `/audit-fix` (or `/audit-fix SA-001` for a specific finding).
