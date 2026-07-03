@@ -1,13 +1,15 @@
 {
-  "PostToolUse": [
-    {
-      "matcher": "Write|Edit",
-      "hooks": [
-        {
-          "type": "command",
-          "command": "python3 $CLAUDE_PLUGIN_ROOT/scripts/security-lint.py"
-        }
-      ]
-    }
-  ]
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 $CLAUDE_PLUGIN_ROOT/scripts/security-lint.py"
+          }
+        ]
+      }
+    ]
+  }
 }
