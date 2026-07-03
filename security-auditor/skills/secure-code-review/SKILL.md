@@ -187,7 +187,7 @@ Ordered by risk × fix effort:
 
 **Production mode**:
 - Sort all findings by CVSS score descending within each severity tier
-- Include EPSS score and CISA KEV status if returned by the MCP `get_cve` tool
+- Include EPSS score (from `get_epss`) and CISA KEV status (from `get_kev`) for each CVE; elevate any KEV-listed CVE to Critical regardless of its CVSS score
 - Executive Summary should be written for a CTO/security lead audience — no code snippets in the summary
 - Dependency section: highlight packages with CISA KEV entries first
 

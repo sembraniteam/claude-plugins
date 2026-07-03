@@ -19,8 +19,11 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 
 NVD_BASE = "https://services.nvd.nist.gov/rest/json/cves/2.0"
 OSV_BASE = "https://api.osv.dev/v1"
-CWE_API_BASE = "https://cwe-api.mitre.org/api/v1/cwe"
+CWE_API_BASE = "https://cwe-api.mitre.org/api/v1/cwe/weakness"
 GITHUB_GRAPHQL = "https://api.github.com/graphql"
+EPSS_BASE = "https://api.first.org/data/v1/epss"
+KEV_URL = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+KEV_CATALOG_TTL = 21600  # 6 hours — CISA updates the catalog roughly once a day
 
 # --- In-memory cache ---
 _cache: Dict[str, tuple] = {}
@@ -38,6 +41,16 @@ def _cache_get(key: str) -> Optional[Any]:
 
 def _cache_set(key: str, data: Any) -> None:
     _cache[key] = (data, time.monotonic())
+
+
+def _cache_get_ex(key: str, ttl: float) -> Optional[Any]:
+    """Cache lookup with a custom TTL (in seconds), for entries that should outlive CACHE_TTL."""
+    if key in _cache:
+        data, ts = _cache[key]
+        if time.monotonic() - ts < ttl:
+            return data
+        del _cache[key]
+    return None
 
 
 # --- NVD rate limiter ---
@@ -241,7 +254,8 @@ def get_cwe(cwe_id: str) -> Dict:
         return cached
     try:
         data = _http_get(f"{CWE_API_BASE}/{clean_id}")
-        item = data[0] if isinstance(data, list) else data
+        weaknesses = data.get("Weaknesses", data if isinstance(data, list) else [data])
+        item = weaknesses[0]
         result = {
             "id": f"CWE-{clean_id}",
             "name": item.get("Name", item.get("name", "")),
@@ -332,6 +346,107 @@ def get_advisory(package: str, ecosystem: str) -> Dict:
     return result
 
 
+# --- EPSS / KEV ---
+
+_kev_lock = threading.Lock()
+
+
+def _load_kev_catalog() -> Dict[str, Dict]:
+    """Download and index the CISA KEV catalog, cached for KEV_CATALOG_TTL seconds."""
+    catalog_key = "kev:__catalog__"
+    cached = _cache_get_ex(catalog_key, KEV_CATALOG_TTL)
+    if cached is not None:
+        return cached
+    with _kev_lock:
+        cached = _cache_get_ex(catalog_key, KEV_CATALOG_TTL)
+        if cached is not None:
+            return cached
+        data = _http_get(KEV_URL)
+        vulns = data.get("vulnerabilities", [])
+        index = {v["cveID"]: v for v in vulns if "cveID" in v}
+        _cache[catalog_key] = (index, time.monotonic())
+        return index
+
+
+def get_epss(cve_id: str) -> Dict:
+    """Get EPSS (Exploit Prediction Scoring System) probability for a CVE from FIRST.org.
+
+    EPSS estimates the probability (0–1) that a CVE will be exploited in the next 30 days.
+    Scores update daily; values above ~0.10 warrant elevated remediation priority.
+    """
+    cve_id = cve_id.upper().strip()
+    key = f"epss:{cve_id}"
+    cached = _cache_get_ex(key, 86400)  # 24h — matches EPSS daily update cadence
+    if cached is not None:
+        return cached
+    try:
+        data = _http_get(EPSS_BASE, params={"cve": cve_id})
+        entries = data.get("data", [])
+        if entries:
+            e = entries[0]
+            score = float(e.get("epss", 0))
+            result = {
+                "cve_id": cve_id,
+                "found": True,
+                "epss_score": score,
+                "percentile": float(e.get("percentile", 0)),
+                "date": e.get("date", ""),
+                "interpretation": f"{score * 100:.1f}% probability of exploitation in the next 30 days",
+                "source": "FIRST.org EPSS",
+            }
+        else:
+            result = {
+                "cve_id": cve_id,
+                "found": False,
+                "epss_score": None,
+                "source": "FIRST.org EPSS",
+            }
+    except Exception as exc:
+        result = {"cve_id": cve_id, "error": str(exc), "epss_score": None}
+    _cache_set(key, result)
+    return result
+
+
+def get_kev(cve_id: str) -> Dict:
+    """Check if a CVE appears in the CISA Known Exploited Vulnerabilities (KEV) catalog.
+
+    KEV entries represent vulnerabilities with confirmed active exploitation.
+    Presence in KEV is the strongest available signal that a CVE needs immediate remediation.
+    """
+    cve_id = cve_id.upper().strip()
+    key = f"kev:{cve_id}"
+    cached = _cache_get(key)
+    if cached is not None:
+        return cached
+    try:
+        catalog = _load_kev_catalog()
+        entry = catalog.get(cve_id)
+        if entry:
+            result = {
+                "cve_id": cve_id,
+                "in_kev": True,
+                "vendor": entry.get("vendorProject", ""),
+                "product": entry.get("product", ""),
+                "vulnerability_name": entry.get("vulnerabilityName", ""),
+                "date_added": entry.get("dateAdded", ""),
+                "due_date": entry.get("dueDate", ""),
+                "required_action": entry.get("requiredAction", ""),
+                "known_ransomware": entry.get("knownRansomwareCampaignUse", "") == "Known",
+                "source": "CISA KEV",
+            }
+        else:
+            result = {
+                "cve_id": cve_id,
+                "in_kev": False,
+                "catalog_size": len(catalog),
+                "source": "CISA KEV",
+            }
+    except Exception as exc:
+        result = {"cve_id": cve_id, "error": str(exc), "in_kev": None}
+    _cache_set(key, result)
+    return result
+
+
 # --- MCP protocol ---
 
 _TOOLS = [
@@ -394,6 +509,32 @@ _TOOLS = [
             "required": ["package", "ecosystem"],
         },
     },
+    {
+        "name": "get_epss",
+        "description": (
+            "Get EPSS (Exploit Prediction Scoring System) score for a CVE from FIRST.org. "
+            "Returns the probability (0–1) of exploitation in the next 30 days and the percentile rank. "
+            "Use after get_cve to enrich findings with real-world exploitability data."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {"cve_id": {"type": "string", "description": "CVE ID, e.g. CVE-2021-44906"}},
+            "required": ["cve_id"],
+        },
+    },
+    {
+        "name": "get_kev",
+        "description": (
+            "Check if a CVE is listed in the CISA Known Exploited Vulnerabilities (KEV) catalog. "
+            "KEV membership means active exploitation has been confirmed in the wild — "
+            "use this to escalate remediation priority for any CVE found in a dependency scan."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {"cve_id": {"type": "string", "description": "CVE ID, e.g. CVE-2021-44906"}},
+            "required": ["cve_id"],
+        },
+    },
 ]
 
 _TOOL_FNS = {
@@ -402,6 +543,8 @@ _TOOL_FNS = {
     "query_osv": query_osv,
     "get_cwe": get_cwe,
     "get_advisory": get_advisory,
+    "get_epss": get_epss,
+    "get_kev": get_kev,
 }
 
 

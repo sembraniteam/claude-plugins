@@ -83,17 +83,21 @@ Generates conventional commit messages and branch names from git context and use
 
 ### [security-auditor](./security-auditor)
 
-Structured security audit for development and production codebases. Maps every finding to a CWE ID and verifies dependency vulnerabilities against live CVE databases (NVD/OSV.dev) via a bundled MCP server. CVE numbers only appear if returned by a tool call — never from model memory.
+Structured security audit for development and production codebases. Maps every finding to a CWE ID and verifies dependency vulnerabilities against live CVE databases (NVD/OSV.dev/CISA KEV) via a bundled MCP server. CVE numbers only appear if returned by a tool call — never from model memory. Production mode enriches every CVE with EPSS exploitation probability and CISA KEV status.
 
-| Component                     | Description                                                                                           |
-|-------------------------------|-------------------------------------------------------------------------------------------------------|
-| `/audit [dev\|prod]`          | Full codebase scan: structural SAST analysis + dependency CVE verification via OSV.dev and NVD        |
-| `/audit-file <path>`          | Deep single-file audit with data flow tracing, line-level evidence, and CWE mapping                   |
-| `/audit-deps`                 | Dependency-only scan — queries all manifest files and outputs a CVE table with severity and fix versions |
-| `/audit-report`               | Regenerates a complete `SECURITY-AUDIT.md` from current session findings                              |
-| `security-auditor` agent      | Read-only subagent (`Read`, `Grep`, `Glob` only) for structural SAST analysis and CWE-mapped findings |
-| `secure-code-review` skill    | OWASP Top 10 checklist, 35+ CWE mappings, severity scale, and report template                        |
-| PostToolUse hook              | Warns when edited files contain high-risk patterns (SQL injection, eval, hardcoded secrets)           |
+| Component                     | Description                                                                                              |
+|-------------------------------|----------------------------------------------------------------------------------------------------------|
+| `/audit [dev\|prod]`          | Full codebase scan: structural SAST + dependency CVE verification + EPSS/KEV enrichment in prod mode     |
+| `/audit-file <path>`          | Deep single-file audit with data flow tracing, line-level evidence, and CWE mapping                      |
+| `/audit-deps`                 | Dependency-only scan — queries all manifest files and outputs a CVE table with severity and fix versions  |
+| `/audit-report`               | Regenerates a complete `SECURITY-AUDIT.md` from current session findings                                 |
+| `/audit-fix [SA-NNN]`         | Delegate one or more findings to `security-fixer`, then verify with `fix-reviewer`; one retry on failure |
+| `/audit-verify`               | Re-run `fix-reviewer` against an existing fix manifest without applying new changes                      |
+| `security-auditor` agent      | Read-only subagent (`Read`, `Grep`, `Glob` only) for structural SAST analysis and CWE-mapped findings    |
+| `security-fixer` agent        | Applies minimal fixes per CWE root cause; outputs a fix manifest; never runs shell commands              |
+| `fix-reviewer` agent          | Read-only post-fix verifier; assigns `fixed` / `partially-fixed` / `not-fixed` / `introduced-new-issue` |
+| `secure-code-review` skill    | OWASP Top 10 checklist, 35+ CWE mappings, severity scale, and report template                           |
+| PostToolUse hook              | Warns when edited files contain high-risk patterns (SQL injection, eval, hardcoded secrets)              |
 
 **Prerequisites:** Python 3
 
@@ -200,7 +204,7 @@ Generates a role-tailored report from the current investigation. Available roles
 /audit
 ```
 
-Claude asks whether you're auditing a development or production codebase, maps your project (languages, frameworks, entry points, dependency manifests), spawns a read-only `security-auditor` agent for structural SAST analysis, then queries OSV.dev and NVD for every dependency version found. Output is a full report using the OWASP Top 10 checklist.
+Claude asks whether you're auditing a development or production codebase, maps your project (languages, frameworks, entry points, dependency manifests), spawns a read-only `security-auditor` agent for structural SAST analysis, then queries OSV.dev and NVD for every dependency version found. In production mode, each CVE is enriched with its EPSS exploitation probability (FIRST.org) and CISA KEV status — KEV-listed CVEs are automatically escalated to Critical. Output is a full report using the OWASP Top 10 checklist.
 
 ```
 /audit-file src/api/users.py
@@ -298,17 +302,21 @@ Regenerates and saves `SECURITY-AUDIT.md` from the current session's findings.
     │   └── plugin.json
     ├── .mcp.json
     ├── agents/
-    │   └── security-auditor.md       # Read-only SAST agent (Read + Grep + Glob only)
+    │   ├── security-auditor.md       # Read-only SAST agent (Read + Grep + Glob only)
+    │   ├── security-fixer.md         # Applies minimal CWE-root-cause fixes; outputs fix manifest
+    │   └── fix-reviewer.md           # Verifies fixes closed the root cause; never writes files
     ├── commands/
     │   ├── audit.md                  # Full codebase audit orchestrator
     │   ├── audit-file.md             # Single-file deep audit
     │   ├── audit-deps.md             # Dependency CVE scan
+    │   ├── audit-fix.md              # Remediation pipeline: fixer → reviewer, one retry on failure
+    │   ├── audit-verify.md           # Re-run fix-reviewer against an existing fix manifest
     │   └── audit-report.md           # Save findings as SECURITY-AUDIT.md
     ├── hooks/
     │   └── hooks.json                # PostToolUse hook — warns on high-risk patterns
     ├── scripts/
     │   ├── security-lint.py          # Hook script — CWE-89/78/798/502/94 pattern detection
-    │   └── vuln_server.py            # MCP server: NVD + OSV.dev + MITRE CWE + GitHub Advisory
+    │   └── vuln_server.py            # MCP server: NVD + OSV.dev + MITRE CWE + GitHub Advisory + EPSS + CISA KEV
     ├── skills/
     │   └── secure-code-review/
     │       └── SKILL.md              # OWASP Top 10, 35+ CWE mappings, report template

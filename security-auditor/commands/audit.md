@@ -41,7 +41,13 @@ Wait for the agent to return its findings before proceeding.
 
 ## Step 4 — Dependency CVE verification via MCP
 
-For each dependency manifest found in Step 2, query the `vuln-lookup` MCP server:
+For each dependency manifest found in Step 2, query the `vuln-lookup` MCP server.
+
+After collecting CVE IDs from OSV/NVD, enrich each one with exploitability signals:
+- Call `get_epss(cve_id)` — returns the probability of exploitation in the next 30 days (FIRST.org EPSS). Scores above ~0.10 (10%) indicate elevated real-world risk.
+- Call `get_kev(cve_id)` — checks the CISA Known Exploited Vulnerabilities catalog. Any CVE in KEV has **confirmed active exploitation** and must be treated as Critical regardless of its CVSS score.
+
+Run these calls in parallel with each other (they hit independent APIs). Record the results for use in Step 5.
 
 **npm (`package.json` / `package-lock.json`)**:
 - Parse each dependency and its pinned version
@@ -75,7 +81,7 @@ For each dependency manifest found in Step 2, query the `vuln-lookup` MCP server
 
 Apply the `secure-code-review` skill to compile and format the final report.
 
-In **production mode**: sort all findings by CVSS score descending; group Critical/High at the top. Include EPSS/KEV status if the MCP tool returned it.
+In **production mode**: sort all findings by CVSS score descending; group Critical/High at the top. Include EPSS score and CISA KEV status from the `get_epss` and `get_kev` tool results. Elevate any KEV-listed CVE to Critical priority regardless of CVSS.
 
 In **development mode**: for each finding, include a concrete code fix example. Verbose is good here.
 
