@@ -1,6 +1,6 @@
 # sembraniteam-claude-plugins
 
-A collection of [Claude Code](https://claude.ai/code) plugins for automating git workflows, release documentation, debugging, and software architecture design.
+A collection of [Claude Code](https://claude.ai/code) plugins for automating git workflows, release documentation, debugging, software architecture design, performance investigation, and security auditing.
 
 ## Plugins
 
@@ -81,6 +81,26 @@ Generates conventional commit messages and branch names from git context and use
 
 ---
 
+### [security-auditor](./security-auditor)
+
+Structured security audit for development and production codebases. Maps every finding to a CWE ID and verifies dependency vulnerabilities against live CVE databases (NVD/OSV.dev) via a bundled MCP server. CVE numbers only appear if returned by a tool call — never from model memory.
+
+| Component                     | Description                                                                                           |
+|-------------------------------|-------------------------------------------------------------------------------------------------------|
+| `/audit [dev\|prod]`          | Full codebase scan: structural SAST analysis + dependency CVE verification via OSV.dev and NVD        |
+| `/audit-file <path>`          | Deep single-file audit with data flow tracing, line-level evidence, and CWE mapping                   |
+| `/audit-deps`                 | Dependency-only scan — queries all manifest files and outputs a CVE table with severity and fix versions |
+| `/audit-report`               | Regenerates a complete `SECURITY-AUDIT.md` from current session findings                              |
+| `security-auditor` agent      | Read-only subagent (`Read`, `Grep`, `Glob` only) for structural SAST analysis and CWE-mapped findings |
+| `secure-code-review` skill    | OWASP Top 10 checklist, 35+ CWE mappings, severity scale, and report template                        |
+| PostToolUse hook              | Warns when edited files contain high-risk patterns (SQL injection, eval, hardcoded secrets)           |
+
+**Prerequisites:** Python 3.11+, `uv`
+
+**Optional:** `NVD_API_KEY` (raises NVD rate limit 5→50 req/30s), `GITHUB_TOKEN` (enables GitHub Advisory Database)
+
+---
+
 ## Installation
 
 Install all plugins at once using the marketplace:
@@ -97,6 +117,7 @@ cc plugin install https://github.com/sembraniteam/claude-plugins/changelog-manag
 cc plugin install https://github.com/sembraniteam/claude-plugins/debugging-workflow
 cc plugin install https://github.com/sembraniteam/claude-plugins/git-helper
 cc plugin install https://github.com/sembraniteam/claude-plugins/perfmind
+cc plugin install https://github.com/sembraniteam/claude-plugins/security-auditor
 ```
 
 ---
@@ -173,6 +194,32 @@ Paste in profiler output, GC logs, screenshots, or metrics. Claude gathers evide
 
 Generates a role-tailored report from the current investigation. Available roles: `developer`, `perf-engineer`, `devops`, `leadership`.
 
+### Security audit workflow
+
+```
+/audit
+```
+
+Claude asks whether you're auditing a development or production codebase, maps your project (languages, frameworks, entry points, dependency manifests), spawns a read-only `security-auditor` agent for structural SAST analysis, then queries OSV.dev and NVD for every dependency version found. Output is a full report using the OWASP Top 10 checklist.
+
+```
+/audit-file src/api/users.py
+```
+
+Deep single-file audit with data flow tracing from input sources to dangerous sinks (SQL, shell, file paths, eval, deserialization). Every finding is mapped to a CWE ID with line-level evidence and a concrete remediation.
+
+```
+/audit-deps
+```
+
+Dependency-only scan — no code analysis. Queries all manifest files (npm, PyPI, Go, Maven, Rust, Ruby, PHP, NuGet) and outputs a CVE table with CVSS scores and fix versions.
+
+```
+/audit-report
+```
+
+Regenerates and saves `SECURITY-AUDIT.md` from the current session's findings.
+
 ---
 
 ## Repository Structure
@@ -226,26 +273,50 @@ Generates a role-tailored report from the current investigation. Available roles
 │   └── skills/
 │       ├── generate-branch/
 │       └── generate-commit/
-└── perfmind/
+├── perfmind/
+│   ├── .claude-plugin/
+│   │   └── plugin.json
+│   ├── agents/
+│   │   ├── performance-analyst.md
+│   │   └── report-generator.md
+│   └── skills/
+│       ├── bottleneck-patterns/
+│       │   ├── SKILL.md
+│       │   └── references/
+│       ├── impact-matrix/
+│       │   └── SKILL.md
+│       ├── investigate/
+│       │   ├── SKILL.md
+│       │   └── examples/
+│       ├── profiler-analysis/
+│       │   └── SKILL.md
+│       └── report/
+│           ├── SKILL.md
+│           └── references/
+└── security-auditor/
     ├── .claude-plugin/
     │   └── plugin.json
+    ├── .mcp.json
     ├── agents/
-    │   ├── performance-analyst.md
-    │   └── report-generator.md
-    └── skills/
-        ├── bottleneck-patterns/
-        │   ├── SKILL.md
-        │   └── references/
-        ├── impact-matrix/
-        │   └── SKILL.md
-        ├── investigate/
-        │   ├── SKILL.md
-        │   └── examples/
-        ├── profiler-analysis/
-        │   └── SKILL.md
-        └── report/
-            ├── SKILL.md
-            └── references/
+    │   └── security-auditor.md       # Read-only SAST agent (Read + Grep + Glob only)
+    ├── commands/
+    │   ├── audit.md                  # Full codebase audit orchestrator
+    │   ├── audit-file.md             # Single-file deep audit
+    │   ├── audit-deps.md             # Dependency CVE scan
+    │   └── audit-report.md           # Save findings as SECURITY-AUDIT.md
+    ├── hooks/
+    │   └── hooks.json                # PostToolUse hook — warns on high-risk patterns
+    ├── scripts/
+    │   ├── security-lint.py          # Hook script — CWE-89/78/798/502/94 pattern detection
+    │   ├── vuln_server.py            # MCP server: NVD + OSV.dev + MITRE CWE + GitHub Advisory
+    │   └── requirements.txt
+    ├── skills/
+    │   └── secure-code-review/
+    │       └── SKILL.md              # OWASP Top 10, 35+ CWE mappings, report template
+    └── test-fixtures/                # Intentionally vulnerable demo files
+        ├── vulnerable_app.py
+        ├── insecure_api.js
+        └── package.json
 ```
 
 ---
