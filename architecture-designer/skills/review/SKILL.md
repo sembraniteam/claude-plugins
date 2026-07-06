@@ -93,9 +93,9 @@ Ask:
 
 Based on the revision scope:
 - For architecture changes: update the affected Mermaid diagrams (C4, sequence, deployment)
-- For database changes: re-spawn the `architecture-designer:database-designer` agent with the updated requirements
+- For database changes: re-spawn the `architecture-designer:database-designer` agent with the updated requirements, then validate with `architecture-designer:database-reviewer`. If Critical or Major findings are returned, spawn `architecture-designer:database-fixer` and re-run the reviewer until it passes.
 - For new features: add new diagram elements as needed
-- For removed components: remove or strike-through the relevant elements
+- For removed components: remove the relevant elements
 
 ### 4c. Architecture re-review
 
@@ -103,7 +103,7 @@ Spawn the `architecture-designer:architecture-reviewer` agent with:
 - The updated requirements (original + changes)
 - All updated diagrams
 
-Fix any critical findings before proceeding.
+If Critical or Major findings are returned: spawn `architecture-designer:architecture-fixer` with the review report, `docs/architecture-designer/diagrams.json`, and the requirements summary. Re-run the reviewer after the fixer updates `diagrams.json`. Repeat until `REVIEW PASSED`.
 
 ### 4d. Browser preview
 
@@ -146,7 +146,9 @@ Spawn the `architecture-designer:document-reviewer` agent. Pass it:
 - Requirements summary
 - Expected filename
 
-Fix any failures, re-review until it passes. Then update `Status` to `Approved`.
+If DOCUMENT REVIEW FAILED: spawn `architecture-designer:document-fixer` with the document path, the review report, and the requirements summary. Re-run `architecture-designer:document-reviewer` after the fixer applies its corrections. If the fixer's log says the file must be renamed (F6), rename it first. Repeat until DOCUMENT REVIEW PASSED.
+
+Then update `Status` to `Approved`.
 
 ### 4g. Implementation offer
 

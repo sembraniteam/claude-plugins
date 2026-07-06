@@ -126,7 +126,15 @@ Spawn the `architecture-designer:database-designer` agent. Pass it:
 - The domain entities extracted from the functional requirements
 - The access patterns (how data will be read and written, from the business processes)
 
-Wait for the agent to return ERD, index plan, engine recommendation, and secure connection config. Incorporate all of this output into the diagram set and document.
+Wait for the agent to return ERD, index plan, engine recommendation, and secure connection config.
+
+Then spawn `architecture-designer:database-reviewer`. Pass it:
+- The full database-designer output
+- The requirements summary (stages 1–5)
+
+If the reviewer returns `DATABASE REVIEW FAILED`: spawn `architecture-designer:database-fixer` with the review report, the database-designer output, and the requirements summary. After the fixer returns corrected outputs, re-spawn `architecture-designer:database-reviewer` to verify. Repeat until `DATABASE REVIEW PASSED`.
+
+Incorporate the final approved database design into the diagram set and document.
 
 ### 6b. Diagram selection and generation
 
@@ -175,9 +183,14 @@ Spawn the `architecture-designer:architecture-reviewer` agent. Pass it:
 
 Wait for the review report.
 
-**If the report contains CRITICAL items**: fix the diagrams, then re-spawn the reviewer. Repeat until no critical items remain.
+**If the report contains CRITICAL or MAJOR items**: spawn `architecture-designer:architecture-fixer`. Pass it:
+- The review report
+- The path to `docs/architecture-designer/diagrams.json`
+- The requirements summary
 
-**If the report contains only MAJOR or MINOR items**: fix the major items, then proceed. Note minor items for the user.
+After the fixer updates `diagrams.json`, re-spawn `architecture-designer:architecture-reviewer` to verify. Repeat until no Critical items remain and all Major items are resolved.
+
+**If the report contains only MINOR items**: note them for the user and proceed.
 
 Do not open the browser preview until the reviewer reports `REVIEW PASSED`.
 
@@ -288,7 +301,13 @@ Spawn the `architecture-designer:document-reviewer` agent. Pass it:
 
 Wait for the review verdict.
 
-**If DOCUMENT REVIEW FAILED**: fix each item listed in the report, re-save the document, re-spawn the reviewer. Repeat until it passes.
+**If DOCUMENT REVIEW FAILED**: spawn `architecture-designer:document-fixer`. Pass it:
+- The document path
+- The review report
+- The requirements summary
+- The path to `docs/architecture-designer/diagrams.json`
+
+After the fixer overwrites the document, re-spawn `architecture-designer:document-reviewer` to verify. If the fixer's log says the file must be renamed (F6), rename it before re-running the reviewer. Repeat until DOCUMENT REVIEW PASSED.
 
 **Once it passes**: update the `Status` column in the metadata table from `Draft` to `Approved`. The table should now read:
 
