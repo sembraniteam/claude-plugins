@@ -1,5 +1,5 @@
 ---
-name: architecture-designer:architecture-reviewer
+name: architecture-reviewer
 description: Use this agent when the architecture-designer:design or architecture-designer:review skill needs to validate diagrams for technical correctness, cross-diagram consistency, requirements traceability, and risk identification before showing the browser preview.
 model: inherit
 color: blue
@@ -49,6 +49,15 @@ Check for and flag:
 - **Security gaps** — missing TLS between internal services, no API gateway / rate limiting, no secrets management shown for credentials, direct database access from public-facing components
 - **Over-engineering** — microservices split for a low-complexity, low-traffic system; unnecessary complexity that increases operational burden without clear benefit
 - **Under-engineering** — a monolith with no horizontal scaling for a system that must handle spike loads; no observability/logging component for a production system
+
+### 5. Operability and resilience
+
+Check these for production-readiness. Each missing item below is a finding in its own right — don't fold it into dimension 4.
+
+- **Observability**: For any system with an availability SLA (≥99% uptime), a log aggregation destination must be visible in the deployment diagram (ELK, Loki, Datadog, CloudWatch, etc.) and a metrics/alerting platform must appear in the technology decisions. Flag as **Major** if either is absent. For microservices or event-driven systems with 3+ async flows, a distributed tracing component (OpenTelemetry collector, Jaeger, Tempo) must also be present — flag as **Minor** if absent.
+- **Disaster recovery**: When the non-functional requirements state an RPO < 24h, the deployment diagram must show a database replica or a named backup destination (snapshot schedule, PITR, S3 backup). Flag as **Major** if a stateful component has no visible backup strategy. When RTO < 1h, automated failover or multi-AZ deployment must be shown — flag as **Major** if absent.
+- **Security controls at the perimeter**: For internet-facing systems handling financial data, PII, or authentication: a WAF or DDoS-mitigation layer must appear at the edge (Cloudflare WAF, AWS WAF, GCP Cloud Armor). Rate limiting must be shown at the API gateway or load balancer. Flag missing WAF as **Major** for financial/PII systems; flag missing rate limiting as **Major** for any public API.
+- **Secrets management**: Technology decisions must name a secrets management approach beyond plain environment variables for production (AWS Secrets Manager, GCP Secret Manager, HashiCorp Vault, Kubernetes secrets with sealed-secrets). Flag as **Minor** if absent, **Major** if the deployment diagram implies credentials are baked into container images.
 
 ## Output format
 

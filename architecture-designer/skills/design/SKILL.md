@@ -108,6 +108,8 @@ Based on everything gathered in stages 1–4, propose:
 5. **Infrastructure provider and key services**: cloud provider, compute option (containers vs VMs vs FaaS), CDN, load balancer. Name the specific managed services (e.g., "AWS ECS Fargate", not just "containers on AWS").
 6. **Key supporting services**: message queue (if async needed), cache, search index, object storage — only recommend if required by the functional requirements. Name specific technologies with versions.
 7. **Authentication approach**: library, managed service, or self-hosted identity provider — justify based on user roles, security requirements, and team capacity.
+8. **Observability strategy**: Logging platform (structured logs → aggregator: ELK, Grafana Loki, Datadog, CloudWatch). Metrics and dashboards. Distributed tracing if multiple services or async flows are involved (OpenTelemetry + Jaeger/Tempo). Alerting destination and escalation path. Recommend only what the system's scale and operational maturity actually require — a monolith with a small team may need only structured logging and a single dashboard.
+9. **Disaster recovery and resilience**: RPO (maximum acceptable data loss) and RTO (maximum acceptable downtime), derived from the availability NFR in stage 2. Backup strategy: automated snapshots, point-in-time recovery, or cross-region replication. Failover approach: manual, automated active-passive, or active-active.
 
 Every recommendation must cite a specific reason from stages 1–4 (e.g., "PostgreSQL 16 because the team has 3 years of PostgreSQL experience [stage 3], the data is relational [stage 2], and the estimated 300 TPS write load is within its range with PgBouncer [stage 4]").
 
@@ -147,6 +149,8 @@ Generate Mermaid diagrams relevant to the project. **All diagrams are optional**
 | C4 Context       | `C4Context`                           | Any external integration or 2+ user types    |
 | C4 Container     | `C4Container`                         | 2+ deployable components                     |
 | Deployment       | `flowchart TD` or `architecture-beta` | Cloud or multi-server deployment             |
+
+**Production-ready requirement**: For any system targeting production workloads, the deployment / infrastructure diagram must show: (1) at least one observability sink (log aggregator, APM agent, or metrics exporter named in Stage 5); (2) at least one DR component (database replica, automated backup target, or cross-region failover). If either is absent the `architecture-reviewer` will raise it as a Major finding.
 
 **ERD special requirement**: Since `erDiagram` has no native index notation, mark indexed columns via attribute comments (`"idx"`) and include an index list table (from the database-designer agent) as a markdown table immediately after the ERD mermaid block. See `references/diagrams-guide.md` for the exact format.
 
@@ -193,6 +197,11 @@ Do not open the browser preview until the reviewer reports `REVIEW PASSED`.
       "id": "<kebab-id>",
       "title": "<Human-readable title>",
       "description": "<One sentence describing what this diagram shows>",
+      "details": "<Multi-paragraph explanation — see field guide below>",
+      "rationale": "<Why this diagram was created — see field guide below>",
+      "companionTable": [
+        { "name": "<index name>", "table": "<table name>", "columns": "<column(s)>", "type": "<index type>", "reason": "<justification>" }
+      ],
       "code": "<Raw Mermaid syntax — newlines as \\n>"
     }
   ]
@@ -200,6 +209,14 @@ Do not open the browser preview until the reviewer reports `REVIEW PASSED`.
 ```
 
 `generatedAt`: use the JavaScript `new Date().toISOString()` equivalent — format as `YYYY-MM-DDTHH:MM:SS.mmmZ`. Never use shell commands.
+
+**Field guide for `details`, `rationale`, and `companionTable`** — all three are rendered in the browser preview directly below the diagram:
+
+- **`details`** (2–4 paragraphs): Explain what each major component or group represents, how data or control flows through the diagram, the key relationships and their significance, and what a developer needs to understand to implement based on this diagram. Separate paragraphs with `\n\n` in the JSON string. Rendered as a collapsible block.
+
+- **`rationale`** (1–3 paragraphs): State why this specific diagram type was chosen for this concern, what design decisions are encoded in the diagram (e.g., why the ERD is normalized this way, why the sequence diagram shows this particular auth flow), what alternatives were considered and why they were not chosen, and which requirements or constraints from stages 1–5 drove the visible choices. Separate paragraphs with `\n\n` in the JSON string. Rendered as a collapsible block.
+
+- **`companionTable`** (optional, ERD diagrams only): Copy the index plan rows from the database-designer output into this structured array. Each row maps to one index: `name` is the index identifier (e.g., `idx_users_email`), `table` is the table it belongs to, `columns` is the indexed column(s) as a string, `type` is the index type (e.g., `UNIQUE B-TREE`, `B-TREE`, `GIN`), and `reason` is the query it serves. Rendered as a visible HTML table immediately below the ERD — omit this field for all non-ERD diagrams.
 
 2. **Find a free port**: run `node <scripts_dir>/find-port.mjs`. Capture stdout (the port number). If it exits non-zero, report the error to the user.
 
@@ -233,10 +250,10 @@ Repeat until the user confirms the design is correct.
 
 Once the user confirms, save the document to:
 ```
-docs/architecture-designer/architecture/{ddmmyyyy}-{topic}.md
+docs/architecture-designer/architecture/{yyyymmdd}-{topic}.md
 ```
 
-- `{ddmmyyyy}`: today's date as 8 digits — use JavaScript `Date` to format: day (2-digit, zero-padded) + month (2-digit, zero-padded) + year (4-digit). Example: `05072026` for 5 July 2026. **Never use the shell `date` command.**
+- `{yyyymmdd}`: today's date as 8 digits in ISO order — use JavaScript `Date` to format: year (4-digit) + month (2-digit, zero-padded) + day (2-digit, zero-padded). Example: `20260705` for 5 July 2026. **Never use the shell `date` command.** This ISO-style order ensures files sort chronologically when listed alphabetically.
 - `{topic}`: the project/application name in kebab-case (lowercase, hyphens, no spaces)
 - If a file with this name already exists, append `-2`, `-3`, etc. until the filename is unique
 
@@ -256,7 +273,7 @@ docs/architecture-designer/architecture/{ddmmyyyy}-{topic}.md
 2. **Requirements Summary** — functional and non-functional requirements from stages 1–2
 3. **Constraints and Feasibility** — from stage 3
 4. **Capacity Planning** — from stage 4 with numeric estimates
-5. **Technology Decisions** — stack, architecture pattern, database, infrastructure, with justifications from stages 1–4
+5. **Technology Decisions** — stack, architecture pattern, database, infrastructure, observability strategy, and DR approach, with justifications from stages 1–4
 6. **Architecture Diagrams** — every created diagram with: a heading, a paragraph description, then the mermaid code block. For the ERD, include the index list table immediately after the mermaid block.
 7. **Database Design** — the full output from the database-designer agent (schema, ERD explanation, index plan, connection config)
 

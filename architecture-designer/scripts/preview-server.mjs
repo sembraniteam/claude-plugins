@@ -12,10 +12,20 @@
  *   "topic": "project-topic-kebab",
  *   "generatedAt": "ISO 8601 string",
  *   "diagrams": [
- *     { "id": "use-case", "title": "Use Case Diagram",
- *       "description": "...", "code": "flowchart LR\n..." }
+ *     {
+ *       "id": "use-case",
+ *       "title": "Use Case Diagram",
+ *       "description": "One-sentence summary shown above the diagram.",
+ *       "details": "Multi-paragraph explanation (paragraphs separated by \\n\\n). Rendered as collapsible block.",
+ *       "rationale": "Why this diagram type was chosen and what decisions it encodes. Rendered as collapsible block.",
+ *       "companionTable": [
+ *         { "name": "idx_name", "table": "tbl", "columns": "col", "type": "B-TREE", "reason": "..." }
+ *       ],
+ *       "code": "flowchart LR\n..."
+ *     }
  *   ]
  * }
+ * companionTable is optional; only include it for erDiagram entries (rendered as an index plan table below the diagram).
  */
 
 import http from 'http';
@@ -44,7 +54,43 @@ function buildTocItem(d) {
   return `<li><a href="#diagram-${esc(d.id)}">${esc(d.title)}</a></li>`;
 }
 
+function renderParagraphs(text) {
+  return String(text ?? '').split(/\n\n+/)
+    .filter(p => p.trim())
+    .map(p => `<p>${esc(p.trim())}</p>`)
+    .join('');
+}
+
+function buildCompanionTable(rows) {
+  if (!Array.isArray(rows) || rows.length === 0) return '';
+  const header = '<tr><th>Index Name</th><th>Table</th><th>Column(s)</th><th>Type</th><th>Reason</th></tr>';
+  const body = rows.map(r => `<tr>
+      <td>${esc(String(r.name ?? ''))}</td>
+      <td>${esc(String(r.table ?? ''))}</td>
+      <td>${esc(String(r.columns ?? ''))}</td>
+      <td>${esc(String(r.type ?? ''))}</td>
+      <td>${esc(String(r.reason ?? ''))}</td>
+    </tr>`).join('');
+  return `<div class="companion-table-wrapper">
+      <div class="companion-table-title">Index plan</div>
+      <table class="companion-table"><thead>${header}</thead><tbody>${body}</tbody></table>
+    </div>`;
+}
+
 function buildSection(d) {
+  const companionBlock = buildCompanionTable(d.companionTable);
+  const detailsBlock = d.details
+    ? `<details class="diagram-meta">
+        <summary>Details</summary>
+        <div class="meta-body">${renderParagraphs(d.details)}</div>
+      </details>`
+    : '';
+  const rationaleBlock = d.rationale
+    ? `<details class="diagram-meta">
+        <summary>Design rationale</summary>
+        <div class="meta-body">${renderParagraphs(d.rationale)}</div>
+      </details>`
+    : '';
   return `
     <section class="diagram-section" id="diagram-${esc(d.id)}" data-id="${esc(d.id)}" data-title="${esc(d.title)}">
       <h2>${esc(d.title)}</h2>
@@ -61,6 +107,7 @@ function buildSection(d) {
           <pre class="mermaid">${esc(d.code)}</pre>
         </div>
       </div>
+      ${companionBlock}${detailsBlock}${rationaleBlock}
     </section>`;
 }
 
@@ -118,6 +165,23 @@ function buildHtml(data) {
     .diagram-inner { transform-origin: 0 0; display: inline-block; padding: 20px; will-change: transform; }
     .diagram-inner svg { max-width: none !important; height: auto; display: block; }
     .mermaid { display: block; }
+    .companion-table-wrapper { margin-top: 16px; border-top: 1px solid #e5e7eb; padding-top: 14px; overflow-x: auto; }
+    .companion-table-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.6px; color: #6b7280; margin-bottom: 8px; }
+    .companion-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .companion-table th { background: #f3f4f6; text-align: left; padding: 7px 10px;
+      font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb; white-space: nowrap; }
+    .companion-table td { padding: 6px 10px; border-bottom: 1px solid #f3f4f6; color: #374151; vertical-align: top; }
+    .companion-table tr:last-child td { border-bottom: none; }
+    .companion-table tbody tr:hover td { background: #f9fafb; }
+    .diagram-meta { border-top: 1px solid #e5e7eb; margin-top: 14px; }
+    .diagram-meta summary { cursor: pointer; font-size: 0.8rem; font-weight: 600;
+      color: #6b7280; padding: 10px 0; user-select: none; list-style: none; }
+    .diagram-meta summary::-webkit-details-marker { display: none; }
+    .diagram-meta[open] summary { color: #374151; }
+    .meta-body { padding: 2px 0 12px; }
+    .meta-body p { font-size: 0.87rem; color: #374151; line-height: 1.7; margin-bottom: 8px; }
+    .meta-body p:last-child { margin-bottom: 0; }
     footer { text-align: center; padding: 20px; color: #9ca3af; font-size: 0.76rem;
               border-top: 1px solid #e5e7eb; margin-top: 8px; }
     @media (max-width: 600px) {
@@ -415,5 +479,9 @@ server.listen(port, '127.0.0.1', () => {
       args = [url];
   }
   const child = spawn(cmd, args, { detached: true, stdio: 'ignore' });
+  child.on('error', () => {
+    process.stderr.write(`Warning: could not open browser automatically.\n`);
+    process.stderr.write(`Please open ${url} manually in your browser.\n`);
+  });
   child.unref();
 });

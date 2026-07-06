@@ -107,7 +107,7 @@ Fix any critical findings before proceeding.
 
 ### 4d. Browser preview
 
-1. Update `docs/architecture-designer/diagrams.json` with the revised diagrams (same JSON format as the design workflow).
+1. Update `docs/architecture-designer/diagrams.json` with the revised diagrams (same JSON format as the design workflow, including `details`, `rationale`, and — for ERD diagrams — `companionTable` rows; update all three to reflect what changed in the revision).
 2. If a preview server from a previous run is already running (the user will know the URL): tell them to refresh their browser.
 3. If no server is running: run `node <scripts_dir>/find-port.mjs`, then `node <scripts_dir>/preview-server.mjs <port>` in the background.
 4. Ask: **"Does this revised architecture look correct to you?"**
@@ -118,7 +118,7 @@ If further revisions are needed, repeat from step 4b.
 
 Once the user confirms the revision, save to:
 ```
-docs/architecture-designer/architecture/{ddmmyyyy}-{topic}.md
+docs/architecture-designer/architecture/{yyyymmdd}-{topic}.md
 ```
 
 **Important**: never overwrite the previous document. Always create a new file. The history must remain intact.
@@ -132,7 +132,7 @@ The metadata table:
 
 - `Version`: increment from the previous document. Use `1.1`, `1.2`, ... for minor changes; `2.0` for major redesigns. Ask the user if unsure.
 - `Reason`: fill with the reason for this revision (e.g., "Added real-time notifications feature", "Migrated from monolith to microservices", "Performance improvements for 10× user growth")
-- `Previous Document`: the filename of the document being revised (e.g., `05072026-inventory-app.md`)
+- `Previous Document`: the filename of the document being revised (e.g., `20260705-inventory-app.md`)
 - `Status`: always starts as `Draft`
 
 Generate timestamps using JavaScript `Date`, not shell commands.

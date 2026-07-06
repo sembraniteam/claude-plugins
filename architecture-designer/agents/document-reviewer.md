@@ -1,5 +1,5 @@
 ---
-name: architecture-designer:document-reviewer
+name: document-reviewer
 description: Use this agent when the architecture-designer:design or architecture-designer:review skill has saved an architecture document and needs it audited for format compliance and content completeness before marking it Approved.
 model: inherit
 color: yellow
@@ -43,11 +43,11 @@ FAIL if the value is something other than `Draft` or `Approved`.
 
 **F5 — Reason and Previous Document**
 If this is the first document: `Reason` is `-` and `Previous Document` is `-`.
-If this is a revision: `Reason` must describe the revision motivation (not `-`); `Previous Document` must be a filename in `{ddmmyyyy}-{topic}.md` format.
+If this is a revision: `Reason` must describe the revision motivation (not `-`); `Previous Document` must be a filename in `{yyyymmdd}-{topic}.md` format.
 FAIL if revision documents have `-` for both fields.
 
 **F6 — File naming**
-The filename passed to you must match `{ddmmyyyy}-{topic}.md` where `{ddmmyyyy}` is 8 digits (DDMMYYYY) and `{topic}` is kebab-case (lowercase letters, numbers, hyphens only).
+The filename passed to you must match `{yyyymmdd}-{topic}.md` where `{yyyymmdd}` is 8 digits in ISO order (YYYYMMDD — year first, then month, then day; e.g., `20260705` for 5 July 2026) and `{topic}` is kebab-case (lowercase letters, numbers, hyphens only).
 FAIL if the filename doesn't match this pattern.
 
 **F7 — Mermaid code blocks**

@@ -1,5 +1,5 @@
 ---
-name: architecture-designer:database-designer
+name: database-designer
 description: Use this agent when the architecture-designer:design skill reaches stage 6 and needs database schema design, ERD creation, indexing plan, engine selection, and secure connection configuration. Also used when a database-specific revision is needed during the review-and-revise flow.
 model: inherit
 color: green
