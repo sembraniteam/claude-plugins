@@ -1,5 +1,5 @@
 ---
-name: architecture-designer:review
+name: review
 description: Use this skill when the user wants to review or revise an existing architecture, says "review my architecture", "audit my architecture", "check my architecture", "my architecture needs review", "update my architecture document", "revise the architecture", "architecture drift", "compare design vs implementation", "architecture is outdated", "architecture inconsistency", "check if my code matches my design", or wants to compare their architecture document against their current codebase. Also trigger when the user mentions their architecture document needs updating after new features were added or requirements changed.
 ---
 
@@ -156,7 +156,10 @@ After approval:
 
 > **"The revised architecture document is approved. Would you like me to regenerate the project skeleton based on the updated architecture?"**
 
-If yes: spawn `architecture-designer:architecture-implementer` with the new document path.
+If yes: scan the working directory for signs of an existing project (look for `package.json`, `go.mod`, `Cargo.toml`, `requirements.txt`, `pyproject.toml`, `pom.xml`, and source directories `src/`, `app/`, `lib/`, `cmd/`, `internal/`). Then spawn `architecture-designer:architecture-implementer`. Pass it:
+- The path to the approved document
+- **Existing project summary** — what was found in the scan; if nothing was found, pass "fresh start — no existing project detected"
+- **Technology stack** — from the architecture document's Technology Decisions section (section 5)
 
 ---
 

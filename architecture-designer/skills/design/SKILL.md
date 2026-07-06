@@ -1,11 +1,11 @@
 ---
-name: architecture-designer:design
-description: Use this skill when the user wants to design a new application's architecture or infrastructure, says "design my architecture", "help me plan the architecture", "create architecture diagrams", "I need to plan a new system", "design the infrastructure for my app", "architecture planning", "help me architect", "create Mermaid diagrams for my system", "I'm starting a new project and need architecture help", or begins a new software project and needs a structured design process. Always use this skill for new architecture design — it guides from requirements gathering through capacity planning, technology selection, diagram generation, document saving, and code skeleton implementation. Do not skip this skill just because the user has already started describing their system.
+name: design
+description: Use this skill when the user wants to design a new application's architecture or infrastructure, says "design my architecture", "help me plan the architecture", "create architecture diagrams", "I need to plan a new system", "design the infrastructure for my app", "architecture planning", "help me architect", "create Mermaid diagrams for my system", "I'm starting a new project and need architecture help", or begins a new software project and needs a structured design process. Also trigger when the user mentions HLD, LLD, high-level design, low-level design, API contracts, or system design. Always use this skill for new architecture design — it guides from requirements gathering through capacity planning, technology selection, diagram generation, low-level design, document saving, and code skeleton implementation. Do not skip this skill just because the user has already started describing their system.
 ---
 
 # Architecture Designer — Main Design Workflow
 
-This skill guides the user through a six-stage architecture design process, ending with browser-rendered Mermaid diagrams, a reviewed and approved document, and an optional code skeleton.
+This skill guides the user through a seven-stage architecture design process, ending with browser-rendered Mermaid diagrams, low-level design artifacts (API contracts, business rules, DTOs, error catalog), a reviewed and approved document, and an optional code skeleton.
 
 **Scripts live two levels up from this file:** `../../scripts/find-port.mjs` and `../../scripts/preview-server.mjs`. At runtime, resolve these paths by taking the absolute path of this SKILL.md and navigating up two directories to find `scripts/`.
 
@@ -13,7 +13,7 @@ This skill guides the user through a six-stage architecture design process, endi
 
 ## How to run this workflow
 
-Work through the six stages in order. At the end of each stage, summarize the user's answers and ask:
+Work through the seven stages in order. At the end of each stage, summarize the user's answers and ask:
 > "Does this summary look correct? Shall we move to the next stage?"
 
 Do not proceed until the user confirms. Keep a running context object (in your working memory) with all answers gathered so far — you'll need it for later stages.
@@ -136,13 +136,46 @@ If the reviewer returns `DATABASE REVIEW FAILED`: spawn `architecture-designer:d
 
 Incorporate the final approved database design into the diagram set and document.
 
-### 6b. Diagram selection and generation
+### 6b. Infrastructure as Code (IaC)
+
+**Read `references/iac-guide.md` before making recommendations.**
+
+Based on the cloud provider chosen in Stage 5 and the infrastructure shape emerging from the capacity plan, define the IaC approach. Cover five points, in order:
+
+1. **Tool selection** — Terraform, OpenTofu, Pulumi, AWS CDK, CloudFormation, or Bicep. Justify based on cloud provider, team language preference, and multi-cloud requirements. See `iac-guide.md` § 1 for decision rules.
+2. **State backend** — remote backend type, bucket/container naming convention, locking mechanism. Never local state.
+3. **Module breakdown** — list each module (network, compute, database, cache, storage, messaging, monitoring) and what it provisions. Note any environment-level size differences (e.g., prod uses Multi-AZ, dev uses single-AZ). Omit modules for services not in scope.
+4. **Environment strategy** — workspace-per-env, directory-per-env, or separate repos. Default: directory-per-environment. Justify the choice.
+5. **Drift detection** — CI plan runs on every PR, scheduled nightly scans, or managed drift detection (Terraform Cloud / HCP Terraform). Pick what matches the team's operational maturity.
+
+Present the IaC plan, discuss any open questions (e.g., existing AWS account structure, Terraform Cloud subscription), adjust, and confirm before continuing.
+
+---
+
+### 6c. CI/CD Pipeline Design
+
+**Read `references/cicd-guide.md` before making recommendations.**
+
+Based on where the code is hosted, the deployment target, and the architecture pattern (monolith vs microservices vs serverless), design the delivery pipeline. Cover six points:
+
+1. **Platform selection** — GitHub Actions, GitLab CI, CircleCI, AWS CodePipeline, Argo CD, etc. Justify based on code host and deployment target. See `cicd-guide.md` § 1 for decision rules. For Kubernetes targets, consider a split: any CI platform for the build leg, Argo CD or Flux for the CD leg.
+2. **Pipeline stages** — list each stage (lint, unit test, build, integration test, security scan, push artifact, deploy per environment) with its trigger and gate condition. Omit stages the project does not need. Use the standard template in `cicd-guide.md` § 2 as a starting point.
+3. **Branching strategy** — trunk-based development, GitHub Flow, or GitFlow. Default: GitHub Flow. Justify based on team size and release cadence.
+4. **Environment promotion** — trigger and gate for each environment (dev → staging → prod). Prod requires a manual approval gate by default. Document the rollback procedure.
+5. **Secret injection** — how credentials reach the pipeline. Prefer OIDC over long-lived keys. Name the secret store (GitHub Secrets, AWS Secrets Manager, Vault, etc.) and the injection mechanism. Confirm no secrets are hardcoded in workflow files or committed to the repo.
+6. **Artifact management** — container registry, image tagging scheme (git SHA for traceability), retention policy.
+
+Present the CI/CD plan, discuss, adjust, and confirm before continuing.
+
+---
+
+### 6d. Diagram selection and generation
 
 Generate Mermaid diagrams relevant to the project. **All diagrams are optional** — select only those that add clarity for this specific project. After generating, tell the user:
 - Which diagrams were created and why
 - Which diagrams were skipped and why (e.g., "State diagram skipped — no entities with complex status lifecycles identified")
 
-**Read `references/diagrams-guide.md` before generating any diagram.** It contains: the exact attribute format for ERD, full templates for each diagram type, common mistakes to avoid, and real-world examples. Don't rely on memory for Mermaid syntax — check the guide.
+**Read `references/diagrams-guide.md` before generating any diagram.** It contains: the exact attribute format for ERD, full templates for each diagram type including CI/CD pipeline, common mistakes to avoid, real-world examples, and anti-overlap rules (ELK layout, label length, C4 config). Don't rely on memory for Mermaid syntax — check the guide.
 
 **Available diagram types** (criteria for when to create each):
 
@@ -157,21 +190,29 @@ Generate Mermaid diagrams relevant to the project. **All diagrams are optional**
 | C4 Context       | `C4Context`                           | Any external integration or 2+ user types    |
 | C4 Container     | `C4Container`                         | 2+ deployable components                     |
 | Deployment       | `flowchart TD` or `architecture-beta` | Cloud or multi-server deployment             |
+| CI/CD pipeline   | `flowchart TD`                        | 2+ deployment environments or staged release |
 
 **Production-ready requirement**: For any system targeting production workloads, the deployment / infrastructure diagram must show: (1) at least one observability sink (log aggregator, APM agent, or metrics exporter named in Stage 5); (2) at least one DR component (database replica, automated backup target, or cross-region failover). If either is absent the `architecture-reviewer` will raise it as a Major finding.
 
 **ERD special requirement**: Since `erDiagram` has no native index notation, mark indexed columns via attribute comments (`"idx"`) and include an index list table (from the database-designer agent) as a markdown table immediately after the ERD mermaid block. See `references/diagrams-guide.md` for the exact format.
 
-### 6c. Mermaid v11.16 compatibility rules
+### 6e. Mermaid v11.16 compatibility rules
 
 - Use `flowchart` instead of `graph` for flowcharts (both work, `flowchart` is preferred)
 - `stateDiagram-v2` not `stateDiagram`
 - `C4Context` and `C4Container` require `securityLevel: 'loose'` — already set in the preview server
-- For `architecture-beta`, use valid node types: `server`, `database`, `cloud`, `disk`, `internet`
+- For `architecture-beta`: node types are `service`, `group`, and `junction` only. `cloud`, `database`, `disk`, `internet`, `server` are built-in **icon names** used in the `(icon)` slot — e.g., `service db(database)[PostgreSQL]`, not `database db[PostgreSQL]`. Edge labels are not supported — put traffic descriptions in the diagram's `description` field instead.
 - Avoid HTML tags inside node labels — use plain text only
 - Do not use `%%` comments on the same line as syntax (put them on their own line)
 - Keep node IDs alphanumeric with underscores — no spaces, hyphens in IDs
 - For long labels, use quotes: `A["Long label text"]`
+
+**Anti-overlap rules** (read `references/diagrams-guide.md` § "Preventing Node Overlap" for full detail):
+
+- **ELK layout** (flowchart): add `%%{init: {'layout': 'elk'}}%%` as the first line of any `flowchart` diagram with 3+ subgraph nesting levels, 12+ nodes, or cross-boundary edges. Required for deployment (flowchart style) and CI/CD pipeline diagrams.
+- **`align` directives** (architecture-beta): add `align row` and `align column` statements before any edge declarations to lock nodes into a grid. Without them the layout engine scatters nodes unpredictably. See `references/diagrams-guide.md` § "Preventing Node Overlap" Rule 4.
+- **Label length**: keep node label text under 28 characters per line. Use `<br/>` for multi-line labels. Subgraph titles: 35 characters max.
+- **C4 layout**: every `C4Context` and `C4Container` must end with `UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")`. Use `"2"` per row when shapes have long description text.
 
 ---
 
@@ -259,7 +300,29 @@ Repeat until the user confirms the design is correct.
 
 ---
 
-## Step 10 — Save Architecture Document
+## Step 10 — Low-Level Design
+
+**Read `references/lld-guide.md`** before starting this stage. It contains the exact format for every artifact type.
+
+Derive the LLD directly from the confirmed HLD diagrams — do not invent endpoints or rules that are not visible in the sequence, class, or business-process diagrams.
+
+Work through the five artifact groups in order, presenting each group to the user and asking for confirmation or revisions before moving to the next:
+
+1. **API contracts** — one entry per endpoint visible in the sequence diagrams. Group by resource (auth, users, orders, …). For each: HTTP method + path, auth requirement, request schema (fields, types, validation), response schemas (success + every error code that can be returned).
+
+2. **Business rules** — one entry per non-trivial operation (anything with conditional logic, aggregation, or side effects). Skip simple CRUD. For each: trigger, pre-conditions, step-by-step logic, post-conditions, edge cases with exact error codes.
+
+3. **Data Transfer Objects (DTOs)** — only for complex or shared bodies used by multiple endpoints. Simple flat request/response bodies are documented inline in the API contract; they do not need a separate DTO entry.
+
+4. **Inter-service contracts** — only for microservices or event-driven architectures. For each event/message: topic/queue name, producer, consumers with their SLAs and idempotency guarantees, payload schema. Omit this group entirely for monoliths.
+
+5. **Error catalog** — a single table covering every error code referenced in the API contracts and business rules. Derived, not invented — no error should appear here that isn't referenced somewhere above.
+
+After the user confirms all groups, the complete LLD is ready to include in the architecture document.
+
+---
+
+## Step 11 — Save Architecture Document
 
 Once the user confirms, save the document to:
 ```
@@ -289,10 +352,13 @@ docs/architecture-designer/architecture/{yyyymmdd}-{topic}.md
 5. **Technology Decisions** — stack, architecture pattern, database, infrastructure, observability strategy, and DR approach, with justifications from stages 1–4
 6. **Architecture Diagrams** — every created diagram with: a heading, a paragraph description, then the mermaid code block. For the ERD, include the index list table immediately after the mermaid block.
 7. **Database Design** — the full output from the database-designer agent (schema, ERD explanation, index plan, connection config)
+8. **Infrastructure as Code** — IaC tool and justification, state backend config, module breakdown table (module name, what it provisions, environment-specific sizing), environment strategy, drift detection approach. Follow `references/iac-guide.md` § 6 for the exact format.
+9. **CI/CD Pipeline** — platform and justification, pipeline stages table (stage, trigger, tool, gate), branching strategy, environment promotion rules, secret injection approach, artifact management. Follow `references/cicd-guide.md` § 7 for the exact format.
+10. **Low-Level Design** — API contracts, business rules, DTOs (complex/shared only), inter-service contracts (microservices/event-driven only), and error catalog. Follow the section order and formatting from `references/lld-guide.md`.
 
 ---
 
-## Step 11 — Document Review
+## Step 12 — Document Review
 
 Spawn the `architecture-designer:document-reviewer` agent. Pass it:
 - The path to the saved document
@@ -317,14 +383,15 @@ After the fixer overwrites the document, re-spawn `architecture-designer:documen
 
 ---
 
-## Step 12 — Implementation Offer
+## Step 13 — Implementation Offer
 
 After the document is approved, ask:
 
 > **"The architecture document is approved. Would you like me to proceed with implementation — generating the project skeleton, data models, and infrastructure files based on this document?"**
 
-If the user says yes: spawn the `architecture-designer:architecture-implementer` agent. Pass it:
+If the user says yes: quickly scan the working directory for signs of an existing project — look for `package.json`, `go.mod`, `Cargo.toml`, `requirements.txt`, `pyproject.toml`, `pom.xml`, and source directories (`src/`, `app/`, `lib/`, `cmd/`, `internal/`). Then spawn the `architecture-designer:architecture-implementer` agent. Pass it:
 - The path to the approved document
+- **Existing project summary** — what was found in the scan; if nothing was found, pass "fresh start — no existing project detected"
 - The technology stack from stage 5
 
 If the user says no: congratulate them and let them know they can run `/architecture-designer:review` at any time to revisit and revise the architecture.

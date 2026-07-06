@@ -13,7 +13,7 @@ The skill that spawns you will pass:
 
 1. **Path to the saved document** — read it with the Read tool
 2. **User requirements summary** — from the design session (stages 1–5), so you can check content accuracy
-3. **Expected filename** — in `{ddmmyyyy}-{topic}.md` format
+3. **Expected filename** — in `{yyyymmdd}-{topic}.md` format
 
 ## Checklist
 

@@ -6,20 +6,21 @@ Guided architecture and infrastructure design workflow for Claude Code — from 
 
 ### `/architecture-designer:design`
 
-Runs the full six-stage design process:
+Runs the full seven-stage design process:
 
 1. **Requirements gathering** — application goals, stakeholders, business processes, success criteria
 2. **Requirements analysis** — functional vs non-functional requirements (performance, security, scalability, availability)
 3. **Feasibility study and constraints** — budget, timeline, regulations, team competencies, legacy integrations
 4. **Capacity planning** — users, TPS, data volume, peak load, growth projections
 5. **Technology selection** — stack, architecture pattern, database, infrastructure, observability strategy, and DR approach; every choice justified against stages 1–4
-6. **Diagram generation** — Mermaid diagrams rendered in the browser with zoom/pan/download
+6. **Architecture and infrastructure design** — Database schema (ERD, index plan, engine selection), IaC tool selection and module structure, CI/CD pipeline design (platform, stages, branching strategy, environment promotion), and Mermaid diagrams rendered in the browser with zoom/pan/download
+7. **Low-Level Design** — API contracts (per sequence diagram endpoint), business rules (pseudocode for non-trivial logic), DTOs, inter-service contracts (microservices/event-driven only), and error catalog
 
 Produced artifacts:
 - Browser preview at `http://localhost:<port>` with zoomable, downloadable 2× resolution PNG diagrams
 - Per-diagram collapsible **Details** and **Design Rationale** blocks in the preview
 - ERD diagrams include an inline **Index Plan** table in the preview
-- `docs/architecture-designer/architecture/{yyyymmdd}-{topic}.md` — complete, reviewed, and approved architecture document
+- `docs/architecture-designer/architecture/{yyyymmdd}-{topic}.md` — complete, reviewed, and approved architecture document including IaC plan, CI/CD pipeline design, and LLD section
 
 ### `/architecture-designer:review`
 
@@ -29,31 +30,49 @@ Reviews and revises an existing architecture:
 - Drift detection (compares document against codebase)
 - Revision flow with new versioned document, preserving full history
 
+### `/architecture-designer:implement`
+
+Turns an approved architecture document into a working project skeleton. Can be invoked standalone (after a design session, or independently by picking a document from `docs/architecture-designer/architecture/`):
+
+1. Locates the architecture document — from session context or lets you choose from saved documents
+2. Scans the working directory for an existing project structure
+3. Asks how to proceed: merge into existing code, fresh start, or work around a described layout
+4. Spawns `architecture-implementer` to propose a folder structure and wait for your confirmation
+5. Saves an implementation plan to `docs/architecture-designer/plan/{yyyymmdd}-{topic}.md` — a markdown checklist of every file to be created, grouped by category (models, routes, config, infrastructure, scripts)
+6. Generates all files; updates the plan checkboxes to `[x]` / `[~]` when done
+
 ## Design workflow
 
 ```mermaid
 flowchart TD
-    A([/architecture-designer:design]) --> B["Six-stage interactive session<br/>requirements → analysis → feasibility<br/>capacity → technology → diagrams"]
-    B --> C["database-designer agent<br/>engine · schema · ERD · index plan · connection config"]
-    C --> D{database-reviewer agent}
-    D -->|DATABASE REVIEW FAILED| E[database-fixer agent]
-    E --> D
-    D -->|DATABASE REVIEW PASSED| F["architecture-reviewer agent<br/>diagrams · consistency · requirements · risks · DR"]
-    F -->|Critical / Major findings| G[architecture-fixer agent]
-    G --> F
-    F -->|REVIEW PASSED| H["Browser preview — localhost:port<br/>zoom · pan · 2× PNG · collapsible Details / Rationale"]
-    H -->|User approves| I["Save architecture document<br/>docs/.../architecture/{yyyymmdd}-{topic}.md"]
-    I --> J{document-reviewer agent}
-    J -->|DOCUMENT REVIEW FAILED| K[document-fixer agent]
-    K --> J
-    J -->|DOCUMENT REVIEW PASSED| L([Document approved])
-    L --> M{Scaffold project?}
-    M -->|Yes| N[architecture-implementer agent]
-    M -->|No| O([Done])
-    N --> O
+    A([/architecture-designer:design]) --> Stages["Stages 1–5<br/>requirements · analysis · feasibility · capacity · technology"]
+    Stages --> DB["database-designer agent<br/>engine · schema · ERD · index plan · connection config"]
+    DB --> DBR{database-reviewer agent}
+    DBR -->|DATABASE REVIEW FAILED| DBF[database-fixer agent]
+    DBF --> DBR
+    DBR -->|DATABASE REVIEW PASSED| IaC["Stage 6b — IaC design<br/>tool · state backend · modules · environments · drift"]
+    IaC --> CICD["Stage 6c — CI/CD pipeline design<br/>platform · stages · branching · promotion · secrets"]
+    CICD --> Diag["Stage 6d — Diagram generation<br/>deployment · sequence · ERD · C4 · class · state · CI/CD"]
+    Diag --> AR["architecture-reviewer agent<br/>correctness · consistency · requirements · risks · DR"]
+    AR -->|Critical / Major findings| AF[architecture-fixer agent]
+    AF --> AR
+    AR -->|REVIEW PASSED| Preview["Browser preview — localhost:port<br/>zoom · pan · 2× PNG · collapsible Details / Rationale"]
+    Preview -->|User confirms| LLD["Step 10 — Low-Level Design<br/>API contracts · business rules · DTOs · error catalog"]
+    LLD --> Save["Step 11 — Save architecture document<br/>docs/.../architecture/{yyyymmdd}-{topic}.md"]
+    Save --> DR{document-reviewer agent}
+    DR -->|DOCUMENT REVIEW FAILED| DF[document-fixer agent]
+    DF --> DR
+    DR -->|DOCUMENT REVIEW PASSED| Approved([Document approved])
+    Approved --> Scaffold{Scaffold project?}
+    Scaffold -->|Yes| Impl["architecture-implementer agent<br/>propose structure → save plan → implement"]
+    Scaffold -->|No| Done([Done])
+    Impl --> Plan["docs/.../plan/{yyyymmdd}-{topic}.md<br/>checkbox per file · updated when done"]
+    Plan --> Done
 ```
 
 The `/architecture-designer:review` skill follows the same reviewer → fixer loop for any diagrams or database changes, then saves a new versioned document through the same document-reviewer pass.
+
+`/architecture-designer:implement` can be invoked standalone — it finds the architecture document, checks for an existing project structure, and delegates to `architecture-implementer` after you confirm the folder layout.
 
 ## Sub-agents
 
@@ -72,7 +91,7 @@ Each reviewer has a paired fixer agent. When a reviewer returns findings, the sk
 
 ## Scripts
 
-All scripts are Node.js ESM (`.mjs`) with no external dependencies. They run identically on Windows, macOS, and Linux.
+All scripts are Node.js ESM (`.mjs`) with no npm dependencies. They run identically on Windows, macOS, and Linux. The preview server loads Mermaid v11 and the ELK layout engine from CDN — an internet connection is required while the browser preview is open.
 
 ```bash
 # Find a free port in 3000–9000
@@ -139,5 +158,6 @@ Revisions create new files (never overwrite), with `Version` incremented, `Reaso
 | C4 Context       | `C4Context`                        | External actors and integrations |
 | C4 Container     | `C4Container`                      | Multiple deployable components   |
 | Deployment       | `flowchart` or `architecture-beta` | Cloud/infrastructure layout      |
+| CI/CD pipeline   | `flowchart TD`                     | 2+ deployment environments       |
 
 All diagrams support zoom in/out/reset (mouse wheel, pinch, buttons) and 2× resolution PNG download.

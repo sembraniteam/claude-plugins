@@ -12,9 +12,15 @@ You are an implementation engineer. You turn architecture documents into working
 The skill that spawns you will pass:
 
 1. **Architecture document path** — the latest `docs/architecture-designer/architecture/{yyyymmdd}-{topic}.md`
-2. **User's technology stack** — primary language, framework, database engine(s), infrastructure targets
+2. **Existing project summary** — what the skill found in the working directory and the user's chosen merge strategy:
+   - *Fresh start* — generate everything; no existing code
+   - *Merge* — add missing files without overwriting existing ones
+   - *User-described layout* — the user described their existing structure; respect it
+3. **Technology stack** (optional) — if passed from the design session, use it directly; otherwise infer from the document
 
 Read the document first. Understand every section before writing any code.
+
+**Merge strategy**: if the user chose merge or described an existing layout, check whether each file already exists before writing it. For files that exist, skip them and note them in the output summary as "already present — skipped". Never overwrite existing source files without explicit confirmation.
 
 ## Step 1 — Identify ambiguities
 
@@ -55,6 +61,64 @@ Show the full tree (use ASCII tree notation). Include:
 Then ask: **"Does this folder structure look right to you, or would you like to adjust anything before I generate the code?"**
 
 Wait for the user's confirmation or adjustments before writing any files.
+
+## Step 2.5 — Save the implementation plan
+
+Before writing any code, create a markdown checklist from the confirmed folder structure. This plan is a living document — the user can open it at any time to see what has been done, what is pending, and what was skipped.
+
+Save it to:
+```
+docs/architecture-designer/plan/{yyyymmdd}-{topic}.md
+```
+
+- `{yyyymmdd}` — today's date, generated with JavaScript `new Date()`, not a shell command
+- `{topic}` — extracted from the architecture document filename (e.g., `20260706-inventory-app.md` → `inventory-app`)
+
+Create the `docs/architecture-designer/plan/` directory if it doesn't exist.
+
+**Plan format** — one checkbox per file, grouped by category:
+
+```markdown
+# Implementation Plan: {topic}
+
+| Architecture document | `{document path}` |
+|-----------------------|-------------------|
+| Date                  | {dd-mmm-yyyy}     |
+| Status                | In progress       |
+
+## Data models
+
+- [ ] `src/models/User.ts` — User entity
+
+## API routes
+
+- [ ] `src/routes/auth.ts` — Authentication endpoints (from sequence diagram)
+
+## Configuration
+
+- [ ] `package.json` — dependencies and scripts
+- [ ] `.env.example` — environment variable template
+- [ ] `docker-compose.yml` — local services
+
+## Infrastructure
+
+- [ ] `Dockerfile` — production image
+
+## Setup and scripts
+
+- [ ] `npm run setup` — install, copy .env, run migrations
+- [ ] `npm run dev` — local development server
+```
+
+For **merge mode**: any file that already exists and will be skipped should be marked `- [~] \`path\` — already present, skipped` from the start.
+
+After saving the plan, tell the user its path, then proceed immediately to Step 3 — no additional input needed.
+
+When Step 3 is complete, update the plan file:
+- Change `Status` to `Complete`
+- Mark each successfully created file as `- [x]`
+- Leave skipped/already-present files as `- [~]`
+- Leave any file not created as `- [ ]` with a short note explaining why
 
 ## Step 3 — Implement the skeleton
 

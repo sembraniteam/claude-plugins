@@ -8,18 +8,19 @@ A collection of [Claude Code](https://claude.ai/code) plugins for automating git
 
 Guided architecture and infrastructure design workflow — from requirements gathering to code implementation — with interactive Mermaid diagrams, browser preview, and structured documentation.
 
-| Component                        | Description                                                                                                                                                                                                                    |
-|----------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `/architecture-designer:design`  | Six-stage interactive session: requirements → analysis → feasibility → capacity → technology → diagrams; generates Mermaid diagrams, browser preview, versioned architecture document, and optional code scaffold              |
-| `/architecture-designer:review`  | Review existing architecture from document, codebase, or both; detect design-vs-implementation drift, apply revisions, and save a new versioned document                                                                       |
-| `architecture-reviewer` agent    | Evaluates technical correctness across diagrams, alignment with requirements, and risks (SPOF, bottlenecks, security gaps, observability, DR); returns Critical / Major / Minor findings with a REVIEW PASSED / FAILED verdict |
-| `architecture-fixer` agent       | Applies targeted fixes to Mermaid diagrams based on architecture-reviewer findings; updates `diagrams.json` in place and returns a fix log                                                                                     |
-| `database-designer` agent        | Designs the full data layer: engine selection, normalized schema, ERD, index plan, and secure connection configuration; output is incorporated directly into the architecture document                                         |
-| `database-reviewer` agent        | Audits database-designer output across five dimensions: engine fit, schema/3NF, ERD accuracy, index completeness, and security config; returns DATABASE REVIEW PASSED / FAILED                                                 |
-| `database-fixer` agent           | Applies targeted corrections to schema, ERD, index plan, `companionTable` JSON, and connection config based on database-reviewer findings                                                                                      |
-| `document-reviewer` agent        | Audits format compliance (metadata table, `dd-mmm-yyyy` date, filename pattern, Mermaid fenced blocks) and content completeness; returns DOCUMENT REVIEW PASSED / FAILED                                                       |
-| `document-fixer` agent           | Fixes specific F1–F7 format and C1–C6 content failures in the architecture document based on document-reviewer findings; overwrites the draft in place                                                                         |
-| `architecture-implementer` agent | Reads the approved architecture document, proposes a folder structure for confirmation, then scaffolds project code (models from ERD, handlers from sequence diagrams) and infrastructure files                                |
+| Component                          | Description                                                                                                                                                                                                                                                             |
+|------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `/architecture-designer:design`    | Seven-stage interactive session: requirements → analysis → feasibility → capacity → technology → architecture (DB · IaC · CI/CD · diagrams) → LLD; generates Mermaid diagrams, browser preview, IaC module plan, CI/CD pipeline design, API contracts, business rules, error catalog, versioned architecture document, and optional code scaffold |
+| `/architecture-designer:review`    | Review existing architecture from document, codebase, or both; detect design-vs-implementation drift, apply revisions, and save a new versioned document                                                                                                                |
+| `/architecture-designer:implement` | Turn an approved architecture document into a working project skeleton; detects existing project structure, proposes folder layout for confirmation, then generates models, routes, config, and infrastructure files                                                    |
+| `architecture-reviewer` agent      | Evaluates technical correctness across diagrams, alignment with requirements, and risks (SPOF, bottlenecks, security gaps, observability, DR); returns Critical / Major / Minor findings with a REVIEW PASSED / FAILED verdict                                          |
+| `architecture-fixer` agent         | Applies targeted fixes to Mermaid diagrams based on architecture-reviewer findings; updates `diagrams.json` in place and returns a fix log                                                                                                                              |
+| `database-designer` agent          | Designs the full data layer: engine selection, normalized schema, ERD, index plan, and secure connection configuration; output is incorporated directly into the architecture document                                                                                  |
+| `database-reviewer` agent          | Audits database-designer output across five dimensions: engine fit, schema/3NF, ERD accuracy, index completeness, and security config; returns DATABASE REVIEW PASSED / FAILED                                                                                          |
+| `database-fixer` agent             | Applies targeted corrections to schema, ERD, index plan, `companionTable` JSON, and connection config based on database-reviewer findings                                                                                                                               |
+| `document-reviewer` agent          | Audits format compliance (metadata table, `dd-mmm-yyyy` date, filename pattern, Mermaid fenced blocks) and content completeness; returns DOCUMENT REVIEW PASSED / FAILED                                                                                                |
+| `document-fixer` agent             | Fixes specific F1–F7 format and C1–C6 content failures in the architecture document based on document-reviewer findings; overwrites the draft in place                                                                                                                  |
+| `architecture-implementer` agent   | Reads the approved architecture document, proposes a folder structure for confirmation, then scaffolds project code (models from ERD, handlers from sequence diagrams) and infrastructure files                                                                         |
 
 **Prerequisites:** Node.js (for browser preview server)
 
@@ -139,13 +140,19 @@ cc plugin install https://github.com/sembraniteam/claude-plugins/security-audito
 /architecture-designer:design
 ```
 
-Claude walks you through six stages: requirements gathering, requirements analysis, feasibility and constraints, capacity planning, technology selection, and diagram generation. At each stage it summarises what it heard and asks for confirmation before continuing. After all diagrams are generated, an `architecture-reviewer` agent checks cross-diagram consistency and requirement alignment (including observability and DR dimensions), then a browser preview opens at `http://localhost:{port}` with zoom, pan, and per-diagram 2× resolution PNG export. Each diagram includes collapsible Details and Design Rationale blocks, and ERD diagrams include an inline index plan table. Once you approve the design, the full document is saved to `docs/architecture-designer/architecture/{yyyymmdd}-{topic}.md` and verified by a `document-reviewer` agent. You can then choose to scaffold the project with `architecture-implementer`.
+Claude walks you through seven stages: requirements gathering, requirements analysis, feasibility and constraints, capacity planning, technology selection, architecture and infrastructure design, and low-level design. Stage 6 covers four sub-phases in sequence — database schema (via `database-designer` agent), IaC tool selection and module structure, CI/CD pipeline design (platform, stages, branching strategy, environment promotion), and Mermaid diagram generation. At each stage it summarises what it heard and asks for confirmation before continuing. After all diagrams are reviewed, a Low-Level Design step produces API contracts (per sequence-diagram endpoint), business rules with pseudocode, DTOs, inter-service contracts (microservices only), and an error catalog — all confirmed section by section before saving. The browser preview opens at `http://localhost:{port}` with zoom, pan, and per-diagram 2× resolution PNG export. Each diagram includes collapsible Details and Design Rationale blocks; ERD diagrams include an inline index plan table. Once you approve the design, the full document (HLD + IaC plan + CI/CD pipeline + LLD) is saved to `docs/architecture-designer/architecture/{yyyymmdd}-{topic}.md` and verified by a `document-reviewer` agent. You can then choose to scaffold the project with `architecture-implementer`.
 
 ```
 /architecture-designer:review
 ```
 
 Review an existing architecture from a saved document, the current codebase, or both. Detects drift between documented and implemented architecture, presents findings, and — if you approve revisions — goes through the same preview and document-save flow, saving a new versioned document.
+
+```
+/architecture-designer:implement
+```
+
+Turn an approved architecture document into a working project skeleton. Detects any existing project structure and asks whether to merge or start fresh, proposes the full folder layout for your confirmation, then generates data models (from the ERD), API route stubs (from sequence diagrams), configuration files, Docker setup, and infrastructure files.
 
 ### Commit workflow
 
@@ -243,12 +250,17 @@ Regenerates and saves `SECURITY-AUDIT.md` from the current session's findings.
 │   │   └── architecture-implementer.md # Scaffold generator from architecture document
 │   ├── skills/
 │   │   ├── design/
-│   │   │   ├── SKILL.md                # Six-stage interactive design → preview → document → scaffold
+│   │   │   ├── SKILL.md                # Seven-stage design: requirements → technology → IaC → CI/CD → LLD → document
 │   │   │   └── references/
-│   │   │       ├── diagrams-guide.md   # Mermaid diagram templates and syntax rules
+│   │   │       ├── diagrams-guide.md   # Mermaid templates, anti-overlap rules (ELK, align), CI/CD pipeline template
+│   │   │       ├── iac-guide.md        # IaC tool selection, state backend, module structure, environment strategy
+│   │   │       ├── cicd-guide.md       # CI/CD platform selection, pipeline stages, branching, promotion, secrets
+│   │   │       ├── lld-guide.md        # LLD artifact formats: API contracts, business rules, DTOs, error catalog
 │   │   │       └── tech-stacks.md      # Technology options by pattern, scale, cloud, and language
-│   │   └── review/
-│   │       └── SKILL.md                # Review document / codebase drift → revise → new document
+│   │   ├── review/
+│   │   │   └── SKILL.md                # Review document / codebase drift → revise → new document
+│   │   └── implement/
+│   │       └── SKILL.md                # Standalone implementation: find doc → assess project → save plan → scaffold
 │   └── scripts/
 │       ├── find-port.mjs               # Finds available port 3000–9000 via net.createServer()
 │       └── preview-server.mjs          # Serves preview HTML; auto-opens browser; 2× resolution PNG export

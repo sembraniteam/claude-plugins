@@ -211,6 +211,9 @@ function buildHtml(data) {
 
   <script type="module">
     import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/mermaid.esm.min.mjs';
+    import elkLayouts from 'https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.1.4/dist/mermaid-layout-elk.esm.min.mjs';
+
+    mermaid.registerLayoutLoaders(elkLayouts);
 
     mermaid.initialize({
       startOnLoad: false,
@@ -219,7 +222,7 @@ function buildHtml(data) {
       fontFamily: 'system-ui, sans-serif',
       er: { useMaxWidth: false },
       sequence: { useMaxWidth: false },
-      flowchart: { useMaxWidth: false },
+      flowchart: { useMaxWidth: false, nodeSpacing: 60, rankSpacing: 80 },
       c4: { useMaxWidth: false },
     });
 

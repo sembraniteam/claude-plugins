@@ -13,6 +13,91 @@ Detailed specifications for each Mermaid diagram type supported by architecture-
 7. [C4 Context Diagram (`C4Context`)](#c4-context-diagram-c4context)
 8. [C4 Container Diagram (`C4Container`)](#c4-container-diagram-c4container)
 9. [Deployment / Infrastructure Diagram (`flowchart TD` or `architecture-beta`)](#deployment--infrastructure-diagram-flowchart-td-or-architecture-beta)
+10. [CI/CD Pipeline Diagram (`flowchart TD`)](#cicd-pipeline-diagram-flowchart-td)
+
+---
+
+## Preventing Node Overlap
+
+Mermaid's default layout engine (Dagre) positions nodes automatically. When diagrams are dense or deeply nested, nodes and labels can overlap. Apply these rules before finishing any diagram.
+
+### Rule 1 — Use ELK for complex flowcharts
+
+ELK (Eclipse Layout Kernel) handles nested subgraphs and many-edge graphs far better than Dagre. Use it for any `flowchart` diagram that has:
+- 3 or more levels of nested subgraphs (e.g., cloud region → VPC → subnet → node), or
+- 12 or more nodes, or
+- Edges that cross subgraph boundaries in multiple directions
+
+Add this as the **first line** of the diagram code:
+
+```
+%%{init: {'layout': 'elk'}}%%
+flowchart TD
+  ...
+```
+
+ELK is loaded by the preview server — no extra configuration needed.
+
+### Rule 2 — Increase spacing for dense Dagre flowcharts
+
+When ELK is not used, override the default spacing with an init directive:
+
+```
+%%{init: {'flowchart': {'nodeSpacing': 80, 'rankSpacing': 100}}}%%
+flowchart TD
+  ...
+```
+
+The preview server already sets `nodeSpacing: 60` and `rankSpacing: 80` globally, but dense diagrams may need higher values (80–120 for each).
+
+### Rule 3 — Keep node labels short
+
+Long labels are the most common cause of visual overflow. Rules:
+- **Maximum 28 characters per line** inside a node label
+- Use `<br/>` to break long labels across two lines: `A["Long label<br/>second line"]`
+- For subgraph titles: maximum 35 characters — Dagre does not resize subgraphs to fit their title
+
+```mermaid
+flowchart TD
+  %% Bad — overflows into neighbors
+  A[Authenticate user with JWT and refresh token]
+
+  %% Good — two short lines
+  B["Authenticate user<br/>JWT + refresh token"]
+```
+
+### Rule 4 — Use `align` directives in `architecture-beta`
+
+`architecture-beta` has its own layout engine (not Dagre). Nodes can scatter unpredictably without explicit positioning hints. Use `align` directives to lock nodes into a grid before edges are drawn:
+
+```
+architecture-beta
+  service a(server)[API 1]
+  service b(server)[API 2]
+  service db(database)[Database]
+
+  align row a b        %% a and b sit side by side on the same row
+  align column a db    %% db is directly below a
+```
+
+Always define `align` statements before any edge statements. Use one `align row` per horizontal layer and one `align column` per vertical spine.
+
+### Rule 5 — Limit subgraph nesting depth
+
+Dagre struggles with more than 3 levels of nesting. For the deployment diagram pattern (region → VPC → subnet → servers):
+- Keep nesting to 3 levels maximum with Dagre
+- Use ELK (Rule 1) if you need 4+ levels
+- Flatten the outer region subgraph if no cross-region topology is being shown
+
+### Rule 6 — Configure C4 layout explicitly
+
+Every `C4Context` and `C4Container` diagram must end with a `UpdateLayoutConfig` call. Without it, all shapes render in a single row and overlap on complex diagrams:
+
+```
+UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
+```
+
+Adjust `$c4ShapeInRow` to control how many shapes appear per row. Use `"2"` for diagrams with long description text on shapes, `"3"` or `"4"` for simpler shapes.
 
 ---
 
@@ -553,11 +638,35 @@ C4Container
 - Arrows show traffic flow with labels
 
 **Using `architecture-beta`** (more expressive, available in Mermaid v11):
-- `service ServiceAlias[Label]` for compute services
-- `database DbAlias[Label]` for data stores
-- `cloud CloudAlias[Label]` for cloud provider boundaries
-- `junction JunctionAlias` for traffic split points
-- Edges: `ServiceAlias:R -- label --> OtherAlias:L`
+
+Node types (there are only three):
+
+| Declaration | Purpose |
+|---|---|
+| `group {id}({icon})[{label}]` | Zone/boundary container (VPC, subnet, cloud region) |
+| `group {id}({icon})[{label}] in {parentId}` | Nested boundary inside another group |
+| `service {id}({icon})[{label}]` | A component or resource node |
+| `service {id}({icon})[{label}] in {groupId}` | Component placed inside a group |
+| `junction {id}` | 4-way traffic split point (no icon) |
+
+Built-in icon names (for the `(icon)` slot): `cloud`, `database`, `disk`, `internet`, `server`
+
+Edge syntax — direction letters are `T` (top), `B` (bottom), `L` (left), `R` (right):
+```
+{id}:B --> T:{id}          right-pointing arrow, bottom-of-A to top-of-B
+{id}:R <-- L:{id}          left-pointing arrow
+{id}:R -- L:{id}           line with no arrowhead
+{id}{group}:B --> T:{id}   cross-group edge (append {group} to the source id)
+```
+
+**Note**: edge labels are not supported in `architecture-beta`. Use the `description` field in `diagrams.json` to describe traffic flow patterns instead.
+
+Overlap prevention with `align` (v11.16+):
+```
+align row {id1} {id2} {id3}       — force these nodes onto the same horizontal row
+align column {id1} {id2}          — force these nodes onto the same vertical column
+```
+Use `align` directives to lock nodes into a grid layout before edges are drawn — this prevents the layout engine from scattering them unpredictably.
 
 **Security zones to model** (in order from public to private):
 1. **Internet** — external users and traffic
@@ -571,8 +680,50 @@ C4Container
 - Showing only the happy path topology — also show backup/replica nodes for production systems
 - Missing TLS labels on connections — every connection crossing a zone boundary should be labeled with its encryption status
 
-**Template** (`flowchart TD`):
+**Template** (`architecture-beta`) — preferred for production infrastructure diagrams:
+```
+architecture-beta
+  %% Cloud region and network boundaries
+  group aws(cloud)[AWS us-east-1]
+  group vpc(server)[VPC 10.0.0.0/16] in aws
+  group public_sub(internet)[Public Subnet AZ-a and AZ-b] in vpc
+  group app_sub(server)[Private App Subnet] in vpc
+  group data_sub(database)[Private Data Subnet] in vpc
+
+  %% Nodes
+  service cdn(internet)[CDN / WAF]
+  service alb(server)[Load Balancer] in public_sub
+  service api1(server)[API Server AZ-a] in app_sub
+  service api2(server)[API Server AZ-b] in app_sub
+  service worker(server)[Background Worker] in app_sub
+  service db_p(database)[PostgreSQL Primary] in data_sub
+  service db_r(database)[PostgreSQL Replica] in data_sub
+  service cache(disk)[Redis Cache] in data_sub
+  service stripe(internet)[Stripe API]
+  service sendgrid(internet)[SendGrid]
+
+  %% Align to grid to prevent overlap
+  align column cdn alb api1 db_p
+  align row api1 api2 worker
+  align row db_p db_r cache
+
+  %% Traffic flow (no labels — describe flow in diagram description field)
+  cdn:B --> T:alb
+  alb:B --> T:api1
+  alb:B --> T:api2
+  api1:B --> T:db_p{group}
+  api2:B --> T:db_p{group}
+  api1:R --> L:db_r{group}
+  api1:B --> T:cache{group}
+  api2:B --> T:cache{group}
+  worker:B --> T:cache{group}
+  worker:R --> L:sendgrid
+  api1:R --> L:stripe
+```
+
+**Template** (`flowchart TD`) — use when edge labels (HTTPS, TLS, etc.) are required or when the team prefers a more familiar diagram style:
 ```mermaid
+%%{init: {'layout': 'elk'}}%%
 flowchart TD
   subgraph Internet["Internet"]
     User((Users))
@@ -616,4 +767,82 @@ flowchart TD
   Worker -->|TLS| Redis
   Worker -->|HTTPS| SendGrid
   API1 & API2 -->|HTTPS| Stripe
+```
+
+---
+
+## CI/CD Pipeline Diagram (`flowchart TD`)
+
+**Purpose**: Shows how code moves from a developer's commit to a running production deployment — stages, gates, and environment promotion. Makes branching strategy, test gates, and manual approval points explicit to the whole team.
+
+**When to create**: Any project with 2 or more deployment environments (dev + staging, staging + prod) or a meaningful staged release process with security scans or manual gates.
+
+**What to include**:
+- Trigger node (push, PR merge, tag) as the start
+- Each pipeline stage as a rectangle, in order
+- Decision diamonds for gates (test pass/fail, manual approval)
+- Failure branches that loop back or terminate
+- Each environment as a distinct stage with a deploy action followed by a smoke-test action
+- Manual approval gates modelled as decision diamonds with `|Approve|` / `|Reject|` branches
+
+**Conventions**:
+- Use `%%{init: {'layout': 'elk'}}%%` — pipeline diagrams have many sequential nodes and ELK renders them cleanly
+- Group stages into swimlane subgraphs if CI and CD run on different platforms (CI: GitHub Actions, CD: Argo CD)
+- Dashed arrows (`-.->`) for rollback or failure notification paths
+- Color-code environments with Mermaid `style` if useful (green for prod, orange for staging)
+
+**Common mistakes**:
+- Showing only the happy path — always add the gate failure branch
+- Omitting the rollback procedure — show how a failed prod deploy is recovered
+- Missing the artifact handoff step (build produces image → push to registry → deploy reads from registry)
+
+**Template**:
+```mermaid
+%%{init: {'layout': 'elk'}}%%
+flowchart TD
+  Trigger([Push to main branch]) --> Lint
+
+  subgraph CI["CI — GitHub Actions"]
+    Lint[Lint & format check]
+    Lint --> UnitTest[Unit tests]
+    UnitTest --> Build[Build Docker image]
+    Build --> IntTest[Integration tests]
+    IntTest --> SecScan[Security scan<br/>Trivy + Semgrep]
+    SecScan --> ScanOK{Scan passed?}
+    ScanOK -->|No — critical CVE| Fail1([Notify team & stop])
+    ScanOK -->|Yes| Push[Push image to registry<br/>tag: git-sha]
+  end
+
+  Push --> DeployDev
+
+  subgraph CD_Dev["Deploy — dev"]
+    DeployDev[Deploy to dev]
+    DeployDev --> SmokeDev[Smoke test dev]
+    SmokeDev --> DevOK{Dev healthy?}
+    DevOK -->|No| Rollback1[Rollback dev]
+    Rollback1 -.-> Fail2([Alert & stop])
+  end
+
+  DevOK -->|Yes| DeployStaging
+
+  subgraph CD_Staging["Deploy — staging"]
+    DeployStaging[Deploy to staging]
+    DeployStaging --> SmokeStaging[Smoke test staging]
+    SmokeStaging --> StagingOK{Staging healthy?}
+    StagingOK -->|No| Rollback2[Rollback staging]
+    Rollback2 -.-> Fail3([Alert & stop])
+  end
+
+  StagingOK -->|Yes| ApprovalGate
+
+  subgraph CD_Prod["Deploy — prod"]
+    ApprovalGate{Manual approval}
+    ApprovalGate -->|Reject| Fail4([Release cancelled])
+    ApprovalGate -->|Approve| DeployProd[Deploy to prod<br/>blue-green cutover]
+    DeployProd --> SmokeProd[Smoke test prod]
+    SmokeProd --> ProdOK{Prod healthy?}
+    ProdOK -->|No| Rollback3[Rollback prod<br/>restore previous version]
+    Rollback3 -.-> Fail5([Incident alert])
+    ProdOK -->|Yes| Done([Release complete])
+  end
 ```
