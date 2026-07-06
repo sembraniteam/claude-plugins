@@ -4,19 +4,20 @@ A collection of [Claude Code](https://claude.ai/code) plugins for automating git
 
 ## Plugins
 
-### [archimind](./archimind)
+### [architecture-designer](./architecture-designer)
 
-Design and review system architectures, database schemas, and feature modules with direct recommendations and visual Mermaid diagrams in a local browser viewer.
+Guided architecture and infrastructure design workflow — from requirements gathering to code implementation — with interactive Mermaid diagrams, browser preview, and structured documentation.
 
-| Component                        | Description                                                                                                                     |
-|----------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
-| `/archimind:design-architecture` | Design a new architecture — presents three options (Lean/Standard/Advanced) with diagrams and tech stack recommendations        |
-| `/archimind:review-architecture` | Audit an existing system, identify antipatterns, and propose three redesign options with migration paths                        |
-| `/archimind:design-database`     | Design new schemas or normalize existing SQL DDL with ER diagrams and index strategy                                            |
-| `/archimind:design-feature`      | Design a new feature or module — presents three options (Inline/Modular/Decoupled) with integration diagrams and test strategy  |
-| `/archimind:visualize`           | Launch a local Mermaid JS viewer with tab navigation, pan/zoom, and PNG export                                                  |
+| Component                        | Description                                                                                                                                                                                                       |
+|----------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `/architecture-designer:design`  | Six-stage interactive session: requirements → analysis → feasibility → capacity → technology → diagrams; generates Mermaid diagrams, browser preview, versioned architecture document, and optional code scaffold |
+| `/architecture-designer:review`  | Review existing architecture from document, codebase, or both; detect design-vs-implementation drift, apply revisions, and save a new versioned document                                                          |
+| `architecture-reviewer` agent    | Evaluates technical correctness across diagrams, alignment with requirements, and risks (SPOF, bottlenecks, security gaps); returns Critical / Major / Minor findings with a REVIEW PASSED / FAILED verdict       |
+| `database-designer` agent        | Designs the full data layer: engine selection, normalized schema, ERD, index plan, and secure connection configuration; output is incorporated directly into the architecture document                            |
+| `document-reviewer` agent        | Audits format compliance (metadata table, `dd-mmm-yyyy` date, filename pattern, Mermaid fenced blocks) and content completeness; returns DOCUMENT REVIEW PASSED / FAILED                                          |
+| `architecture-implementer` agent | Reads the approved architecture document, proposes a folder structure for confirmation, then scaffolds project code (models from ERD, handlers from sequence diagrams) and infrastructure files                   |
 
-**Prerequisites:** Python 3
+**Prerequisites:** Node.js (for browser preview server)
 
 ---
 
@@ -85,19 +86,19 @@ Generates conventional commit messages and branch names from git context and use
 
 Structured security audit for development and production codebases. Maps every finding to a CWE ID and verifies dependency vulnerabilities against live CVE databases (NVD/OSV.dev/CISA KEV) via a bundled MCP server. CVE numbers only appear if returned by a tool call — never from model memory. Production mode enriches every CVE with EPSS exploitation probability and CISA KEV status.
 
-| Component                     | Description                                                                                              |
-|-------------------------------|----------------------------------------------------------------------------------------------------------|
-| `/audit [dev\|prod]`          | Full codebase scan: structural SAST + dependency CVE verification + EPSS/KEV enrichment in prod mode     |
-| `/audit-file <path>`          | Deep single-file audit with data flow tracing, line-level evidence, and CWE mapping                      |
-| `/audit-deps`                 | Dependency-only scan — queries all manifest files and outputs a CVE table with severity and fix versions  |
-| `/audit-report`               | Regenerates a complete `SECURITY-AUDIT.md` from current session findings                                 |
-| `/audit-fix [SA-NNN]`         | Delegate one or more findings to `security-fixer`, then verify with `fix-reviewer`; one retry on failure |
-| `/audit-verify`               | Re-run `fix-reviewer` against an existing fix manifest without applying new changes                      |
-| `security-auditor` agent      | Read-only subagent (`Read`, `Grep`, `Glob` only) for structural SAST analysis and CWE-mapped findings    |
-| `security-fixer` agent        | Applies minimal fixes per CWE root cause; outputs a fix manifest; never runs shell commands              |
-| `fix-reviewer` agent          | Read-only post-fix verifier; assigns `fixed` / `partially-fixed` / `not-fixed` / `introduced-new-issue` |
-| `secure-code-review` skill    | OWASP Top 10 checklist, 35+ CWE mappings, severity scale, and report template                           |
-| PostToolUse hook              | Warns when edited files contain high-risk patterns (SQL injection, eval, hardcoded secrets)              |
+| Component                  | Description                                                                                              |
+|----------------------------|----------------------------------------------------------------------------------------------------------|
+| `/audit [dev\|prod]`       | Full codebase scan: structural SAST + dependency CVE verification + EPSS/KEV enrichment in prod mode     |
+| `/audit-file <path>`       | Deep single-file audit with data flow tracing, line-level evidence, and CWE mapping                      |
+| `/audit-deps`              | Dependency-only scan — queries all manifest files and outputs a CVE table with severity and fix versions |
+| `/audit-report`            | Regenerates a complete `SECURITY-AUDIT.md` from current session findings                                 |
+| `/audit-fix [SA-NNN]`      | Delegate one or more findings to `security-fixer`, then verify with `fix-reviewer`; one retry on failure |
+| `/audit-verify`            | Re-run `fix-reviewer` against an existing fix manifest without applying new changes                      |
+| `security-auditor` agent   | Read-only subagent (`Read`, `Grep`, `Glob` only) for structural SAST analysis and CWE-mapped findings    |
+| `security-fixer` agent     | Applies minimal fixes per CWE root cause; outputs a fix manifest; never runs shell commands              |
+| `fix-reviewer` agent       | Read-only post-fix verifier; assigns `fixed` / `partially-fixed` / `not-fixed` / `introduced-new-issue`  |
+| `secure-code-review` skill | OWASP Top 10 checklist, 35+ CWE mappings, severity scale, and report template                            |
+| PostToolUse hook           | Warns when edited files contain high-risk patterns (SQL injection, eval, hardcoded secrets)              |
 
 **Prerequisites:** Python 3
 
@@ -116,7 +117,7 @@ cc plugin install https://github.com/sembraniteam/claude-plugins
 Or install a single plugin by pointing to its directory:
 
 ```bash
-cc plugin install https://github.com/sembraniteam/claude-plugins/archimind
+cc plugin install https://github.com/sembraniteam/claude-plugins/architecture-designer
 cc plugin install https://github.com/sembraniteam/claude-plugins/changelog-manager
 cc plugin install https://github.com/sembraniteam/claude-plugins/debugging-workflow
 cc plugin install https://github.com/sembraniteam/claude-plugins/git-helper
@@ -131,24 +132,16 @@ cc plugin install https://github.com/sembraniteam/claude-plugins/security-audito
 ### Architecture design workflow
 
 ```
-/archimind:design-architecture
+/architecture-designer:design
 ```
 
-Claude gathers requirements dynamically (skipping questions already answered in context), then presents three architecture options (Lean/Standard/Advanced) with Mermaid diagrams, tech stack recommendations, and trade-off analysis. The selected option is saved to `docs/archimind/architecture/`.
+Claude walks you through six stages: requirements gathering, requirements analysis, feasibility and constraints, capacity planning, technology selection, and diagram generation. At each stage it summarises what it heard and asks for confirmation before continuing. After all diagrams are generated, an `architecture-reviewer` agent checks cross-diagram consistency and requirement alignment, then a browser preview opens at `http://localhost:{port}` with zoom, pan, and per-diagram 2× resolution PNG export. Once you approve the design, the full document is saved to `docs/architecture-designer/architecture/{ddmmyyyy}-{topic}.md` and verified by a `document-reviewer` agent. You can then choose to scaffold the project with `architecture-implementer`.
 
 ```
-/archimind:visualize
+/architecture-designer:review
 ```
 
-Launches a local interactive viewer at `http://localhost:{port}` to explore diagrams with pan/zoom, tab navigation between options, and PNG export.
-
-### Feature design workflow
-
-```
-/archimind:design-feature
-```
-
-Claude analyzes the existing application context and feature requirements, then presents three implementation options (Inline/Modular/Decoupled) with integration diagrams and testing strategies. The selected option is saved to `docs/archimind/features/`.
+Review an existing architecture from a saved document, the current codebase, or both. Detects drift between documented and implemented architecture, presents findings, and — if you approve revisions — goes through the same preview and document-save flow, saving a new file with `Revisi: Ya`.
 
 ### Commit workflow
 
@@ -232,21 +225,25 @@ Regenerates and saves `SECURITY-AUDIT.md` from the current session's findings.
 .
 ├── .claude-plugin/
 │   └── marketplace.json          # Plugin registry
-├── archimind/
+├── architecture-designer/
 │   ├── .claude-plugin/
 │   │   └── plugin.json
-│   ├── scripts/
-│   │   ├── find-port.sh
-│   │   ├── start-server.sh
-│   │   ├── stop-server.sh
-│   │   └── site/
-│   │       └── index.html        # Mermaid JS viewer
-│   └── skills/
-│       ├── design-architecture/
-│       ├── design-database/
-│       ├── design-feature/
-│       ├── review-architecture/
-│       └── visualize/
+│   ├── agents/
+│   │   ├── architecture-reviewer.md    # Technical correctness + requirements alignment; REVIEW PASSED / FAILED
+│   │   ├── database-designer.md        # ERD, index plan, engine selection, and secure connection config
+│   │   ├── document-reviewer.md        # Format + content auditor; DOCUMENT REVIEW PASSED / FAILED
+│   │   └── architecture-implementer.md # Scaffold generator from architecture document
+│   ├── skills/
+│   │   ├── design/
+│   │   │   ├── SKILL.md                # Six-stage interactive design → preview → document → scaffold
+│   │   │   └── references/
+│   │   │       ├── diagrams-guide.md   # Mermaid diagram templates and syntax rules
+│   │   │       └── tech-stacks.md      # Technology options by pattern, scale, cloud, and language
+│   │   └── review/
+│   │       └── SKILL.md                # Review document / codebase drift → revise → new document
+│   └── scripts/
+│       ├── find-port.mjs               # Finds available port 3000–9000 via net.createServer()
+│       └── preview-server.mjs          # Serves preview HTML; auto-opens browser; 2× resolution PNG export
 ├── changelog-manager/
 │   ├── .claude-plugin/
 │   │   └── plugin.json

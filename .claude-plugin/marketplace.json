@@ -7,10 +7,10 @@
   },
   "plugins": [
     {
-      "name": "archimind",
-      "description": "Design and review system architectures, database schemas, and feature modules with a direct recommendation workflow and visual Mermaid diagrams in a local browser viewer.",
-      "version": "0.10.0",
-      "source": "./archimind",
+      "name": "architecture-designer",
+      "description": "Guided architecture and infrastructure design workflow — from requirements gathering to code implementation — with interactive Mermaid diagrams, browser preview, and structured documentation.",
+      "version": "0.1.0",
+      "source": "./architecture-designer",
       "author": {
         "name": "Ahmad Rifa'i",
         "email": "develop.rifai@gmail.com"
