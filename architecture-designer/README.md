@@ -97,11 +97,16 @@ All scripts are Node.js ESM (`.mjs`) with no npm dependencies. They run identica
 # Find a free port in 3000–9000
 node scripts/find-port.mjs
 
+# Validate diagrams.json structure before opening the preview
+node scripts/validate-diagrams.mjs
+
 # Start the preview server (opens browser automatically)
 node scripts/preview-server.mjs <port>
 ```
 
 The preview server reads `docs/architecture-designer/diagrams.json` on every request. Reload the browser page to see diagram updates without restarting the server.
+
+`validate-diagrams.mjs` exits 0 if all diagrams pass and 1 if any fail. The design skill runs it automatically before launching the preview server, but you can also run it manually to check diagrams at any time.
 
 ## `diagrams.json` schema
 

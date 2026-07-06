@@ -82,3 +82,19 @@ Return a structured report with three sections. If a section has no findings, wr
 If there are no critical or major findings, end with: `REVIEW PASSED — diagrams are ready for preview.`
 
 If there are critical findings, end with: `REVIEW FAILED — fix critical items and re-review before showing the preview.`
+
+**Evidence requirement**: Every finding line must cite the diagram ID and the specific component name or line it refers to — e.g., `[deployment / api-gateway]` or `[sequence-auth / alt block line 12]`. A finding without a diagram+component citation is not valid and must be rewritten before returning.
+
+When a section has no findings, replace "None." with a `### Examined` sub-list showing what you actually checked — one line per diagram ID and the dimensions verified for it. Writing "None." without listing what was examined is not acceptable.
+
+Example of a valid "no findings" section:
+
+```
+### Critical (must fix before proceeding)
+None.
+
+### Examined
+- [erd] — technical correctness: all entities, cardinality, PK/FK, data types ✓
+- [sequence-auth] — technical correctness: participants declared, alt blocks closed, failure paths present ✓
+- [deployment] — requirements traceability: observability sink present, DR component present ✓
+```

@@ -5,7 +5,7 @@ description: Use this skill when the user wants to design a new application's ar
 
 # Architecture Designer — Main Design Workflow
 
-This skill guides the user through a seven-stage architecture design process, ending with browser-rendered Mermaid diagrams, low-level design artifacts (API contracts, business rules, DTOs, error catalog), a reviewed and approved document, and an optional code skeleton.
+This skill guides the user through a six-stage architecture design process (with seven post-design steps for review, preview, LLD, document save, and implementation), ending with browser-rendered Mermaid diagrams, low-level design artifacts (API contracts, business rules, DTOs, error catalog), a reviewed and approved document, and an optional code skeleton.
 
 **Scripts live two levels up from this file:** `../../scripts/find-port.mjs` and `../../scripts/preview-server.mjs`. At runtime, resolve these paths by taking the absolute path of this SKILL.md and navigating up two directories to find `scripts/`.
 
@@ -13,10 +13,10 @@ This skill guides the user through a seven-stage architecture design process, en
 
 ## How to run this workflow
 
-Work through the seven stages in order. At the end of each stage, summarize the user's answers and ask:
+Work through the six stages in order (Stages 1–6), then follow Steps 7–13. At the end of each stage, summarize the user's answers and ask:
 > "Does this summary look correct? Shall we move to the next stage?"
 
-Do not proceed until the user confirms. Keep a running context object (in your working memory) with all answers gathered so far — you'll need it for later stages.
+Do not proceed until the user confirms. After each stage is confirmed, persist the stage summary to disk: write `docs/architecture-designer/session.json` (create the `docs/architecture-designer/` directory if it does not exist). The file is a JSON object with one key per completed stage, e.g. `{ "stage1": { ... }, "stage2": { ... }, ... }` — append each new stage's summary when the user confirms. Do not keep context only in working memory: working memory degrades over long sessions and is invisible to sub-agents. Sub-agents must be given the contents of `session.json` as part of their input so they do not depend on conversation history that they cannot access.
 
 ---
 
@@ -91,6 +91,8 @@ Ask:
 
 Summarize with explicit numbers (estimates are fine — label them as estimates), confirm, then proceed.
 
+**Number discipline**: Every figure in the confirmed capacity summary must originate from the user's answers or be explicitly derived from those answers — show the arithmetic (e.g., "10,000 daily active users ÷ 86,400 s × 3× peak factor ≈ 0.35 req/s baseline"). Do not cite database or infrastructure performance benchmarks from memory (e.g., "PostgreSQL handles 10,000 TPS") as justification — those figures are not grounded in this project's specific usage and create false precision. When the user cannot provide a number, derive a reasoned estimate together and label it **"estimate — validate at launch"**.
+
 ---
 
 ## Stage 5 — Technology and Architecture Pattern Selection
@@ -115,6 +117,8 @@ Every recommendation must cite a specific reason from stages 1–4 (e.g., "Postg
 
 Present recommendations, discuss with the user, adjust if needed, confirm, then proceed.
 
+**Version grounding**: Every recommended technology must include a specific version number. Before citing a version: (1) if WebSearch is available, verify the current stable release of each technology before writing it down; (2) if WebSearch is unavailable, write the version as **"latest stable — verify at implementation time"** rather than citing a version number from memory that may be stale.
+
 ---
 
 ## Stage 6 — Architecture and Infrastructure Design
@@ -122,7 +126,7 @@ Present recommendations, discuss with the user, adjust if needed, confirm, then 
 ### 6a. Database design (delegate to sub-agent)
 
 Spawn the `architecture-designer:database-designer` agent. Pass it:
-- The complete requirements summary (stages 1–5)
+- The complete requirements summary — read this from `docs/architecture-designer/session.json` (the confirmed stages 1–5 data written to disk at each confirmation). Do not rely solely on conversation memory.
 - The domain entities extracted from the functional requirements
 - The access patterns (how data will be read and written, from the business processes)
 
@@ -219,7 +223,7 @@ Generate Mermaid diagrams relevant to the project. **All diagrams are optional**
 ## Step 7 — Architecture Review (BEFORE preview)
 
 Spawn the `architecture-designer:architecture-reviewer` agent. Pass it:
-- The full requirements summary (all stages 1–5)
+- The full requirements summary — read from `docs/architecture-designer/session.json` (all confirmed stages 1–5, including IaC and CI/CD decisions from Stage 6b and 6c). Do not rely solely on conversation memory.
 - All generated Mermaid diagram code, labeled by type
 
 Wait for the review report.
@@ -272,13 +276,15 @@ Do not open the browser preview until the reviewer reports `REVIEW PASSED`.
 
 - **`companionTable`** (optional, ERD diagrams only): Copy the index plan rows from the database-designer output into this structured array. Each row maps to one index: `name` is the index identifier (e.g., `idx_users_email`), `table` is the table it belongs to, `columns` is the indexed column(s) as a string, `type` is the index type (e.g., `UNIQUE B-TREE`, `B-TREE`, `GIN`), and `reason` is the query it serves. Rendered as a visible HTML table immediately below the ERD — omit this field for all non-ERD diagrams.
 
-2. **Find a free port**: run `node <scripts_dir>/find-port.mjs`. Capture stdout (the port number). If it exits non-zero, report the error to the user.
+2. **Validate diagrams**: run `node <scripts_dir>/validate-diagrams.mjs`. If the script exits non-zero or prints `VALIDATION FAILED`, fix the flagged issues in the diagram code and re-write `docs/architecture-designer/diagrams.json`. Do not proceed to step 3 until validation passes.
 
-3. **Start the preview server** in the background: `node <scripts_dir>/preview-server.mjs <port>`. The server opens the browser automatically. Tell the user the URL (e.g., `http://localhost:3000`).
+3. **Find a free port**: run `node <scripts_dir>/find-port.mjs`. Capture stdout (the port number). If it exits non-zero, report the error to the user.
+
+4. **Start the preview server** in the background: `node <scripts_dir>/preview-server.mjs <port>`. The server opens the browser automatically. Tell the user the URL (e.g., `http://localhost:3000`).
 
 `<scripts_dir>` is the `scripts/` directory of this plugin — two levels above this SKILL.md file.
 
-4. **Do NOT create a stop-server script.** Leave the server running. Simply inform the user of the URL.
+5. **Do NOT create a stop-server script.** Leave the server running. Simply inform the user of the URL.
 
 ---
 
@@ -333,6 +339,8 @@ docs/architecture-designer/architecture/{yyyymmdd}-{topic}.md
 - `{topic}`: the project/application name in kebab-case (lowercase, hyphens, no spaces)
 - If a file with this name already exists, append `-2`, `-3`, etc. until the filename is unique
 
+After saving, update `docs/architecture-designer/session.json`: add (or overwrite) a top-level `"documentPath"` key with the full absolute path of the saved file. This lets `/architecture-designer:implement` locate the document without asking.
+
 **The document must begin with this metadata table on line 1:**
 
 ```markdown
@@ -362,7 +370,7 @@ docs/architecture-designer/architecture/{yyyymmdd}-{topic}.md
 
 Spawn the `architecture-designer:document-reviewer` agent. Pass it:
 - The path to the saved document
-- The requirements summary
+- The requirements summary — read from `docs/architecture-designer/session.json` (all confirmed stages)
 - The expected filename
 
 Wait for the review verdict.

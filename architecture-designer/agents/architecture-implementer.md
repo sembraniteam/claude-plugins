@@ -104,25 +104,41 @@ Create the `docs/architecture-designer/plan/` directory if it doesn't exist.
 
 - [ ] `Dockerfile` — production image
 
-## Setup and scripts
+## Setup and run commands
 
-- [ ] `npm run setup` — install, copy .env, run migrations
+- [ ] `npm run setup` — installs deps, copies .env.example, runs migrations
 - [ ] `npm run dev` — local development server
 ```
 
+> **Note on the "Setup and run commands" section**: these are npm script names, not filesystem paths. They are defined inside `package.json`. The filesystem verification pass (test -f) in Step 3 applies only to sections whose entries are actual file paths — skip this section during the path-existence check and instead verify that `package.json` exists and that its `scripts` field contains the expected keys.
+
 For **merge mode**: any file that already exists and will be skipped should be marked `- [~] \`path\` — already present, skipped` from the start.
 
-After saving the plan, tell the user its path, then proceed immediately to Step 3 — no additional input needed.
+After saving the plan, tell the user its path.
+
+**Create implementation tasks**: Using the TaskCreate tool, create one task per file group. All start in `pending` status. Omit any group that has no files in the confirmed tree for this project.
+
+| Task title                 | What it covers                                                   |
+|----------------------------|------------------------------------------------------------------|
+| Implement data models      | Model files, migration files, schema/ORM definitions             |
+| Implement API routes       | Route handlers, controllers, middleware                          |
+| Write configuration files  | package.json, .env.example, tsconfig, docker-compose, Dockerfile |
+| Write infrastructure files | Terraform, CDK, Kubernetes manifests, CI/CD pipeline configs     |
+| Write setup scripts        | npm scripts, cross-platform setup and run commands               |
+
+Proceed immediately to Step 3 after creating the tasks — no additional user input needed.
 
 When Step 3 is complete, update the plan file:
 - Change `Status` to `Complete`
 - Mark each successfully created file as `- [x]`
 - Leave skipped/already-present files as `- [~]`
-- Leave any file not created as `- [ ]` with a short note explaining why
+- Leave any file not created (FAIL) as `- [ ] FAIL: {reason}`
 
 ## Step 3 — Implement the skeleton
 
 After the user confirms the structure, implement it completely. Write every file — do not skip "obvious" ones.
+
+**Task lifecycle rule**: Before starting each file group, mark the corresponding task `in_progress`. After writing all files in that group (verified with a quick `ls`), mark it `completed`. Do this for every group in sequence.
 
 ### What to implement
 
@@ -160,10 +176,16 @@ After the user confirms the structure, implement it completely. Write every file
 - **No hardcoded credentials or secrets** anywhere in the code — use `process.env.VARIABLE_NAME` (or equivalent) exclusively.
 - **Cross-platform scripts** — test that `npm run dev` would work on all three OSes. Use `cross-env` for environment variable injection in npm scripts on Windows.
 
-## Output
+## Verification and output
 
-After implementation, provide a summary:
+Before writing the final summary, run a verification pass: for every file path in the confirmed folder tree, check whether it exists on disk using `test -f <path> && echo EXISTS || echo MISSING` (or `ls <path>`). The result is binary — there is no middle ground:
 
-1. Files created (grouped by category: models, routes, config, infrastructure)
-2. Next steps the developer should take (install deps, configure `.env`, run migrations, start the dev server)
-3. Any remaining TODOs or integration points that require actual business logic
+- **EXISTS** → include in the files-created list; mark `[x]` in the plan.
+- **MISSING** → this is a **FAIL**, not a skip. It means a file that was supposed to be created is absent. List it under "Files that failed" with the reason. Mark it `[ ] FAIL: {reason}` in the plan. Do not label a failed file as "skipped" — "skipped" (`[~]`) is only for files already present on disk in merge mode that were intentionally left untouched.
+
+After the verification pass, provide the summary:
+
+1. **Files created** — grouped by category (models, routes, config, infrastructure, scripts)
+2. **Files that failed** — paths expected but not found on disk; each entry must state why the write did not occur
+3. **Next steps** — install deps, configure `.env`, run migrations, start the dev server
+4. Any remaining TODOs or integration points that require actual business logic

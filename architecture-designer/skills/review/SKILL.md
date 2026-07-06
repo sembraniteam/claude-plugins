@@ -60,6 +60,9 @@ Compose a **Reconstructed Architecture Summary**:
 - Deployment configuration
 
 If the user also has a document (option c): compare the reconstructed architecture against the document and produce a **Drift Report**:
+
+**File path requirement**: Every claim in the Drift Report must cite its evidence source. For code-based claims, include the specific file path where the evidence was found (e.g., "`src/auth/middleware.ts` uses JWT but document § 5 specifies OAuth2"). For document-based claims, cite the document section (e.g., "§ 7 Database Design"). A claim without a source reference must not be written.
+
 - Components in the document but absent from the code
 - Components in the code but absent from the document
 - Naming inconsistencies

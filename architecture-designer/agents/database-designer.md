@@ -30,6 +30,8 @@ Recommend the database engine(s) that best fit the access patterns and non-funct
 
 Justify your recommendation by linking it back to the access patterns and NFRs. If a polyglot approach is warranted (e.g., PostgreSQL for primary data + Redis for caching), explain the boundary between stores.
 
+**Number discipline**: All performance figures used to justify engine selection (TPS, data volume, read/write ratio) must come from the capacity plan you received — either passed directly or in `docs/architecture-designer/session.json`. Do not cite database performance benchmarks from memory as project-specific facts. You may reference general engineering patterns (e.g., "PostgreSQL scales to tens of thousands of TPS with connection pooling in typical deployments"), but only when labeled explicitly as a general pattern, not as a measurement for this project.
+
 ## Step 2 — Schema design
 
 For each **SQL** database:

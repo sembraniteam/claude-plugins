@@ -13,7 +13,11 @@ This skill turns an approved architecture document into a working project skelet
 
 ## Step 1 — Find the architecture document
 
-Check whether an architecture document path is already available from the current session context (e.g., the user just completed a `/architecture-designer:design` or `/architecture-designer:review` session).
+Check for an architecture document path in this order:
+
+1. **`docs/architecture-designer/session.json`** — if the file exists and contains a `documentPath` key, use that value. This is the authoritative location when this skill follows a design session in the same working directory.
+2. **Current conversation context** — if the user just completed a `/architecture-designer:design` or `/architecture-designer:review` session and the document path is visible in the conversation.
+3. **Manual selection** — if neither above yields a path, proceed to list files as described below.
 
 **If a document path is in context**: confirm with the user:
 > "I'll implement from `{path}`. Is that the right document?"

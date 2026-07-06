@@ -182,6 +182,12 @@ function buildHtml(data) {
     .meta-body { padding: 2px 0 12px; }
     .meta-body p { font-size: 0.87rem; color: #374151; line-height: 1.7; margin-bottom: 8px; }
     .meta-body p:last-child { margin-bottom: 0; }
+    .render-error { background: #fff5f5; border: 2px solid #fca5a5; border-radius: 6px;
+      padding: 14px 18px; margin: 8px 0; }
+    .render-error strong { display: block; margin-bottom: 8px; font-size: 0.88rem; color: #991b1b; }
+    .render-error pre { font-size: 0.76rem; white-space: pre-wrap; word-break: break-word;
+      background: #fee2e2; padding: 10px 12px; border-radius: 4px; color: #7f1d1d;
+      margin: 0; max-height: 260px; overflow-y: auto; }
     footer { text-align: center; padding: 20px; color: #9ca3af; font-size: 0.76rem;
               border-top: 1px solid #e5e7eb; margin-top: 8px; }
     @media (max-width: 600px) {
@@ -226,11 +232,30 @@ function buildHtml(data) {
       c4: { useMaxWidth: false },
     });
 
-    try {
-      await mermaid.run({ querySelector: '.mermaid' });
-    } catch (renderErr) {
-      console.error('Mermaid render error:', renderErr);
-    }
+    // Render each diagram individually so errors appear on the page, not just in DevTools
+    const mermaidEls = Array.from(document.querySelectorAll('.mermaid'));
+    await Promise.allSettled(
+      mermaidEls.map(async (el) => {
+        const section = el.closest('.diagram-section');
+        const id = section?.dataset?.id ?? ('d' + Math.random().toString(36).slice(2));
+        const code = el.textContent;
+        try {
+          const { svg } = await mermaid.render('mermaid-render-' + id, code);
+          const tmp = document.createElement('div');
+          tmp.innerHTML = svg;
+          const svgEl = tmp.firstElementChild;
+          if (svgEl) el.replaceWith(svgEl);
+        } catch (renderErr) {
+          const msg = String(renderErr.message ?? renderErr)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          const errDiv = document.createElement('div');
+          errDiv.className = 'render-error';
+          errDiv.innerHTML = '<strong>⚠ Mermaid render error in &ldquo;' + id + '&rdquo;</strong><pre>' + msg + '</pre>';
+          el.replaceWith(errDiv);
+          console.error('Mermaid render error [' + id + ']:', renderErr);
+        }
+      })
+    );
 
     // ── Per-diagram zoom / pan / download ───────────────────────────────────
     const states = {};
