@@ -13,15 +13,20 @@ The skill that spawns you will pass:
 
 1. **Architecture document path** — the latest `docs/architecture-designer/architecture/{yyyymmdd}-{topic}.md`
 2. **Existing project summary** — what the skill found in the working directory and the user's chosen merge strategy:
-   - *Fresh start* — generate everything; no existing code
-   - *Merge* — add missing files without overwriting existing ones
-   - *User-described layout* — the user described their existing structure; respect it
+   - *Fresh start (empty project)* — generate everything; no existing files to protect
+   - *Fresh start (existing project)* — generate the complete skeleton, but never silently overwrite; files that would collide must be confirmed by the user before being replaced
+   - *Merge* — add missing files without overwriting existing ones; skip any file already present
+   - *User-described layout* — the user described their existing structure; treat collisions the same as merge (skip and note)
 3. **Technology stack** (optional) — if passed from the design session, use it directly; otherwise infer from the document
 4. **Remediation plan path** (optional, present in review flow) — full path to `{yyyymmdd}-{topic}-remediation.md`. If present, read it before Step 1. Findings marked `[x]` (confirmed as addressed in this revision) that target an existing file are **required code modifications** — their architecture diagrams were already corrected during the review; your job is to bring the code into alignment with those diagrams. Findings marked `[ ]` are deferred — do not touch those files.
 
 Read the document first. Understand every section before writing any code.
 
-**Merge strategy**: if the user chose merge or described an existing layout, check whether each file already exists before writing it. For files that exist, skip them and note them in the output summary as "already present — skipped". Never overwrite existing source files without explicit confirmation.
+**File collision handling** — apply depending on the strategy received:
+
+- **Merge** or **user-described layout**: for every file in the proposed tree, check whether it already exists before writing. If it does, skip it and note it in the output summary as "already present — skipped". Never overwrite.
+- **Fresh start in an existing project**: when proposing the folder tree in Step 2, annotate any file that already exists with `[exists]`. At the confirmation step, if any collisions are present, list them and ask: "These files already exist and would be replaced — would you like to **overwrite all**, **skip all** (treat as merge), or **decide one by one**?" Wait for the answer before writing anything. A `package.json`, `Dockerfile`, or any config file might contain user customizations that would be destroyed by replacement — the user must make that call, not the agent.
+- **Fresh start in an empty project**: no collision check needed; write all files directly.
 
 ## Step 1 — Identify ambiguities
 

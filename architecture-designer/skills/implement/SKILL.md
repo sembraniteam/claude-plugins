@@ -43,7 +43,7 @@ Scan the current working directory for signs of an existing project. Look for:
 
 > "I found an existing project structure. How would you like to proceed?
 > **(a) Merge** — add missing files from the architecture without overwriting existing code
-> **(b) Fresh start** — generate the full skeleton alongside what is already there
+> **(b) Fresh start** — generate the complete skeleton; any file that already exists will be flagged before being overwritten — you decide per collision
 > **(c) Let me describe what to keep** — I'll describe my existing layout and we'll work around it"
 
 Wait for the answer before proceeding.
@@ -63,11 +63,12 @@ Spawn `architecture-designer:architecture-implementer`. Pass it:
 
 The agent will:
 1. Read the document and surface any remaining ambiguities (framework choice, ORM vs raw SQL, etc.) — all at once, not one by one
-2. Propose a full folder structure as an ASCII tree, accounting for what already exists
+2. Propose a full folder structure as an ASCII tree, annotating any files that already exist; if fresh-starting into an existing project, ask how to handle collisions before writing anything
 3. Wait for your confirmation or adjustments before writing anything
 4. Save an implementation plan to `docs/architecture-designer/plan/{yyyymmdd}-{topic}.md` — a markdown checklist of every file to be created, grouped by category
 5. Implement every file — models from the ERD, route stubs from sequence diagrams, configuration files, Docker setup, infrastructure as code
 6. Update the plan file: mark completed files `[x]`, skipped files `[~]`, and set Status to Complete
+7. Offer an optional smoke test — installs dependencies and verifies the project compiles or starts (requires your confirmation since it modifies the project directory)
 
 Wait for the agent to complete. You do not need to guide it further — it has complete instructions.
 
