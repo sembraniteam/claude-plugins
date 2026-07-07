@@ -1,32 +1,46 @@
 /**
- * Structural validation for docs/architecture-designer/diagrams.json.
+ * Structural + syntactic validation for docs/architecture-designer/diagrams.json.
  * Usage: node scripts/validate-diagrams.mjs
  *
- * Checks each diagram entry for:
- *   - Required fields (id, title, code)
- *   - Recognized Mermaid diagram type on first/second line
- *   - architecture-beta: icon names misused as node types
- *   - C4Context / C4Container: missing UpdateLayoutConfig
- *   - flowchart / graph: basic bracket-balance heuristic
+ * Validates each diagram with the real @mermaid-js/parser, catching actual syntax
+ * errors before they reach the browser. Heuristic checks supplement the parser for
+ * diagram types it does not yet cover (e.g. architecture-beta node-type misuse).
+ *
+ * Requires: run `npm install` in the scripts/ directory once before first use.
  *
  * Exit 0 → all pass.  Exit 1 → one or more failures.
  */
 
 import fs from 'fs';
 import path from 'path';
+import { parse } from '@mermaid-js/parser';
+
+// First-line Mermaid keyword → @mermaid-js/parser type argument
+const PARSER_TYPES = {
+  flowchart:           'flowchart',
+  graph:               'flowchart',
+  sequenceDiagram:     'sequenceDiagram',
+  classDiagram:        'classDiagram',
+  erDiagram:           'erDiagram',
+  'stateDiagram-v2':   'stateDiagram',
+  stateDiagram:        'stateDiagram',
+  C4Context:           'c4',
+  C4Container:         'c4',
+  C4Component:         'c4',
+  'architecture-beta': 'architecture',
+  gantt:               'gantt',
+  pie:                 'pie',
+  gitGraph:            'gitGraph',
+  mindmap:             'mindmap',
+  timeline:            'timeline',
+};
 
 const DIAGRAMS_PATH = path.resolve(
   process.cwd(),
   'docs', 'architecture-designer', 'diagrams.json'
 );
 
-const KNOWN_TYPES = [
-  'flowchart', 'graph', 'sequenceDiagram', 'classDiagram',
-  'stateDiagram-v2', 'stateDiagram', 'erDiagram',
-  'C4Context', 'C4Container', 'C4Component',
-  'architecture-beta', 'gantt', 'pie', 'gitGraph',
-  'mindmap', 'timeline',
-];
+const KNOWN_TYPES = Object.keys(PARSER_TYPES);
 
 function validateCode(id, code) {
   const errors = [];
@@ -44,19 +58,41 @@ function validateCode(id, code) {
   const typeLineIdx = firstLine.startsWith('%%') ? 1 : 0;
   const typeLine = (lines[typeLineIdx] ?? '').trim();
 
-  if (!KNOWN_TYPES.some(t => typeLine.startsWith(t))) {
+  const detectedKeyword = KNOWN_TYPES.find(t => typeLine.startsWith(t));
+
+  if (!detectedKeyword) {
     errors.push(
       `Unrecognized diagram type on line ${typeLineIdx + 1}: "${typeLine.slice(0, 70)}"`
     );
+    return errors; // nothing further to check without a type
   }
+
+  // ── Real Mermaid parse ───────────────────────────────────────────────────
+
+  const parserType = PARSER_TYPES[detectedKeyword];
+  try {
+    parse(parserType, trimmed);
+    // Parse succeeded — heuristics below are redundant; return clean
+    return errors;
+  } catch (parseErr) {
+    const msg = String(parseErr?.message ?? parseErr)
+      .replace(/\n/g, ' ')
+      .slice(0, 300);
+    // "Type not yet supported by parser" → fall through to heuristics
+    const isUnsupported =
+      /unsupported|not (yet )?supported|unknown diagram|no parser/i.test(msg);
+    if (!isUnsupported) {
+      errors.push(`Parse error: ${msg}`);
+      return errors; // real error supersedes heuristics
+    }
+  }
+
+  // ── Heuristic checks (complement real parse for unsupported diagram types) ──
 
   // architecture-beta: icon names used as standalone node types
   if (typeLine === 'architecture-beta') {
     const iconNames = ['database', 'cloud', 'server', 'internet', 'disk'];
     for (const icon of iconNames) {
-      // Match an indented line that starts with the icon name followed by an identifier
-      // This pattern matches node declarations like "  database foo[..." but NOT
-      // valid icon slot usage like "service db(database)[Label]"
       const re = new RegExp(`^[ \\t]+${icon}[ \\t]+\\w`, 'm');
       if (re.test(trimmed)) {
         errors.push(

@@ -61,7 +61,7 @@ Check these for production-readiness. Each missing item below is a finding in it
 
 ## Output format
 
-Return a structured report with three sections. If a section has no findings, write "None."
+Return a structured report with three sections. When a section has no findings, add a `### Examined` sub-list (see example below) showing what you actually checked — one line per diagram ID and the dimensions verified for it. An empty heading with no content is not acceptable.
 
 ```
 ## Architecture Review Report
@@ -79,19 +79,18 @@ Return a structured report with three sections. If a section has no findings, wr
 [2–3 sentences: overall quality, key strengths, whether diagrams are ready to proceed]
 ```
 
-If there are no critical or major findings, end with: `REVIEW PASSED — diagrams are ready for preview.`
+**Verdict line** — append one of the following after the Summary, depending on the findings:
 
-If there are critical findings, end with: `REVIEW FAILED — fix critical items and re-review before showing the preview.`
+- No Critical or Major findings → `REVIEW PASSED — diagrams are ready for preview.`
+- Major findings, no Critical → `REVIEW PASSED WITH WARNINGS — address major items before final approval.`
+- Any Critical findings → `REVIEW FAILED — fix critical items and re-review before showing the preview.`
 
 **Evidence requirement**: Every finding line must cite the diagram ID and the specific component name or line it refers to — e.g., `[deployment / api-gateway]` or `[sequence-auth / alt block line 12]`. A finding without a diagram+component citation is not valid and must be rewritten before returning.
-
-When a section has no findings, replace "None." with a `### Examined` sub-list showing what you actually checked — one line per diagram ID and the dimensions verified for it. Writing "None." without listing what was examined is not acceptable.
 
 Example of a valid "no findings" section:
 
 ```
 ### Critical (must fix before proceeding)
-None.
 
 ### Examined
 - [erd] — technical correctness: all entities, cardinality, PK/FK, data types ✓

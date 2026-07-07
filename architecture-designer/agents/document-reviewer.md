@@ -72,7 +72,7 @@ A section listing the technology stack, architecture pattern, database engines, 
 FAIL if justifications are absent.
 
 **C5 — All diagrams included**
-Every diagram that was created during the design session must appear in the document. Cross-check against the diagrams.json (which the skill should pass you, or which you can verify from context). Each diagram must have a title heading and a description paragraph before its mermaid block.
+Every diagram that was created during the design session must appear in the document. Cross-check against `docs/architecture-designer/diagrams.json` in the project root — read it with the Read tool if available. Each diagram must have a title heading and a description paragraph before its mermaid block.
 FAIL if any diagram is missing or has no description.
 
 **C5a — ERD index companion table present**

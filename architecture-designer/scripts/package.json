@@ -1,0 +1,10 @@
+{
+  "name": "architecture-designer-scripts",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "description": "Validation scripts for the architecture-designer plugin. Run `npm install` once to enable full Mermaid syntax validation.",
+  "dependencies": {
+    "@mermaid-js/parser": "^1.2.0"
+  }
+}

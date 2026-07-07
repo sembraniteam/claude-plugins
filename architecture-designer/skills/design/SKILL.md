@@ -13,10 +13,35 @@ This skill guides the user through a six-stage architecture design process (with
 
 ## How to run this workflow
 
+**Before starting — check for an existing session**: look for `docs/architecture-designer/session.json`. If the file already exists, read it and ask the user:
+
+> "I found an existing design session for **[project name from the file, or 'a previous project' if unnamed]**. Would you like to continue where we left off, or start a new design from scratch?"
+
+If they choose to continue: read the completed stages from `session.json`, brief the user on where the previous session left off, and resume from the first incomplete stage. If they choose to start fresh: delete `docs/architecture-designer/session.json` (and `docs/architecture-designer/diagrams.json` if present) before proceeding.
+
 Work through the six stages in order (Stages 1–6), then follow Steps 7–13. At the end of each stage, summarize the user's answers and ask:
 > "Does this summary look correct? Shall we move to the next stage?"
 
 Do not proceed until the user confirms. After each stage is confirmed, persist the stage summary to disk: write `docs/architecture-designer/session.json` (create the `docs/architecture-designer/` directory if it does not exist). The file is a JSON object with one key per completed stage, e.g. `{ "stage1": { ... }, "stage2": { ... }, ... }` — append each new stage's summary when the user confirms. Do not keep context only in working memory: working memory degrades over long sessions and is invisible to sub-agents. Sub-agents must be given the contents of `session.json` as part of their input so they do not depend on conversation history that they cannot access.
+
+**session.json write discipline**: Write the exact text the user confirmed — do not produce a fresh paraphrase or condensed re-summary. The goal is to preserve what was actually agreed upon, so that sub-agents work from confirmed facts rather than a re-interpretation that may silently diverge from the user's intent.
+
+**Canonical session.json schema** — the top-level keys are fixed; the field names inside each stage object are the user's confirmed answers and may vary:
+
+```json
+{
+  "stage1": { "applicationGoal": "...", "stakeholders": "...", "businessProcesses": "...", "painPoints": "...", "successCriteria": "..." },
+  "stage2": { "functionalRequirements": ["..."], "nonFunctionalRequirements": { "performance": "...", "security": "...", "compliance": "...", "scalability": "...", "availability": "..." } },
+  "stage3": { "budget": "...", "timeline": "...", "regulations": "...", "teamCompetencies": "...", "legacySystems": "...", "cloudPreference": "..." },
+  "stage4": { "registeredUsers": "...", "concurrentUsers": "...", "tps": "...", "dataVolume": "...", "readWriteRatio": "...", "peakPatterns": "...", "geography": "..." },
+  "stage5": { "architecturePattern": "...", "backend": "...", "frontend": "...", "database": "...", "infrastructure": "...", "supportingServices": "...", "authentication": "...", "observability": "...", "disasterRecovery": "..." },
+  "stage6b": { "tool": "...", "stateBackend": "...", "modules": "...", "envStrategy": "...", "driftDetection": "..." },
+  "stage6c": { "platform": "...", "stages": "...", "branchingStrategy": "...", "envPromotion": "...", "secretInjection": "...", "artifactManagement": "..." },
+  "documentPath": "/absolute/path/to/docs/architecture-designer/architecture/YYYYMMDD-topic.md"
+}
+```
+
+Sub-agents receive the full contents of this file as input and must read it tolerantly — inner field names are illustrative, not contractual. The only guaranteed top-level keys are `stage1`–`stage5` and (after Step 11) `documentPath`. `stage6b` and `stage6c` are written after Stage 6b/6c confirmation and must be included when passing session context to sub-agents.
 
 ---
 
@@ -50,6 +75,8 @@ Ask:
 **Non-functional requirements** (qualities):
 - **Performance**: Are there response time targets? (e.g., "search results in under 500ms")
 - **Security**: What data is sensitive? Are there compliance requirements (GDPR, HIPAA, PCI-DSS, SOC 2)?
+
+> **Compliance grounding rule**: When the user names a compliance framework, record it as a stated requirement — do not assert specific technical controls from memory (e.g., "GDPR requires X-day retention"). Regulatory specifics vary by jurisdiction and change over time; model-generated compliance claims are expensive to correct. Mark every compliance-specific control in the document with **"⚠ Needs legal/compliance validation"** and defer exact requirements to the user's legal team.
 - **Scalability**: Must the system scale horizontally? Is auto-scaling important?
 - **Availability**: What is the acceptable downtime? (e.g., 99.9% SLA = ~8.7 hours/year)
 - **Number of users**: How many concurrent users are expected at launch? At peak?
@@ -119,9 +146,13 @@ Present recommendations, discuss with the user, adjust if needed, confirm, then 
 
 **Version grounding**: Every recommended technology must include a specific version number. Before citing a version: (1) if WebSearch is available, verify the current stable release of each technology before writing it down; (2) if WebSearch is unavailable, write the version as **"latest stable — verify at implementation time"** rather than citing a version number from memory that may be stale.
 
+**Cloud service and compliance grounding**: The same discipline applies to cloud managed-service names (service tiers, feature availability, regional presence) and to compliance-specific claims (which controls a standard requires, whether a managed service holds a certification). If WebSearch is available, verify before asserting. If not, label the claim **"⚠ verify before relying"** rather than stating it as established fact.
+
 ---
 
 ## Stage 6 — Architecture and Infrastructure Design
+
+**Session completeness gate**: before spawning any sub-agent, run `node <scripts_dir>/validate-session.mjs`. If the check fails, the listed stages must be completed first — do not proceed to 6a or any later step until `SESSION CHECK PASSED`.
 
 ### 6a. Database design (delegate to sub-agent)
 
@@ -154,6 +185,8 @@ Based on the cloud provider chosen in Stage 5 and the infrastructure shape emerg
 
 Present the IaC plan, discuss any open questions (e.g., existing AWS account structure, Terraform Cloud subscription), adjust, and confirm before continuing.
 
+After confirmation, append the confirmed IaC decisions to `docs/architecture-designer/session.json` under the `"stage6b"` key (create or overwrite). Use the exact text the user confirmed — do not paraphrase.
+
 ---
 
 ### 6c. CI/CD Pipeline Design
@@ -170,6 +203,8 @@ Based on where the code is hosted, the deployment target, and the architecture p
 6. **Artifact management** — container registry, image tagging scheme (git SHA for traceability), retention policy.
 
 Present the CI/CD plan, discuss, adjust, and confirm before continuing.
+
+After confirmation, append the confirmed CI/CD decisions to `docs/architecture-designer/session.json` under the `"stage6c"` key (create or overwrite). Use the exact text the user confirmed — do not paraphrase.
 
 ---
 
@@ -223,7 +258,7 @@ Generate Mermaid diagrams relevant to the project. **All diagrams are optional**
 ## Step 7 — Architecture Review (BEFORE preview)
 
 Spawn the `architecture-designer:architecture-reviewer` agent. Pass it:
-- The full requirements summary — read from `docs/architecture-designer/session.json` (all confirmed stages 1–5, including IaC and CI/CD decisions from Stage 6b and 6c). Do not rely solely on conversation memory.
+- The full requirements summary — read from `docs/architecture-designer/session.json` (confirmed stages 1–5, plus IaC decisions from stage6b and CI/CD decisions from stage6c if present). Do not rely solely on conversation memory.
 - All generated Mermaid diagram code, labeled by type
 
 Wait for the review report.
@@ -233,7 +268,10 @@ Wait for the review report.
 - The path to `docs/architecture-designer/diagrams.json`
 - The requirements summary
 
-After the fixer updates `diagrams.json`, re-spawn `architecture-designer:architecture-reviewer` to verify. Repeat until no Critical items remain and all Major items are resolved.
+After the fixer updates `diagrams.json`:
+- If the fix log contains a **"Proposed Additions"** section, present each item to the user for confirmation before continuing. Add confirmed items to `diagrams.json`; discard rejected ones.
+- Re-spawn `architecture-designer:architecture-reviewer` to verify.
+- Repeat until no Critical items remain and all Major items are resolved, **up to a maximum of 3 reviewer–fixer cycles**. If issues still persist after 3 cycles, stop the loop, present the remaining unresolved findings to the user verbatim, and ask for their guidance — do not continue cycling automatically.
 
 **If the report contains only MINOR items**: note them for the user and proceed.
 
@@ -381,7 +419,7 @@ Wait for the review verdict.
 - The requirements summary
 - The path to `docs/architecture-designer/diagrams.json`
 
-After the fixer overwrites the document, re-spawn `architecture-designer:document-reviewer` to verify. If the fixer's log says the file must be renamed (F6), rename it before re-running the reviewer. Repeat until DOCUMENT REVIEW PASSED.
+After the fixer overwrites the document, re-spawn `architecture-designer:document-reviewer` to verify. If the fixer's log says the file must be renamed (F6), rename it before re-running the reviewer. Repeat until DOCUMENT REVIEW PASSED, **up to a maximum of 3 reviewer–fixer cycles**. If failures persist after 3 cycles, present the remaining FAIL items to the user and ask for their input rather than cycling again.
 
 **Once it passes**: update the `Status` column in the metadata table from `Draft` to `Approved`. The table should now read:
 

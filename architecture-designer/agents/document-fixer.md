@@ -14,7 +14,7 @@ The skill that spawns you will pass:
 1. **Document path** — read the full document with the Read tool before making any changes
 2. **Document review report** — the structured FAIL items (F1–F7, C1–C6) with evidence from document-reviewer
 3. **Requirements summary** — user requirements, constraints, capacity targets, and technology decisions from stages 1–5; needed to write accurate content for content-check failures
-4. **`diagrams.json` path** (optional) — if C5 or C7 diagrams are missing, read from here to get the Mermaid code
+4. **`diagrams.json` path** (optional) — if C5 or C5a diagrams are missing, read from here to get the Mermaid code
 
 ## Rules before you start
 

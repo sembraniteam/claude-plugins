@@ -11,6 +11,16 @@ This skill reviews an existing architecture (from a document, the codebase, or b
 
 ---
 
+## Before starting — load and validate session context
+
+Check for `docs/architecture-designer/session.json`:
+
+- **If the file exists**: read it in full, then run `node <scripts_dir>/validate-session.mjs` and show its output. This orients you on which requirement stages are confirmed and reveals gaps before the review begins. If the check reports missing stages, proceed anyway — the review is still useful — but note the incomplete context. The session contents serve as the original requirements baseline for the architecture-reviewer and any revision agents.
+
+- **If the file does not exist**: proceed without session context. Inform the user: "No session.json found — I won't have the original confirmed requirements on hand. The review will rely on the document and/or codebase alone. Sharing the original requirements now will improve the review quality."
+
+---
+
 ## Step 1 — Determine review source
 
 Ask the user:
@@ -33,6 +43,7 @@ If the user chose (a) or (c):
 3. Ask: **"What is your current goal for this review? Has anything changed since this document was written? (New requirements, new constraints, team changes, performance issues, etc.)"**
 4. Spawn the `architecture-designer:architecture-reviewer` agent. Pass it:
    - The full contents of the architecture document
+   - The original requirements context — the contents of `docs/architecture-designer/session.json` read above (stages 1–5). If session.json was absent or incomplete, use the document's own Requirements Summary section as the baseline instead.
    - The user's current context/goals
    - Any new requirements or constraints the user described
    Let the agent assess: quality, consistency, completeness, and fit with current needs.
@@ -103,14 +114,18 @@ Based on the revision scope:
 ### 4c. Architecture re-review
 
 Spawn the `architecture-designer:architecture-reviewer` agent with:
-- The updated requirements (original + changes)
+- The requirements summary — read from `docs/architecture-designer/session.json` (the original confirmed stages 1–5) plus any new requirements or constraints gathered in step 4a. If session.json is absent, use the previous document's Requirements Summary section.
 - All updated diagrams
 
-If Critical or Major findings are returned: spawn `architecture-designer:architecture-fixer` with the review report, `docs/architecture-designer/diagrams.json`, and the requirements summary. Re-run the reviewer after the fixer updates `diagrams.json`. Repeat until `REVIEW PASSED`.
+If Critical or Major findings are returned: spawn `architecture-designer:architecture-fixer` with the review report, `docs/architecture-designer/diagrams.json`, and the requirements summary. After the fixer updates `diagrams.json`:
+- If the fix log contains a **"Proposed Additions"** section, present each item to the user for confirmation before continuing. Add confirmed items to `diagrams.json`; discard rejected ones.
+- Re-run the reviewer.
+- Repeat until `REVIEW PASSED`, **up to a maximum of 3 reviewer–fixer cycles**. If issues persist after 3 cycles, stop the loop, present the remaining unresolved findings to the user verbatim, and ask for guidance rather than cycling further.
 
 ### 4d. Browser preview
 
 1. Update `docs/architecture-designer/diagrams.json` with the revised diagrams (same JSON format as the design workflow, including `details`, `rationale`, and — for ERD diagrams — `companionTable` rows; update all three to reflect what changed in the revision).
+1b. **Validate diagrams**: run `node <scripts_dir>/validate-diagrams.mjs`. If it exits non-zero or prints `VALIDATION FAILED`, fix the flagged issues in `diagrams.json` before opening or refreshing the preview. Revised diagrams are written under longer-context pressure and are at least as likely to contain syntax errors as freshly generated ones.
 2. If a preview server from a previous run is already running (the user will know the URL): tell them to refresh their browser.
 3. If no server is running: run `node <scripts_dir>/find-port.mjs`, then `node <scripts_dir>/preview-server.mjs <port>` in the background.
 4. Ask: **"Does this revised architecture look correct to you?"**
@@ -140,6 +155,8 @@ The metadata table:
 
 Generate timestamps using JavaScript `Date`, not shell commands.
 
+After saving, update `docs/architecture-designer/session.json`: add or overwrite the top-level `"documentPath"` key with the full absolute path of the saved file. This lets `/architecture-designer:implement` find the latest approved document without asking.
+
 The document body follows the same structure as the design workflow (all sections, all diagrams). This is a standalone document, not a diff — someone reading it without the previous version should have complete context.
 
 ### 4f. Document review
@@ -149,7 +166,7 @@ Spawn the `architecture-designer:document-reviewer` agent. Pass it:
 - Requirements summary
 - Expected filename
 
-If DOCUMENT REVIEW FAILED: spawn `architecture-designer:document-fixer` with the document path, the review report, and the requirements summary. Re-run `architecture-designer:document-reviewer` after the fixer applies its corrections. If the fixer's log says the file must be renamed (F6), rename it first. Repeat until DOCUMENT REVIEW PASSED.
+If DOCUMENT REVIEW FAILED: spawn `architecture-designer:document-fixer` with the document path, the review report, and the requirements summary. Re-run `architecture-designer:document-reviewer` after the fixer applies its corrections. If the fixer's log says the file must be renamed (F6), rename it first. Repeat until DOCUMENT REVIEW PASSED, **up to a maximum of 3 reviewer–fixer cycles**. If failures persist after 3 cycles, present the remaining FAIL items to the user and ask for their input rather than cycling again.
 
 Then update `Status` to `Approved`.
 

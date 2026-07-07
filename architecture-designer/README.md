@@ -78,35 +78,43 @@ The `/architecture-designer:review` skill follows the same reviewer → fixer lo
 
 Each reviewer has a paired fixer agent. When a reviewer returns findings, the skill spawns the fixer to apply targeted corrections, then re-runs the reviewer. This loop runs until the reviewer passes — no manual editing required.
 
-| Agent                                            | Role                                                                                                                                                                        |
-|--------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `architecture-designer:architecture-reviewer`    | Validates diagrams for technical correctness, cross-diagram consistency, requirements traceability, risks, observability, and DR; returns Critical / Major / Minor findings |
-| `architecture-designer:architecture-fixer`       | Applies targeted fixes to Mermaid diagrams based on reviewer findings; updates `diagrams.json` in place and returns a fix log                                               |
-| `architecture-designer:database-designer`        | Designs schema, ERD, index plan, engine selection, and secure connection config for SQL and NoSQL                                                                           |
-| `architecture-designer:database-reviewer`        | Audits database design: engine fit, schema/3NF, ERD accuracy, index completeness, security config; returns DATABASE REVIEW PASSED / FAILED                                  |
-| `architecture-designer:database-fixer`           | Corrects schema, ERD, index plan, `companionTable` JSON, and connection config based on database-reviewer findings                                                          |
-| `architecture-designer:document-reviewer`        | Audits saved documents for format compliance (F1–F7) and content completeness (C1–C6); returns DOCUMENT REVIEW PASSED / FAILED                                              |
-| `architecture-designer:document-fixer`           | Fixes specific format and content failures in the document based on reviewer findings; overwrites the draft in place                                                        |
-| `architecture-designer:architecture-implementer` | Implements project skeleton, data models, routes, and infrastructure files from an approved document                                                                        |
+| Agent                                            | Role                                                                                                                                                                                                                                   |
+|--------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `architecture-designer:architecture-reviewer`    | Validates diagrams for technical correctness, cross-diagram consistency, requirements traceability, risks, observability, and DR; returns Critical / Major / Minor findings with REVIEW PASSED / PASSED WITH WARNINGS / FAILED verdict |
+| `architecture-designer:architecture-fixer`       | Applies targeted fixes to Mermaid diagrams based on reviewer findings; updates `diagrams.json` in place and returns a fix log                                                                                                          |
+| `architecture-designer:database-designer`        | Designs schema, ERD, index plan, engine selection, and secure connection config for SQL and NoSQL                                                                                                                                      |
+| `architecture-designer:database-reviewer`        | Audits database design: engine fit, schema/3NF, ERD accuracy, index completeness, security config; returns DATABASE REVIEW PASSED / FAILED                                                                                             |
+| `architecture-designer:database-fixer`           | Corrects schema, ERD, index plan, `companionTable` JSON, and connection config based on database-reviewer findings                                                                                                                     |
+| `architecture-designer:document-reviewer`        | Audits saved documents for format compliance (F1–F7) and content completeness (C1–C6); returns DOCUMENT REVIEW PASSED / FAILED                                                                                                         |
+| `architecture-designer:document-fixer`           | Fixes specific format and content failures in the document based on reviewer findings; overwrites the draft in place                                                                                                                   |
+| `architecture-designer:architecture-implementer` | Implements project skeleton, data models, routes, and infrastructure files from an approved document                                                                                                                                   |
 
 ## Scripts
 
-All scripts are Node.js ESM (`.mjs`) with no npm dependencies. They run identically on Windows, macOS, and Linux. The preview server loads Mermaid v11 and the ELK layout engine from CDN — an internet connection is required while the browser preview is open.
+All scripts are Node.js ESM (`.mjs`). They run identically on Windows, macOS, and Linux. The preview server loads Mermaid v11 and the ELK layout engine from CDN — an internet connection is required while the browser preview is open.
+
+`validate-diagrams.mjs` uses `@mermaid-js/parser` for real syntax validation. Run `npm install` once in the `scripts/` directory before first use:
 
 ```bash
+# Install validation dependency (once)
+cd scripts && npm install
+
+# Validate diagrams.json syntax before opening the preview (exits 0/1)
+node scripts/validate-diagrams.mjs
+
+# Check that session.json stages 1–5 are complete before Stage 6
+node scripts/validate-session.mjs
+
 # Find a free port in 3000–9000
 node scripts/find-port.mjs
-
-# Validate diagrams.json structure before opening the preview
-node scripts/validate-diagrams.mjs
 
 # Start the preview server (opens browser automatically)
 node scripts/preview-server.mjs <port>
 ```
 
-The preview server reads `docs/architecture-designer/diagrams.json` on every request. Reload the browser page to see diagram updates without restarting the server.
+The preview server reads `docs/architecture-designer/diagrams.json` on every request — reload the page to see diagram updates without restarting the server.
 
-`validate-diagrams.mjs` exits 0 if all diagrams pass and 1 if any fail. The design skill runs it automatically before launching the preview server, but you can also run it manually to check diagrams at any time.
+`validate-diagrams.mjs` catches real Mermaid syntax errors (via `@mermaid-js/parser`) and supplements them with heuristic checks for unsupported diagram types (architecture-beta node misuse, C4 UpdateLayoutConfig, bracket balance). The design skill runs it automatically before launching the preview, but you can run it manually at any time. `validate-session.mjs` is run automatically at the start of Stage 6 to confirm all requirement stages are on disk before sub-agents are spawned.
 
 ## `diagrams.json` schema
 

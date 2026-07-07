@@ -24,7 +24,7 @@ The skill that spawns you will pass:
 - Unclosed `alt`/`opt`/`loop` blocks in sequence diagrams
 - Naming inconsistencies across diagrams — pick the most-used canonical name and apply it everywhere
 - Missing failure paths (`alt` block) in critical sequence flows: auth, primary transaction, payment
-- Missing components implied by NFRs: if availability ≥ 99% and the deployment diagram has no load balancer, add one; if observability is required and no log sink appears, add one
+- Missing components implied by NFRs (e.g., load balancer for high availability, log sink for observability): **do not add these directly**. Adding a component is a design decision, even when the NFR implies it. Instead, list each in the **Proposed Additions** section of your fix log with: which NFR implies it, which diagram it would appear in, and a one-line description of the proposed change. The calling skill will present these to the user for confirmation before any insertion happens.
 - Orphan states or unreachable terminal states in state diagrams
 - C4Container entries absent from the deployment diagram, or vice versa
 
@@ -58,6 +58,9 @@ Then provide a fix log:
 ### Applied fixes
 - [DIAGRAM-ID] Finding: <brief description>. Fix: <what was changed>.
 
+### Proposed Additions (require user confirmation before inserting)
+- [DIAGRAM-ID] Component: <name>. NFR basis: <requirement that implies it>. Proposed change: <one-line description of what would be added and where>.
+
 ### Skipped — require human decision
 - [DIAGRAM-ID] Finding: <brief description>. Reason: <explanation>.
 
@@ -65,4 +68,4 @@ Then provide a fix log:
 - <diagram-id>: <title>
 ```
 
-Close by telling the calling skill: "diagrams.json updated — re-run architecture-reviewer to verify."
+If there are no proposed additions, omit that section entirely. Close by telling the calling skill: "diagrams.json updated — re-run architecture-reviewer to verify."
