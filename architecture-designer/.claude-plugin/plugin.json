@@ -17,6 +17,9 @@
     "database",
     "implementation",
     "planning",
-    "c4"
+    "c4",
+    "review",
+    "drift",
+    "remediation"
   ]
 }

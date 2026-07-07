@@ -30,7 +30,7 @@ These are mechanical fixes:
 
 - **F1 — Metadata table missing or wrong columns**: Add the table at the very top of the document (line 1). Use this exact header row: `| Date | Version | Status | Reason | Previous Document |` followed by the separator `|------|---------|--------|--------|-------------------|`. Fill values: date in `dd-mmm-y` format (e.g., `05-Jul-2026`), version `1.0`, status `Draft`, `-` for Reason and Previous Document (for first documents). For revisions, see the requirements summary for the correct reason and previous filename.
 
-- **F2 — Wrong date format**: Correct the Date column value to `dd-mmm-y` format. Day is zero-padded two digits; month is a three-letter abbreviation with uppercase first letter (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec); year is four digits. Use today's date derived from a JavaScript `Date` equivalent — never a shell command.
+- **F2 — Wrong date format**: Reformat the *existing* Date column value to `dd-mmm-y` format — do not replace it with today's date. Read the current date from the metadata table, parse it (whatever format it is in), and rewrite it as: day zero-padded two digits; month three-letter abbreviation with uppercase first letter (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec); year four digits. Example: `2026-07-05` → `05-Jul-2026`. Only if the date is completely absent or unreadable should you fall back to today's date (derived from a JavaScript `Date` equivalent — never a shell command).
 
 - **F3 — Missing or non-numeric version**: Add or correct the version to a decimal number (`1.0` for first document, `1.1` / `2.0` for revisions).
 

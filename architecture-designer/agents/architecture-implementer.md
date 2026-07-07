@@ -74,6 +74,7 @@ docs/architecture-designer/plan/{yyyymmdd}-{topic}.md
 
 - `{yyyymmdd}` — today's date in ISO order: 4-digit year + 2-digit zero-padded month + 2-digit zero-padded day (e.g., `20260707`). Generate with JavaScript `new Date()`, never a shell command.
 - `{topic}` — extracted from the architecture document filename (e.g., `20260706-inventory-app.md` → `inventory-app`)
+- **Collision avoidance**: if the file already exists, append `-2`, `-3`, etc. until the name is unique (`20260707-inventory-app-2.md`). This preserves previous plan files and their FAIL history — same rule as architecture documents.
 
 Create the `docs/architecture-designer/plan/` directory if it doesn't exist.
 
@@ -117,7 +118,7 @@ Create the `docs/architecture-designer/plan/` directory if it doesn't exist.
 
 > **Note on the "Setup and run commands" section**: these are npm script names, not filesystem paths. They are defined inside `package.json`. The filesystem verification pass (test -f) in Step 3 applies only to sections whose entries are actual file paths — skip this section during the path-existence check and instead verify that `package.json` exists and that its `scripts` field contains the expected keys.
 
-> **Note on "Modifications to existing files"**: only present when a remediation plan is passed. Each item is a `[x]` (confirmed/addressed) finding from the remediation plan that targets an existing file — these are the code changes needed to match the corrected diagrams. `[ ]` (deferred) findings are excluded. After applying each change, mark it `[x]` in both the implementation plan and the remediation plan file itself. If no remediation plan was provided, omit this section entirely.
+> **Note on "Modifications to existing files"**: only present when a remediation plan is passed. Each item is a `[x]` (confirmed/addressed) finding from the remediation plan that targets an existing file — these are the code changes needed to match the corrected diagrams. `[ ]` (deferred) findings are excluded. After applying each change, mark it `[x]` in the implementation plan; in the remediation plan the checkbox is already `[x]` — update only the suffix from `*(addressed in revision — code pending)*` to `*(code aligned)*`. If no remediation plan was provided, omit this section entirely.
 
 For **merge mode**: any file that already exists and will be skipped should be marked `- [~] \`path\` — already present, skipped` from the start.
 
@@ -146,7 +147,7 @@ When Step 3 is complete, update the plan file:
 
 After the user confirms the structure, implement it completely. Write every file — do not skip "obvious" ones.
 
-**Task lifecycle rule**: Before starting each file group, mark the corresponding task `in_progress`. After writing all files in that group (verified with a quick `ls`), mark it `completed`. Do this for every group in sequence.
+**Task lifecycle rule**: Before starting each file group, use TaskUpdate to mark the corresponding task `in_progress`. After writing all files in that group (verified with a quick `ls`), use TaskUpdate to mark it `completed`. Do this for every group in sequence.
 
 ### What to implement
 
@@ -178,8 +179,8 @@ After the user confirms the structure, implement it completely. Write every file
 
 **Modifications to existing files** (only when a remediation plan is provided):
 - For each `[ ]` item in the *implementation plan's* "Modifications to existing files" section (which corresponds to a `[x]` finding in the remediation plan): read the current file, apply the targeted change to align the code with the corrected diagrams, verify it was written.
-- Mark `[x]` in the implementation plan **and** in the remediation plan file itself after each successful change.
-- If a modification cannot be applied cleanly (e.g., the file structure has diverged too far): mark `[ ] FAIL: {reason}` in both plans and list it under "Files that failed" in the final summary. Do not silently skip it.
+- Mark `[x]` in the implementation plan. In the remediation plan file, the checkbox is already `[x]` — update only the suffix: replace `*(addressed in revision — code pending)*` with `*(code aligned)*`. This makes it possible to tell at a glance which findings are fully complete (diagram + code) versus only diagram-fixed.
+- If a modification cannot be applied cleanly (e.g., the file structure has diverged too far): mark `[ ] FAIL: {reason}` in the implementation plan and leave the remediation plan suffix as `*(addressed in revision — code pending)*` — do not flip it to `*(code aligned)*`. List the failure under "Files that failed" in the final summary. Do not silently skip it.
 - Never rewrite an entire file to apply a remediation change — make the minimal targeted edit that closes the finding.
 
 ### Rules for implementation
@@ -201,8 +202,8 @@ Before writing the final summary, run a verification pass:
 
 **Modifications** (when a remediation plan was provided) — for each item in "Modifications to existing files":
 - Re-read the relevant section of the file and confirm the change is present.
-- **MODIFIED** → mark `[x]` in the implementation plan and in the remediation plan file.
-- **NOT MODIFIED** → mark `[ ] FAIL: {reason}` in both plans and list under "Files that failed".
+- **MODIFIED** → mark `[x]` in the implementation plan; in the remediation plan update the suffix from `*(addressed in revision — code pending)*` to `*(code aligned)*`.
+- **NOT MODIFIED** → mark `[ ] FAIL: {reason}` in the implementation plan; leave the remediation plan suffix as `*(addressed in revision — code pending)*`. List under "Files that failed".
 
 After the verification pass, provide the summary:
 
@@ -211,3 +212,24 @@ After the verification pass, provide the summary:
 3. **Files that failed** — paths expected but not found or not modified on disk; each entry must state why
 4. **Next steps** — install deps, configure `.env`, run migrations, start the dev server
 5. Any remaining TODOs or integration points that require actual business logic
+
+**Smoke test** — especially important in merge mode or when remediation changes were applied, because those touch existing files and are most likely to break the build. Installing dependencies modifies the project, so ask for permission first:
+
+> "Would you like me to run a quick smoke test — install dependencies and verify the project compiles or starts — to confirm nothing was broken by the merge or remediation changes?"
+
+If yes:
+
+1. **Install dependencies** — run the appropriate command for the project type:
+   - Node.js (`package.json` present): `npm install --silent`
+   - Python with `pyproject.toml`: `poetry install --no-interaction`
+   - Python with `requirements.txt`: `pip install -r requirements.txt`
+   - Go (`go.mod` present): `go mod download && go build ./...`
+   - Rust (`Cargo.toml` present): `cargo build 2>&1`
+
+2. **Compile or start check** — choose based on what's available:
+   - If a `build` script or equivalent exists: run it (`npm run build` / `go build ./...` / `cargo build`). A zero exit code confirms the project compiles cleanly.
+   - If no separate build step exists (interpreted language, or build-on-run): start the dev server with a 15-second timeout and capture the first 60 lines of output: `timeout 15 npm run dev 2>&1 | head -60`. A startup success message (e.g., "listening on port", "server started") in the output and no stack trace indicates a clean boot.
+
+3. **Report the result**:
+   - **Pass** — "Smoke test passed — project installs and starts without build errors."
+   - **Fail** — show the first relevant error lines. Identify which newly created or modified file is implicated in the error. Note: a crash caused by a missing *external* service (e.g., `ECONNREFUSED` to a database that isn't running, `ENOENT` on a `.env` file) is not a code error — flag this distinction explicitly so the user knows the skeleton itself is valid and only runtime configuration is missing.

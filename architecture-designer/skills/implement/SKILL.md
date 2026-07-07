@@ -52,11 +52,14 @@ Wait for the answer before proceeding.
 
 ## Step 3 — Spawn the architecture-implementer agent
 
+Before spawning, check `docs/architecture-designer/session.json` for a `"remediationPlanPath"` key. If present and the file exists at that path, you will pass the path to the implementer so it can apply the confirmed code changes from the remediation plan.
+
 Spawn `architecture-designer:architecture-implementer`. Pass it:
 
 - **Architecture document path** — the file confirmed in Step 1
 - **Existing project summary** — what was found in Step 2, and the user's chosen merge strategy (a/b/c or "fresh start" if empty)
 - **Technology stack** — if a prior design session is still in context, pass the technology stack from stage 5 directly so the agent doesn't have to re-infer it from the document
+- **Remediation plan path** — the path from `session.json → remediationPlanPath`, if it exists on disk (omit if absent). When a remediation plan is present, also pass **mode: merge** — a remediation plan implies an existing codebase, so the implementer must add or modify without overwriting.
 
 The agent will:
 1. Read the document and surface any remaining ambiguities (framework choice, ORM vs raw SQL, etc.) — all at once, not one by one
@@ -74,7 +77,7 @@ Wait for the agent to complete. You do not need to guide it further — it has c
 
 Once the agent reports completion, remind the user:
 
-1. Open `docs/architecture-designer/plan/{yyyymmdd}-{topic}.md` to review what was created and what was skipped
+1. Open the implementation plan file in `docs/architecture-designer/plan/` — the name follows `{yyyymmdd}-{topic}.md`; if you ran implementation multiple times on the same day, the latest will have a `-2`, `-3` suffix
 2. Copy `.env.example` → `.env` and fill in real credentials (database URL, secrets, API keys)
 3. Run the setup command the agent provided (typically `npm install && npm run setup` or equivalent)
 4. Start the dev server and verify the app boots without errors

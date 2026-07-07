@@ -19,13 +19,17 @@ Check for `docs/architecture-designer/session.json`:
 
 - **If the file does not exist**: proceed without session context. Inform the user: "No session.json found — I won't have the original confirmed requirements on hand. The review will rely on the document and/or codebase alone. Sharing the original requirements now will improve the review quality."
 
-**Check for an existing remediation plan**: if `session.json` contains a `"remediationPlanPath"` key, read that file. If it exists on disk and has any `[ ]` (deferred) items, surface them to the user before Step 1:
+**Check for an existing remediation plan**: if `session.json` contains a `"remediationPlanPath"` key, read that file. Then:
 
-> "I found a previous remediation plan at `{path}` with **{N} deferred item(s)** not yet addressed. Here they are:
-> {list of [ ] items}
-> Would you like to include these in this review session?"
-
-If the user says yes, carry the deferred items forward into step 4a (revision scope) so they can be addressed or remain deferred. If the file no longer exists at the stored path, note it and continue.
+- **If the file no longer exists at the stored path**: note it and continue without loading it.
+- **If the file exists and has `[ ]` (deferred) items**: surface them before Step 1:
+  > "I found a previous remediation plan at `{path}` with **{N} deferred item(s)** not yet addressed. Here they are:
+  > {list of [ ] items}
+  > Would you like to include these in this review session?"
+  If the user says yes, carry the deferred items forward into step 4a (revision scope) so they can be addressed or remain deferred.
+- **If the file exists but every item is `[x] *(code aligned)*`** (nothing deferred, all complete): note it briefly to the user:
+  > "Previous remediation plan at `{path}` is fully complete — all findings have been code-aligned. Starting fresh review."
+  Then continue to Step 1.
 
 ---
 
@@ -151,6 +155,7 @@ docs/architecture-designer/plan/{yyyymmdd}-{topic}-remediation.md
 
 - `{yyyymmdd}` — today's date, generated with JavaScript `new Date()` (never a shell command).
 - `{topic}` — the topic slug from the architecture document filename (e.g., `20260706-inventory-app.md` → `inventory-app`).
+- **Collision avoidance**: if the file already exists, append `-2`, `-3`, etc. until the name is unique (`{yyyymmdd}-{topic}-remediation-2.md`).
 
 Create the `docs/architecture-designer/plan/` directory if it doesn't exist.
 
@@ -167,18 +172,20 @@ Create the `docs/architecture-designer/plan/` directory if it doesn't exist.
 
 ## Findings
 
-- [x] `src/auth/middleware.ts` — JWT used but document §5 specifies OAuth2 *(addressed in this revision)*
+- [x] `src/auth/middleware.ts` — JWT used but document §5 specifies OAuth2 *(addressed in revision — code pending)*
 - [ ] `src/payments/service.ts` — Payment service present in code but absent from architecture document *(deferred)*
 ```
 
 Rules:
 - **One checkbox per finding** from the drift report or architecture review report.
 - **Source path is mandatory** on every item — the same file-path-citation rule that governs the drift report applies here. A finding without a file path (or a document section reference for document-only claims) must not be written.
-- `[x]` for findings the user confirmed as addressed in this revision (the scope agreed in step 4a).
-- `[ ]` for findings the user deferred or chose not to address now.
-- Append `*(addressed in this revision)*` or `*(deferred)*` as a brief suffix so the document is self-explanatory across sessions.
+- `[x]` for findings the user confirmed as addressed in this revision (the scope agreed in step 4a); `[ ]` for findings deferred.
+- **Suffix progression** — use a two-phase suffix for `[x]` items so the document stays readable across sessions:
+  - Write `*(addressed in revision — code pending)*` at this step — the diagram fix is done, but the code change will happen during implementation.
+  - The implementer updates it to `*(code aligned)*` once the code change is verified. Only the suffix text changes; the `[x]` checkbox stays.
+  - `[ ]` items always carry `*(deferred)*`.
 
-This file is a **living document**: in future review sessions, re-open it, tick off newly resolved items (`[ ]` → `[x]`), and update `Status` to `Complete` when every item is `[x]`.
+This file is a **living document**: in future review sessions, re-open it, tick off deferred items (`[ ]` → `[x]`, with suffix `*(addressed in revision — code pending)*`), and update `Status` to `Complete` when every `[x]` item reads `*(code aligned)*` and no `[ ]` items remain.
 
 After saving, update `docs/architecture-designer/session.json`: add or overwrite the top-level `"remediationPlanPath"` key with the full absolute path of this file. Then note the path — you will pass it to the implementer in step 4h.
 

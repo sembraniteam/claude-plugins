@@ -41,7 +41,7 @@ Do not proceed until the user confirms. After each stage is confirmed, persist t
 }
 ```
 
-Sub-agents receive the full contents of this file as input and must read it tolerantly — inner field names are illustrative, not contractual. The only guaranteed top-level keys are `stage1`–`stage5` and (after Step 11) `documentPath`. `stage6b` and `stage6c` are written after Stage 6b/6c confirmation and must be included when passing session context to sub-agents.
+Sub-agents receive the full contents of this file as input and must read it tolerantly — inner field names are illustrative, not contractual. The only guaranteed top-level keys are `stage1`–`stage5` and (after Step 11) `documentPath`. `stage6b` and `stage6c` are written after Stage 6b/6c confirmation and must be included when passing session context to sub-agents. `remediationPlanPath` may also appear if the user has previously run `/architecture-designer:review` — it is written by the review skill, not this skill, and must be passed to the architecture-implementer when present.
 
 ---
 
