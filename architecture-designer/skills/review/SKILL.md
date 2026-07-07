@@ -107,7 +107,7 @@ Ask:
 
 Based on the revision scope:
 - For architecture changes: update the affected Mermaid diagrams (C4, sequence, deployment)
-- For database changes: re-spawn the `architecture-designer:database-designer` agent with the updated requirements, then validate with `architecture-designer:database-reviewer`. If Critical or Major findings are returned, spawn `architecture-designer:database-fixer` and re-run the reviewer until it passes.
+- For database changes: re-spawn the `architecture-designer:database-designer` agent with the updated requirements, then validate with `architecture-designer:database-reviewer`. If Critical or Major findings are returned, spawn `architecture-designer:database-fixer` with the review report, the database-designer output, the requirements summary, and the path to `docs/architecture-designer/diagrams.json`. The fixer writes the corrected ERD and companionTable directly into `diagrams.json`. Re-run the reviewer after it completes, and repeat until it passes.
 - For new features: add new diagram elements as needed
 - For removed components: remove the relevant elements
 
@@ -120,7 +120,7 @@ Spawn the `architecture-designer:architecture-reviewer` agent with:
 If Critical or Major findings are returned: spawn `architecture-designer:architecture-fixer` with the review report, `docs/architecture-designer/diagrams.json`, and the requirements summary. After the fixer updates `diagrams.json`:
 - If the fix log contains a **"Proposed Additions"** section, present each item to the user for confirmation before continuing. Add confirmed items to `diagrams.json`; discard rejected ones.
 - Re-run the reviewer.
-- Repeat until `REVIEW PASSED`, **up to a maximum of 3 reviewer–fixer cycles**. If issues persist after 3 cycles, stop the loop, present the remaining unresolved findings to the user verbatim, and ask for guidance rather than cycling further.
+- Repeat until `REVIEW PASSED` or `REVIEW CONDITIONALLY PASSED` with all Major items resolved, **up to a maximum of 3 reviewer–fixer cycles**. If issues persist after 3 cycles, stop the loop, present the remaining unresolved findings to the user verbatim, and ask for guidance rather than cycling further.
 
 ### 4d. Browser preview
 

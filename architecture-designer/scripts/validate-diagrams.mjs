@@ -110,10 +110,11 @@ async function validateCode(id, code) {
     return { errors: ['code field is empty'], quality: 'parsed' };
   }
 
-  const lines     = trimmed.split('\n');
-  const firstLine = lines[0].trim();
-  const typeIdx   = firstLine.startsWith('%%') ? 1 : 0;
-  const typeLine  = (lines[typeIdx] ?? '').trim();
+  const lines = trimmed.split('\n');
+  // Skip all leading %% comment / init-directive lines to find the diagram type keyword.
+  let typeIdx = 0;
+  while (typeIdx < lines.length && lines[typeIdx].trim().startsWith('%%')) typeIdx++;
+  const typeLine = (lines[typeIdx] ?? '').trim();
   const keyword   = ALL_KNOWN_TYPES.find(t => typeLine.startsWith(t));
 
   if (!keyword) {

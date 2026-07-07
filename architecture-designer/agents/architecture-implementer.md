@@ -71,7 +71,7 @@ Save it to:
 docs/architecture-designer/plan/{yyyymmdd}-{topic}.md
 ```
 
-- `{yyyymmdd}` — today's date, generated with JavaScript `new Date()`, not a shell command
+- `{yyyymmdd}` — today's date in ISO order: 4-digit year + 2-digit zero-padded month + 2-digit zero-padded day (e.g., `20260707`). Generate with JavaScript `new Date()`, never a shell command.
 - `{topic}` — extracted from the architecture document filename (e.g., `20260706-inventory-app.md` → `inventory-app`)
 
 Create the `docs/architecture-designer/plan/` directory if it doesn't exist.

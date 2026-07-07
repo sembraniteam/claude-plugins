@@ -51,7 +51,7 @@ The filename passed to you must match `{yyyymmdd}-{topic}.md` where `{yyyymmdd}`
 FAIL if the filename doesn't match this pattern.
 
 **F7 — Mermaid code blocks**
-Every diagram section must contain at least one fenced ` ```mermaid ` block. The block must not be empty. Every block must start with a valid Mermaid diagram type keyword on the first line (`flowchart`, `graph`, `erDiagram`, `sequenceDiagram`, `classDiagram`, `stateDiagram-v2`, `C4Context`, `C4Container`, `architecture-beta`, `gitGraph`, `mindmap`, `quadrantChart`, `xychart-beta`).
+Every diagram section must contain at least one fenced ` ```mermaid ` block. The block must not be empty. Every block must start with a valid Mermaid diagram type keyword on the first line (or on the first non-`%%`-comment line): `flowchart`, `graph`, `erDiagram`, `sequenceDiagram`, `classDiagram`, `stateDiagram-v2`, `stateDiagram`, `C4Context`, `C4Container`, `architecture-beta`, `gitGraph`, `mindmap`, `timeline`, `gantt`, `pie`, `quadrantChart`, `xychart-beta`.
 FAIL if any diagram section has no mermaid block, or a block starts with an unrecognized keyword.
 
 ### Content completeness

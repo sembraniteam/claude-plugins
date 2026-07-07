@@ -82,7 +82,7 @@ Return a structured report with three sections. When a section has no findings, 
 **Verdict line** — append one of the following after the Summary, depending on the findings:
 
 - No Critical or Major findings → `REVIEW PASSED — diagrams are ready for preview.`
-- Major findings, no Critical → `REVIEW PASSED WITH WARNINGS — address major items before final approval.`
+- Major findings, no Critical → `REVIEW CONDITIONALLY PASSED — major items must be fixed before final approval.`
 - Any Critical findings → `REVIEW FAILED — fix critical items and re-review before showing the preview.`
 
 **Evidence requirement**: Every finding line must cite the diagram ID and the specific component name or line it refers to — e.g., `[deployment / api-gateway]` or `[sequence-auth / alt block line 12]`. A finding without a diagram+component citation is not valid and must be rewritten before returning.

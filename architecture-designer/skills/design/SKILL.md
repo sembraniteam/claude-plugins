@@ -167,7 +167,7 @@ Then spawn `architecture-designer:database-reviewer`. Pass it:
 - The full database-designer output
 - The requirements summary (stages 1–5)
 
-If the reviewer returns `DATABASE REVIEW FAILED`: spawn `architecture-designer:database-fixer` with the review report, the database-designer output, and the requirements summary. After the fixer returns corrected outputs, re-spawn `architecture-designer:database-reviewer` to verify. Repeat until `DATABASE REVIEW PASSED`.
+If the reviewer returns `DATABASE REVIEW FAILED`: spawn `architecture-designer:database-fixer` with the review report, the database-designer output, the requirements summary, and the path to `docs/architecture-designer/diagrams.json`. The fixer writes the corrected ERD and companionTable directly into `diagrams.json`. After it completes, re-spawn `architecture-designer:database-reviewer` to verify. Repeat until `DATABASE REVIEW PASSED`.
 
 Incorporate the final approved database design into the diagram set and document.
 
@@ -277,7 +277,7 @@ After the fixer updates `diagrams.json`:
 
 **If the report contains only MINOR items**: note them for the user and proceed.
 
-Do not open the browser preview until the reviewer reports `REVIEW PASSED`.
+Do not open the browser preview until the reviewer reports `REVIEW PASSED` or `REVIEW CONDITIONALLY PASSED` with all Major items resolved.
 
 ---
 

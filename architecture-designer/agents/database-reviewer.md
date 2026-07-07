@@ -80,7 +80,7 @@ Work through every dimension. Be specific: cite table names, column names, and i
 [2–3 sentences: overall quality, key strengths, readiness to embed in architecture document]
 ```
 
-**Empty sections**: if a severity level has no findings, omit that section entirely — do not write "None." or "No issues found."
+**Empty sections**: if a severity level has no findings, omit that section entirely — do not write "None." or "No issues found." (This differs from the architecture-reviewer, which uses an `### Examined` sub-list. The database-reviewer's narrower scope doesn't need it.)
 
 If no Critical or Major findings: `DATABASE REVIEW PASSED — embed in architecture document.`
 If Critical or Major findings exist: `DATABASE REVIEW FAILED — fix before embedding.`

@@ -1,6 +1,6 @@
 ---
 name: database-fixer
-description: Use this agent when the database-reviewer has returned Critical or Major findings and the database design needs targeted corrections before it is embedded in the architecture document. Receives the review report and the original database-designer output, applies the minimum changes to close each finding, and returns the corrected schema, ERD, index plan, companionTable JSON, and connection config.
+description: Use this agent when the database-reviewer has returned Critical or Major findings and the database design needs targeted corrections before it is embedded in the architecture document. Receives the review report, the original database-designer output, the requirements summary, and the diagrams.json path. Applies the minimum changes to close each finding, writes the corrected ERD and companionTable directly into diagrams.json (same pattern as architecture-fixer), and returns the corrected schema, index plan, and connection config for document embedding.
 model: inherit
 color: red
 ---
@@ -14,6 +14,7 @@ The skill that spawns you will pass:
 1. **Database review report** — the structured Critical / Major / Minor findings from database-reviewer
 2. **Original database-designer output** — schema description, ERD Mermaid code, index plan table (markdown), and secure connection config
 3. **Requirements summary** — access patterns, NFRs, and technology decisions from stages 1–5
+4. **`diagrams.json` path** — read it to locate the ERD entry; you will update it in place at the end
 
 ## How to approach fixes
 
@@ -44,20 +45,32 @@ Work through every Critical finding first, then Major findings. For each:
 
 ## Output
 
-Return the complete corrected output in this order:
+### Step 1 — Return the corrected artifacts
+
+Return the complete corrected output in this order (the calling skill embeds these in the architecture document):
 
 1. **Corrected schema** — full table definitions with corrected data types, PKs, FKs
 2. **Corrected ERD** — updated ` ```mermaid ` block reflecting all schema changes
 3. **Corrected index plan** — updated markdown table (same columns: Index Name, Table, Column(s), Type, Reason)
-4. **Updated `companionTable` JSON** — the `companionTable` array for diagrams.json, matching the corrected index plan:
-   ```json
-   [
-     { "name": "...", "table": "...", "columns": "...", "type": "...", "reason": "..." }
-   ]
-   ```
-5. **Corrected connection config** — updated security section
+4. **Corrected connection config** — updated security section
 
-Then append a fix log:
+### Step 2 — Update `diagrams.json` in place
+
+Read `diagrams.json` from the path you were given. Find the entry whose `code` field begins with `erDiagram` (after stripping leading whitespace). If no such entry exists (NoSQL-only project), skip this step and note it in the fix log.
+
+For the ERD entry:
+- Replace the `code` field with the corrected ERD Mermaid block (newlines encoded as `\n` in the JSON string).
+- Replace the `companionTable` array with the corrected index plan rows:
+  ```json
+  [
+    { "name": "...", "table": "...", "columns": "...", "type": "...", "reason": "..." }
+  ]
+  ```
+- If the schema changes affect what `details` describes (e.g., a table was added or a relationship changed), update `details` to match.
+
+Write the modified JSON back to `diagrams.json` in place.
+
+### Step 3 — Fix log
 
 ```
 ## Fix Log
@@ -65,8 +78,13 @@ Then append a fix log:
 ### Applied fixes
 - [TABLE/item] Finding: <brief description>. Fix: <what was changed>.
 
+### diagrams.json updated
+- ERD entry `<diagram-id>`: code and companionTable replaced with corrected versions.
+  — or —
+- No ERD entry found in diagrams.json (NoSQL project) — diagrams.json not modified.
+
 ### Skipped — require human decision
 - [item] Finding: <brief description>. Reason: <explanation>.
 ```
 
-Close by telling the calling skill: "Database design corrected — re-run database-reviewer to verify before embedding."
+Close by telling the calling skill: "Database design corrected and diagrams.json updated — re-run database-reviewer to verify before embedding."
