@@ -52,7 +52,9 @@ async function initParsers() {
     const { window: w } = new JSDOM('<!DOCTYPE html><html><body></body></html>');
     globalThis.window    = w;
     globalThis.document  = w.document;
-    globalThis.navigator = w.navigator;
+    // Node 21+ defines navigator as a getter-only property on globalThis; a plain
+    // assignment throws TypeError.  Object.defineProperty bypasses the restriction.
+    Object.defineProperty(globalThis, 'navigator', { get: () => w.navigator, configurable: true });
     globalThis.location  = w.location;
     globalThis.SVGElement  = w.SVGElement;
     globalThis.HTMLElement = w.HTMLElement;
@@ -68,11 +70,12 @@ async function initParsers() {
       if (result === false) throw new Error('syntax check failed (no detail available)');
     };
     legacyAvail = true;
-  } catch {
+  } catch (e) {
     process.stderr.write(
       'WARNING: mermaid+jsdom unavailable — run `npm install` in scripts/ to enable real\n' +
       '         syntax validation for flowchart, ERD, sequence, C4, class, and state.\n' +
-      '         These types will fall back to heuristic checks (shown as "heuristics only").\n\n'
+      '         These types will fall back to heuristic checks (shown as "heuristics only").\n' +
+      `         Reason: ${e?.message ?? e}\n\n`
     );
   }
 
