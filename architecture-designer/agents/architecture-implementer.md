@@ -17,6 +17,7 @@ The skill that spawns you will pass:
    - *Merge* — add missing files without overwriting existing ones
    - *User-described layout* — the user described their existing structure; respect it
 3. **Technology stack** (optional) — if passed from the design session, use it directly; otherwise infer from the document
+4. **Remediation plan path** (optional, present in review flow) — full path to `{yyyymmdd}-{topic}-remediation.md`. If present, read it before Step 1. Findings marked `[x]` (confirmed as addressed in this revision) that target an existing file are **required code modifications** — their architecture diagrams were already corrected during the review; your job is to bring the code into alignment with those diagrams. Findings marked `[ ]` are deferred — do not touch those files.
 
 Read the document first. Understand every section before writing any code.
 
@@ -108,9 +109,15 @@ Create the `docs/architecture-designer/plan/` directory if it doesn't exist.
 
 - [ ] `npm run setup` — installs deps, copies .env.example, runs migrations
 - [ ] `npm run dev` — local development server
+
+## Modifications to existing files
+
+- [ ] `src/auth/middleware.ts` — Switch from JWT to OAuth2 (remediation finding)
 ```
 
 > **Note on the "Setup and run commands" section**: these are npm script names, not filesystem paths. They are defined inside `package.json`. The filesystem verification pass (test -f) in Step 3 applies only to sections whose entries are actual file paths — skip this section during the path-existence check and instead verify that `package.json` exists and that its `scripts` field contains the expected keys.
+
+> **Note on "Modifications to existing files"**: only present when a remediation plan is passed. Each item is a `[x]` (confirmed/addressed) finding from the remediation plan that targets an existing file — these are the code changes needed to match the corrected diagrams. `[ ]` (deferred) findings are excluded. After applying each change, mark it `[x]` in both the implementation plan and the remediation plan file itself. If no remediation plan was provided, omit this section entirely.
 
 For **merge mode**: any file that already exists and will be skipped should be marked `- [~] \`path\` — already present, skipped` from the start.
 
@@ -118,13 +125,14 @@ After saving the plan, tell the user its path.
 
 **Create implementation tasks**: Using the TaskCreate tool, create one task per file group. All start in `pending` status. Omit any group that has no files in the confirmed tree for this project.
 
-| Task title                 | What it covers                                                   |
-|----------------------------|------------------------------------------------------------------|
-| Implement data models      | Model files, migration files, schema/ORM definitions             |
-| Implement API routes       | Route handlers, controllers, middleware                          |
-| Write configuration files  | package.json, .env.example, tsconfig, docker-compose, Dockerfile |
-| Write infrastructure files | Terraform, CDK, Kubernetes manifests, CI/CD pipeline configs     |
-| Write setup scripts        | npm scripts, cross-platform setup and run commands               |
+| Task title                 | What it covers                                                                          |
+|----------------------------|-----------------------------------------------------------------------------------------|
+| Implement data models      | Model files, migration files, schema/ORM definitions                                    |
+| Implement API routes       | Route handlers, controllers, middleware                                                 |
+| Write configuration files  | package.json, .env.example, tsconfig, docker-compose, Dockerfile                        |
+| Write infrastructure files | Terraform, CDK, Kubernetes manifests, CI/CD pipeline configs                            |
+| Write setup scripts        | npm scripts, cross-platform setup and run commands                                      |
+| Apply remediation changes  | Modifications to existing files per the remediation plan (only when a plan is provided) |
 
 Proceed immediately to Step 3 after creating the tasks — no additional user input needed.
 
@@ -168,6 +176,12 @@ After the user confirms the structure, implement it completely. Write every file
 - An `npm run build` and `npm start` for production
 - All scripts must work identically on Windows, macOS, and Linux — use `cross-env`, Node.js scripts, or platform-neutral npm lifecycle hooks
 
+**Modifications to existing files** (only when a remediation plan is provided):
+- For each `[ ]` item in the *implementation plan's* "Modifications to existing files" section (which corresponds to a `[x]` finding in the remediation plan): read the current file, apply the targeted change to align the code with the corrected diagrams, verify it was written.
+- Mark `[x]` in the implementation plan **and** in the remediation plan file itself after each successful change.
+- If a modification cannot be applied cleanly (e.g., the file structure has diverged too far): mark `[ ] FAIL: {reason}` in both plans and list it under "Files that failed" in the final summary. Do not silently skip it.
+- Never rewrite an entire file to apply a remediation change — make the minimal targeted edit that closes the finding.
+
 ### Rules for implementation
 
 - **Follow the document, not assumptions.** If the document says PostgreSQL, use PostgreSQL. If it says Redis for sessions, use Redis. Do not substitute.
@@ -178,14 +192,22 @@ After the user confirms the structure, implement it completely. Write every file
 
 ## Verification and output
 
-Before writing the final summary, run a verification pass: for every file path in the confirmed folder tree, check whether it exists on disk using `test -f <path> && echo EXISTS || echo MISSING` (or `ls <path>`). The result is binary — there is no middle ground:
+Before writing the final summary, run a verification pass:
+
+**New files** — for every file path in the confirmed folder tree, check whether it exists on disk using `test -f <path> && echo EXISTS || echo MISSING` (or `ls <path>`). The result is binary — there is no middle ground:
 
 - **EXISTS** → include in the files-created list; mark `[x]` in the plan.
 - **MISSING** → this is a **FAIL**, not a skip. It means a file that was supposed to be created is absent. List it under "Files that failed" with the reason. Mark it `[ ] FAIL: {reason}` in the plan. Do not label a failed file as "skipped" — "skipped" (`[~]`) is only for files already present on disk in merge mode that were intentionally left untouched.
 
+**Modifications** (when a remediation plan was provided) — for each item in "Modifications to existing files":
+- Re-read the relevant section of the file and confirm the change is present.
+- **MODIFIED** → mark `[x]` in the implementation plan and in the remediation plan file.
+- **NOT MODIFIED** → mark `[ ] FAIL: {reason}` in both plans and list under "Files that failed".
+
 After the verification pass, provide the summary:
 
 1. **Files created** — grouped by category (models, routes, config, infrastructure, scripts)
-2. **Files that failed** — paths expected but not found on disk; each entry must state why the write did not occur
-3. **Next steps** — install deps, configure `.env`, run migrations, start the dev server
-4. Any remaining TODOs or integration points that require actual business logic
+2. **Files modified** — list of existing files that were changed per the remediation plan (omit if none)
+3. **Files that failed** — paths expected but not found or not modified on disk; each entry must state why
+4. **Next steps** — install deps, configure `.env`, run migrations, start the dev server
+5. Any remaining TODOs or integration points that require actual business logic

@@ -19,6 +19,14 @@ Check for `docs/architecture-designer/session.json`:
 
 - **If the file does not exist**: proceed without session context. Inform the user: "No session.json found — I won't have the original confirmed requirements on hand. The review will rely on the document and/or codebase alone. Sharing the original requirements now will improve the review quality."
 
+**Check for an existing remediation plan**: if `session.json` contains a `"remediationPlanPath"` key, read that file. If it exists on disk and has any `[ ]` (deferred) items, surface them to the user before Step 1:
+
+> "I found a previous remediation plan at `{path}` with **{N} deferred item(s)** not yet addressed. Here they are:
+> {list of [ ] items}
+> Would you like to include these in this review session?"
+
+If the user says yes, carry the deferred items forward into step 4a (revision scope) so they can be addressed or remain deferred. If the file no longer exists at the stored path, note it and continue.
+
 ---
 
 ## Step 1 — Determine review source
@@ -132,7 +140,49 @@ If Critical or Major findings are returned: spawn `architecture-designer:archite
 
 If further revisions are needed, repeat from step 4b.
 
-### 4e. Save the revised document
+### 4e. Save remediation plan
+
+Once the user confirms the revised architecture looks correct, persist the confirmed findings as a living remediation plan.
+
+Save to:
+```
+docs/architecture-designer/plan/{yyyymmdd}-{topic}-remediation.md
+```
+
+- `{yyyymmdd}` — today's date, generated with JavaScript `new Date()` (never a shell command).
+- `{topic}` — the topic slug from the architecture document filename (e.g., `20260706-inventory-app.md` → `inventory-app`).
+
+Create the `docs/architecture-designer/plan/` directory if it doesn't exist.
+
+**Plan format**:
+
+```markdown
+# Remediation Plan: {topic}
+
+| Architecture document | `{document path}`                                    |
+|-----------------------|------------------------------------------------------|
+| Review source         | {drift report, architecture review, or both}         |
+| Date                  | {dd-mmm-yyyy}                                        |
+| Status                | In progress                                          |
+
+## Findings
+
+- [x] `src/auth/middleware.ts` — JWT used but document §5 specifies OAuth2 *(addressed in this revision)*
+- [ ] `src/payments/service.ts` — Payment service present in code but absent from architecture document *(deferred)*
+```
+
+Rules:
+- **One checkbox per finding** from the drift report or architecture review report.
+- **Source path is mandatory** on every item — the same file-path-citation rule that governs the drift report applies here. A finding without a file path (or a document section reference for document-only claims) must not be written.
+- `[x]` for findings the user confirmed as addressed in this revision (the scope agreed in step 4a).
+- `[ ]` for findings the user deferred or chose not to address now.
+- Append `*(addressed in this revision)*` or `*(deferred)*` as a brief suffix so the document is self-explanatory across sessions.
+
+This file is a **living document**: in future review sessions, re-open it, tick off newly resolved items (`[ ]` → `[x]`), and update `Status` to `Complete` when every item is `[x]`.
+
+After saving, update `docs/architecture-designer/session.json`: add or overwrite the top-level `"remediationPlanPath"` key with the full absolute path of this file. Then note the path — you will pass it to the implementer in step 4h.
+
+### 4f. Save the revised document
 
 Once the user confirms the revision, save to:
 ```
@@ -159,18 +209,18 @@ After saving, update `docs/architecture-designer/session.json`: add or overwrite
 
 The document body follows the same structure as the design workflow (all sections, all diagrams). This is a standalone document, not a diff — someone reading it without the previous version should have complete context.
 
-### 4f. Document review
+### 4g. Document review
 
 Spawn the `architecture-designer:document-reviewer` agent. Pass it:
 - Path to the new document
 - Requirements summary
 - Expected filename
 
-If DOCUMENT REVIEW FAILED: spawn `architecture-designer:document-fixer` with the document path, the review report, and the requirements summary. Re-run `architecture-designer:document-reviewer` after the fixer applies its corrections. If the fixer's log says the file must be renamed (F6), rename it first. Repeat until DOCUMENT REVIEW PASSED, **up to a maximum of 3 reviewer–fixer cycles**. If failures persist after 3 cycles, present the remaining FAIL items to the user and ask for their input rather than cycling again.
+If DOCUMENT REVIEW FAILED: spawn `architecture-designer:document-fixer` with the document path, the review report, the requirements summary, and the path to `docs/architecture-designer/diagrams.json`. Re-run `architecture-designer:document-reviewer` after the fixer applies its corrections. If the fixer's log says the file must be renamed (F6), rename it first. Repeat until DOCUMENT REVIEW PASSED, **up to a maximum of 3 reviewer–fixer cycles**. If failures persist after 3 cycles, present the remaining FAIL items to the user and ask for their input rather than cycling again.
 
 Then update `Status` to `Approved`.
 
-### 4g. Implementation offer
+### 4h. Implementation offer
 
 After approval:
 
@@ -180,6 +230,8 @@ If yes: scan the working directory for signs of an existing project (look for `p
 - The path to the approved document
 - **Existing project summary** — what was found in the scan; if nothing was found, pass "fresh start — no existing project detected"
 - **Technology stack** — from the architecture document's Technology Decisions section (section 5)
+- **Remediation plan path** — the full path to the `{yyyymmdd}-{topic}-remediation.md` file saved in step 4e (always present in the review flow)
+- **Mode** — `merge`, because a review implies an existing codebase; the implementer must add or modify files without overwriting content that already exists
 
 ---
 
