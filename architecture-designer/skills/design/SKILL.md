@@ -253,6 +253,8 @@ Generate Mermaid diagrams relevant to the project. **All diagrams are optional**
 - **Label length**: keep node label text under 28 characters per line. Use `<br/>` for multi-line labels. Subgraph titles: 35 characters max.
 - **C4 layout**: every `C4Context` and `C4Container` must end with `UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")`. Use `"2"` per row when shapes have long description text.
 
+After applying layout rules and finalizing all diagram code, **immediately write `docs/architecture-designer/diagrams.json`** following the schema in Step 8.1 (create `docs/architecture-designer/` if needed). This must happen before Step 7 — the architecture-fixer reads and updates the file in place during the review cycle and will fail if the file does not exist.
+
 ---
 
 ## Step 7 — Architecture Review (BEFORE preview)
@@ -281,7 +283,7 @@ Do not open the browser preview until the reviewer reports `REVIEW PASSED`.
 
 ## Step 8 — Browser Preview
 
-1. **Write `diagrams.json`** to `docs/architecture-designer/diagrams.json` (create the directory if needed):
+1. **Confirm `diagrams.json` is current** at `docs/architecture-designer/diagrams.json`. The file was written at the end of Stage 6d and may have been updated by the architecture-fixer in Step 7 — if so it is already correct. If validation in step 8.2 flags issues, re-write the corrected diagram code into the file. The schema the file must follow:
 
 ```json
 {

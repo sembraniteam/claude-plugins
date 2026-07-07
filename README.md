@@ -264,9 +264,9 @@ Regenerates and saves `SECURITY-AUDIT.md` from the current session's findings.
 │   └── scripts/
 │       ├── find-port.mjs               # Finds available port 3000–9000 via net.createServer()
 │       ├── preview-server.mjs          # Serves preview HTML; auto-opens browser; 2× resolution PNG export
-│       ├── validate-diagrams.mjs       # Validates diagrams.json syntax (@mermaid-js/parser); exits 0/1
+│       ├── validate-diagrams.mjs       # Validates diagrams.json syntax (mermaid + @mermaid-js/parser); exits 0/1
 │       ├── validate-session.mjs        # Pre-flight check that session.json stages 1–5 are complete
-│       ├── package.json                # @mermaid-js/parser dependency — run `npm install` once
+│       ├── package.json                # mermaid, jsdom, @mermaid-js/parser — run `npm install` once
 │       └── .gitignore                  # Excludes node_modules/
 ├── changelog-manager/
 │   ├── .claude-plugin/

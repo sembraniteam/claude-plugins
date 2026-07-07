@@ -5,6 +5,8 @@
   "private": true,
   "description": "Validation scripts for the architecture-designer plugin. Run `npm install` once to enable full Mermaid syntax validation.",
   "dependencies": {
-    "@mermaid-js/parser": "^1.2.0"
+    "@mermaid-js/parser": "^1.2.0",
+    "jsdom": "^25.0.0",
+    "mermaid": "^11.0.0"
   }
 }

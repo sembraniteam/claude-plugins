@@ -93,7 +93,7 @@ Each reviewer has a paired fixer agent. When a reviewer returns findings, the sk
 
 All scripts are Node.js ESM (`.mjs`). They run identically on Windows, macOS, and Linux. The preview server loads Mermaid v11 and the ELK layout engine from CDN — an internet connection is required while the browser preview is open.
 
-`validate-diagrams.mjs` uses `@mermaid-js/parser` for real syntax validation. Run `npm install` once in the `scripts/` directory before first use:
+`validate-diagrams.mjs` uses a two-tier strategy: the `mermaid` package (Jison parsers) for legacy types (flowchart, ERD, sequence, C4, class, state) and `@mermaid-js/parser` for new types (architecture-beta). If packages are missing it degrades gracefully to heuristics rather than crashing. Run `npm install` once in the `scripts/` directory before first use:
 
 ```bash
 # Install validation dependency (once)
@@ -114,7 +114,7 @@ node scripts/preview-server.mjs <port>
 
 The preview server reads `docs/architecture-designer/diagrams.json` on every request — reload the page to see diagram updates without restarting the server.
 
-`validate-diagrams.mjs` catches real Mermaid syntax errors (via `@mermaid-js/parser`) and supplements them with heuristic checks for unsupported diagram types (architecture-beta node misuse, C4 UpdateLayoutConfig, bracket balance). The design skill runs it automatically before launching the preview, but you can run it manually at any time. `validate-session.mjs` is run automatically at the start of Stage 6 to confirm all requirement stages are on disk before sub-agents are spawned.
+`validate-diagrams.mjs` catches real Mermaid syntax errors using the mermaid package for legacy types and `@mermaid-js/parser` for new types. Diagrams validated only by heuristics (when parsers are unavailable) are marked `✓ (heuristics only)` in the output. The design skill runs it automatically before launching the preview, but you can run it manually at any time. `validate-session.mjs` is run automatically at the start of Stage 6 to confirm all requirement stages are on disk before sub-agents are spawned.
 
 ## `diagrams.json` schema
 
