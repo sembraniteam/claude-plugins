@@ -119,7 +119,7 @@ Ask:
 
 Based on the revision scope:
 - For architecture changes: update the affected Mermaid diagrams (C4, sequence, deployment)
-- For database changes: re-spawn the `architecture-designer:database-designer` agent with the updated requirements, then validate with `architecture-designer:database-reviewer`. If Critical or Major findings are returned, spawn `architecture-designer:database-fixer` with the review report, the database-designer output, the requirements summary, and the path to `docs/architecture-designer/diagrams.json`. The fixer writes the corrected ERD and companionTable directly into `diagrams.json`. Re-run the reviewer after it completes, and repeat until it passes.
+- For database changes: re-spawn the `architecture-designer:database-designer` agent with the updated requirements, then validate with `architecture-designer:database-reviewer`. If the reviewer returns `DATABASE REVIEW FAILED`, spawn `architecture-designer:database-fixer` with the review report, the database-designer output, the requirements summary, and the path to `docs/architecture-designer/diagrams.json`. The fixer writes the corrected ERD and indexPlan directly into `diagrams.json`. Re-run the reviewer after it completes. Repeat until `DATABASE REVIEW PASSED`, **up to a maximum of 3 reviewer–fixer cycles**. If it still returns `DATABASE REVIEW FAILED` after 3 cycles, stop the loop, present the remaining findings to the user verbatim, and ask for their guidance rather than cycling further.
 - For new features: add new diagram elements as needed
 - For removed components: remove the relevant elements
 
@@ -136,11 +136,11 @@ If Critical or Major findings are returned: spawn `architecture-designer:archite
 
 ### 4d. Browser preview
 
-1. Update `docs/architecture-designer/diagrams.json` with the revised diagrams (same JSON format as the design workflow, including `details`, `rationale`, and — for ERD diagrams — `companionTable` rows; update all three to reflect what changed in the revision).
-1b. **Validate diagrams**: run `node <scripts_dir>/validate-diagrams.mjs`. If it exits non-zero or prints `VALIDATION FAILED`, fix the flagged issues in `diagrams.json` before opening or refreshing the preview. Revised diagrams are written under longer-context pressure and are at least as likely to contain syntax errors as freshly generated ones.
-2. If a preview server from a previous run is already running (the user will know the URL): tell them to refresh their browser.
-3. If no server is running: run `node <scripts_dir>/find-port.mjs`, then `node <scripts_dir>/preview-server.mjs <port>` in the background.
-4. Ask: **"Does this revised architecture look correct to you?"**
+1. Update `docs/architecture-designer/diagrams.json` with the revised diagrams (same JSON format as the design workflow, including `details`, `rationale`, and — for ERD diagrams — `indexPlan` rows; update all three to reflect what changed in the revision). Skip this for any diagram the database-fixer or architecture-fixer already wrote directly in 4b/4c — re-writing it here would just overwrite their fix with stale content.
+2. **Validate diagrams**: run `node <scripts_dir>/validate-diagrams.mjs`. If it exits non-zero or prints `VALIDATION FAILED`, fix the flagged issues in `diagrams.json` before opening or refreshing the preview. Revised diagrams are written under longer-context pressure and are at least as likely to contain syntax errors as freshly generated ones — and since this check runs after every `diagrams.json` write in the revision flow (step 1 above, and the fixers in 4b/4c), one gate covers all of them.
+3. If a preview server from a previous run is already running (the user will know the URL): tell them to refresh their browser.
+4. If no server is running: run `node <scripts_dir>/find-port.mjs`, then `node <scripts_dir>/preview-server.mjs <port>` in the background.
+5. Ask: **"Does this revised architecture look correct to you?"**
 
 If further revisions are needed, repeat from step 4b.
 

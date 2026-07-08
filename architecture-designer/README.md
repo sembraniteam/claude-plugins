@@ -78,16 +78,16 @@ The `/architecture-designer:review` skill follows the same reviewer → fixer lo
 
 Each reviewer has a paired fixer agent. When a reviewer returns findings, the skill spawns the fixer to apply targeted corrections, then re-runs the reviewer. This loop runs until the reviewer passes — no manual editing required.
 
-| Agent                                            | Role                                                                                                                                                                                                                                                   |
-|--------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `architecture-designer:architecture-reviewer`    | Validates diagrams for technical correctness, cross-diagram consistency, requirements traceability, risks, observability, and DR; returns Critical / Major / Minor findings with REVIEW PASSED / CONDITIONALLY PASSED / FAILED verdict                 |
-| `architecture-designer:architecture-fixer`       | Applies targeted fixes to Mermaid diagrams based on reviewer findings; updates `diagrams.json` in place and returns a fix log                                                                                                                          |
-| `architecture-designer:database-designer`        | Designs schema, ERD, index plan, engine selection, and secure connection config for SQL and NoSQL                                                                                                                                                      |
-| `architecture-designer:database-reviewer`        | Audits database design: engine fit, schema/3NF, ERD accuracy, index completeness, security config; returns DATABASE REVIEW PASSED / FAILED                                                                                                             |
-| `architecture-designer:database-fixer`           | Corrects schema, ERD, index plan, and connection config; writes the corrected ERD and `companionTable` directly into `diagrams.json` (same pattern as `architecture-fixer`), and returns corrected schema and connection config for document embedding |
-| `architecture-designer:document-reviewer`        | Audits saved documents for format compliance (F1–F7) and content completeness (C1–C6); returns DOCUMENT REVIEW PASSED / FAILED                                                                                                                         |
-| `architecture-designer:document-fixer`           | Fixes specific format and content failures in the document based on reviewer findings; overwrites the draft in place                                                                                                                                   |
-| `architecture-designer:architecture-implementer` | Implements project skeleton, data models, routes, and infrastructure files from an approved document                                                                                                                                                   |
+| Agent                                            | Role                                                                                                                                                                                                                                              |
+|--------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `architecture-designer:architecture-reviewer`    | Validates diagrams for technical correctness, cross-diagram consistency, requirements traceability, risks, observability, and DR; returns Critical / Major / Minor findings with REVIEW PASSED / CONDITIONALLY PASSED / FAILED verdict            |
+| `architecture-designer:architecture-fixer`       | Applies targeted fixes to Mermaid diagrams based on reviewer findings; updates `diagrams.json` in place and returns a fix log                                                                                                                     |
+| `architecture-designer:database-designer`        | Designs schema, ERD, index plan, engine selection, and secure connection config for SQL and NoSQL                                                                                                                                                 |
+| `architecture-designer:database-reviewer`        | Audits database design: engine fit, schema/3NF, ERD accuracy, index completeness, security config; returns DATABASE REVIEW PASSED / FAILED                                                                                                        |
+| `architecture-designer:database-fixer`           | Corrects schema, ERD, index plan, and connection config; writes the corrected ERD and `indexPlan` directly into `diagrams.json` (same pattern as `architecture-fixer`), and returns corrected schema and connection config for document embedding |
+| `architecture-designer:document-reviewer`        | Audits saved documents for format compliance (F1–F7) and content completeness (C1–C6); returns DOCUMENT REVIEW PASSED / FAILED                                                                                                                    |
+| `architecture-designer:document-fixer`           | Fixes specific format and content failures in the document based on reviewer findings; overwrites the draft in place                                                                                                                              |
+| `architecture-designer:architecture-implementer` | Implements project skeleton, data models, routes, and infrastructure files from an approved document                                                                                                                                              |
 
 ## Scripts
 
@@ -130,7 +130,7 @@ The preview server reads `docs/architecture-designer/diagrams.json` on every req
       "description": "One-sentence summary shown above the diagram.",
       "details": "Multi-paragraph explanation (paragraphs separated by \\n\\n). Rendered as a collapsible block.",
       "rationale": "Why this diagram type was chosen and what design decisions it encodes. Collapsible block.",
-      "companionTable": [
+      "indexPlan": [
         { "name": "idx_users_email", "table": "users", "columns": "email", "type": "UNIQUE B-TREE", "reason": "Login lookup" }
       ],
       "code": "erDiagram\n  USERS { uuid id PK }\n..."
@@ -139,7 +139,7 @@ The preview server reads `docs/architecture-designer/diagrams.json` on every req
 }
 ```
 
-`companionTable` is optional and only used for `erDiagram` entries — it renders as an inline index plan table below the ERD.
+`indexPlan` is optional and only used for `erDiagram` entries — it renders as an inline index plan table below the ERD. Every row must be an index (five keys: `name`, `table`, `columns`, `type`, `reason`) — `validate-diagrams.mjs` rejects rows that aren't. The field was previously named `companionTable`; that key is still read as a fallback but is deprecated in favor of the self-describing `indexPlan` name.
 
 ## Document format
 

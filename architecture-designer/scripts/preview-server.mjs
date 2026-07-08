@@ -18,14 +18,16 @@
  *       "description": "One-sentence summary shown above the diagram.",
  *       "details": "Multi-paragraph explanation (paragraphs separated by \\n\\n). Rendered as collapsible block.",
  *       "rationale": "Why this diagram type was chosen and what decisions it encodes. Rendered as collapsible block.",
- *       "companionTable": [
+ *       "indexPlan": [
  *         { "name": "idx_name", "table": "tbl", "columns": "col", "type": "B-TREE", "reason": "..." }
  *       ],
  *       "code": "flowchart LR\n..."
  *     }
  *   ]
  * }
- * companionTable is optional; only include it for erDiagram entries (rendered as an index plan table below the diagram).
+ * indexPlan is optional; only include it for erDiagram entries (rendered as an index plan table below the
+ * diagram). Every row is one database index — the legacy key `companionTable` is still read as a fallback
+ * but is deprecated in favor of the self-describing name.
  */
 
 import http from 'http';
@@ -61,8 +63,25 @@ function renderParagraphs(text) {
     .join('');
 }
 
+const INDEX_PLAN_KEYS = ['name', 'table', 'columns', 'type', 'reason'];
+
+// Rows that don't carry all five keys are not index rows — most often this is the model
+// filling the field with entity descriptions instead of an index plan. Surface that loudly
+// rather than silently rendering an empty or partial grid.
 function buildCompanionTable(rows) {
+  if (rows === undefined || rows === null) return '';
   if (!Array.isArray(rows) || rows.length === 0) return '';
+
+  const malformed = rows.filter(r => !r || typeof r !== 'object' || INDEX_PLAN_KEYS.some(k => !(k in r)));
+  if (malformed.length > 0) {
+    return `<div class="companion-table-wrapper companion-table-warning">
+      <div class="companion-table-title">⚠ Index plan malformed</div>
+      <p>${malformed.length} of ${rows.length} row(s) are missing one of the required keys (${INDEX_PLAN_KEYS.join(', ')}).
+      This usually means the field was filled with entity descriptions or other ERD notes instead of index rows.
+      Fix <code>indexPlan</code> in diagrams.json and re-run validate-diagrams.mjs.</p>
+    </div>`;
+  }
+
   const header = '<tr><th>Index Name</th><th>Table</th><th>Column(s)</th><th>Type</th><th>Reason</th></tr>';
   const body = rows.map(r => `<tr>
       <td>${esc(String(r.name ?? ''))}</td>
@@ -78,7 +97,7 @@ function buildCompanionTable(rows) {
 }
 
 function buildSection(d) {
-  const companionBlock = buildCompanionTable(d.companionTable);
+  const companionBlock = buildCompanionTable(d.indexPlan ?? d.companionTable);
   const detailsBlock = d.details
     ? `<details class="diagram-meta">
         <summary>Details</summary>
@@ -174,6 +193,10 @@ function buildHtml(data) {
     .companion-table td { padding: 6px 10px; border-bottom: 1px solid #f3f4f6; color: #374151; vertical-align: top; }
     .companion-table tr:last-child td { border-bottom: none; }
     .companion-table tbody tr:hover td { background: #f9fafb; }
+    .companion-table-warning { border-top-color: #fca5a5; background: #fef2f2; padding: 12px 14px;
+      border-radius: 6px; }
+    .companion-table-warning .companion-table-title { color: #b91c1c; }
+    .companion-table-warning p { font-size: 0.82rem; color: #7f1d1d; margin: 0; line-height: 1.5; }
     .diagram-meta { border-top: 1px solid #e5e7eb; margin-top: 14px; }
     .diagram-meta summary { cursor: pointer; font-size: 0.8rem; font-weight: 600;
       color: #6b7280; padding: 10px 0; user-select: none; list-style: none; }

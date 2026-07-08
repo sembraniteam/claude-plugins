@@ -48,7 +48,7 @@ For Minor findings: fix them if mechanical and low-risk; skip them if they requi
 
 ## Output
 
-Update `diagrams.json` in place — write the corrected Mermaid code into the `code` field of each affected diagram entry. If your fix changes what `details`, `rationale`, or `companionTable` describe, update those fields too.
+Update `diagrams.json` in place — write the corrected Mermaid code into the `code` field of each affected diagram entry. If your fix changes what `details`, `rationale`, or `indexPlan` describe, update those fields too.
 
 Then provide a fix log:
 

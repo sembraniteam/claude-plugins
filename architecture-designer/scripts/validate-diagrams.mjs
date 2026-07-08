@@ -10,6 +10,10 @@
  *   - When parsers are unavailable (node_modules missing): heuristic checks;
  *     passing diagrams are marked "✓ (heuristics only)" to be honest about coverage
  *
+ * Also checks the `indexPlan` contract on ERD entries: every row must carry all five
+ * keys (name, table, columns, type, reason). This catches the field being filled with
+ * entity descriptions or other ERD notes instead of actual index rows.
+ *
  * Requires: run `npm install` in the scripts/ directory once before first use.
  * The script degrades gracefully if dependencies are missing — it will not crash.
  *
@@ -189,6 +193,25 @@ async function validateCode(id, code) {
   return { errors, quality: parserRan ? 'parsed' : 'heuristics' };
 }
 
+// ── indexPlan contract check ──────────────────────────────────────────────────
+// A row missing one of the five keys is not an index row — usually it means the
+// field was filled with entity descriptions or other ERD notes instead of an
+// index plan. Catch that mechanically rather than relying on the writer to have
+// followed the field guide.
+
+const INDEX_PLAN_KEYS = ['name', 'table', 'columns', 'type', 'reason'];
+
+function validateIndexPlan(rows) {
+  if (!Array.isArray(rows)) return ['indexPlan must be an array of index rows'];
+  return rows.flatMap((row, i) => {
+    if (!row || typeof row !== 'object') return [`indexPlan row ${i + 1} is not an object`];
+    const missing = INDEX_PLAN_KEYS.filter(k => !(k in row));
+    return missing.length > 0
+      ? [`indexPlan row ${i + 1} missing key(s): ${missing.join(', ')} — looks like an entity description or note, not an index row`]
+      : [];
+  });
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 await initParsers();
@@ -221,9 +244,17 @@ let anyFailed = false;
 for (const d of diagrams) {
   const id          = String(d.id ?? '(no id)');
   const fieldErrors = [];
+  const notes       = [];
   if (!d.id)    fieldErrors.push('missing required field: id');
   if (!d.title) fieldErrors.push('missing required field: title');
   if (!d.code)  fieldErrors.push('missing required field: code');
+
+  if (d.indexPlan !== undefined || d.companionTable !== undefined) {
+    if (d.indexPlan === undefined) {
+      notes.push('using deprecated key "companionTable" — rename to "indexPlan"');
+    }
+    fieldErrors.push(...validateIndexPlan(d.indexPlan ?? d.companionTable));
+  }
 
   const { errors: codeErrors, quality } = d.code
     ? await validateCode(id, d.code)
@@ -231,7 +262,7 @@ for (const d of diagrams) {
 
   const errors = [...fieldErrors, ...codeErrors];
   if (errors.length > 0) anyFailed = true;
-  results.push({ id, errors, quality });
+  results.push({ id, errors, notes, quality });
 }
 
 // ── Report ────────────────────────────────────────────────────────────────────
@@ -249,6 +280,9 @@ for (const r of results) {
     for (const e of r.errors) {
       process.stdout.write(`       → ${e}\n`);
     }
+  }
+  for (const n of r.notes) {
+    process.stdout.write(`       note: ${n}\n`);
   }
 }
 

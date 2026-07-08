@@ -167,7 +167,7 @@ Then spawn `architecture-designer:database-reviewer`. Pass it:
 - The full database-designer output
 - The requirements summary (stages 1–5)
 
-If the reviewer returns `DATABASE REVIEW FAILED`: spawn `architecture-designer:database-fixer` with the review report, the database-designer output, the requirements summary, and the path to `docs/architecture-designer/diagrams.json`. The fixer writes the corrected ERD and companionTable directly into `diagrams.json`. After it completes, re-spawn `architecture-designer:database-reviewer` to verify. Repeat until `DATABASE REVIEW PASSED`.
+If the reviewer returns `DATABASE REVIEW FAILED`: spawn `architecture-designer:database-fixer` with the review report, the database-designer output, the requirements summary, and the path to `docs/architecture-designer/diagrams.json`. The fixer writes the corrected ERD and indexPlan directly into `diagrams.json`. After it completes, re-spawn `architecture-designer:database-reviewer` to verify. Repeat until `DATABASE REVIEW PASSED`, **up to a maximum of 3 reviewer–fixer cycles**. If it still returns `DATABASE REVIEW FAILED` after 3 cycles, stop the loop, present the remaining findings to the user verbatim, and ask for their guidance rather than cycling further.
 
 Incorporate the final approved database design into the diagram set and document.
 
@@ -297,7 +297,7 @@ Do not open the browser preview until the reviewer reports `REVIEW PASSED` or `R
       "description": "<One sentence describing what this diagram shows>",
       "details": "<Multi-paragraph explanation — see field guide below>",
       "rationale": "<Why this diagram was created — see field guide below>",
-      "companionTable": [
+      "indexPlan": [
         { "name": "<index name>", "table": "<table name>", "columns": "<column(s)>", "type": "<index type>", "reason": "<justification>" }
       ],
       "code": "<Raw Mermaid syntax — newlines as \\n>"
@@ -308,13 +308,13 @@ Do not open the browser preview until the reviewer reports `REVIEW PASSED` or `R
 
 `generatedAt`: use the JavaScript `new Date().toISOString()` equivalent — format as `YYYY-MM-DDTHH:MM:SS.mmmZ`. Never use shell commands.
 
-**Field guide for `details`, `rationale`, and `companionTable`** — all three are rendered in the browser preview directly below the diagram:
+**Field guide for `details`, `rationale`, and `indexPlan`** — all three are rendered in the browser preview directly below the diagram:
 
 - **`details`** (2–4 paragraphs): Explain what each major component or group represents, how data or control flows through the diagram, the key relationships and their significance, and what a developer needs to understand to implement based on this diagram. Separate paragraphs with `\n\n` in the JSON string. Rendered as a collapsible block.
 
 - **`rationale`** (1–3 paragraphs): State why this specific diagram type was chosen for this concern, what design decisions are encoded in the diagram (e.g., why the ERD is normalized this way, why the sequence diagram shows this particular auth flow), what alternatives were considered and why they were not chosen, and which requirements or constraints from stages 1–5 drove the visible choices. Separate paragraphs with `\n\n` in the JSON string. Rendered as a collapsible block.
 
-- **`companionTable`** (optional, ERD diagrams only): Copy the index plan rows from the database-designer output into this structured array. Each row maps to one index: `name` is the index identifier (e.g., `idx_users_email`), `table` is the table it belongs to, `columns` is the indexed column(s) as a string, `type` is the index type (e.g., `UNIQUE B-TREE`, `B-TREE`, `GIN`), and `reason` is the query it serves. Rendered as a visible HTML table immediately below the ERD — omit this field for all non-ERD diagrams.
+- **`indexPlan`** (optional, ERD diagrams only): Copy the index plan rows from the database-designer output into this structured array — nothing else. This is not a general-purpose "companion table" for entity descriptions or other ERD commentary; every entry is one database index. Each row maps to one index and must have exactly these five keys: `name` is the index identifier (e.g., `idx_users_email`), `table` is the table it belongs to, `columns` is the indexed column(s) as a string, `type` is the index type (e.g., `UNIQUE B-TREE`, `B-TREE`, `GIN`), and `reason` is the query it serves. Rendered as a visible HTML table immediately below the ERD titled "Index plan" — omit this field entirely for all non-ERD diagrams and for ERD diagrams with no indexes to report; do not fill it with anything else. `validate-diagrams.mjs` checks that every row has all five keys and will fail loudly if not.
 
 2. **Validate diagrams**: run `node <scripts_dir>/validate-diagrams.mjs`. If the script exits non-zero or prints `VALIDATION FAILED`, fix the flagged issues in the diagram code and re-write `docs/architecture-designer/diagrams.json`. Do not proceed to step 3 until validation passes.
 
@@ -338,8 +338,10 @@ If the user requests revisions:
 - Identify which stage the revision affects
 - Return to that stage, ask the relevant questions again, update the answers
 - Regenerate the affected diagrams
-- Re-run the architecture reviewer (step 7)
-- Update `diagrams.json` (the server reloads it on page refresh — tell the user to refresh their browser)
+- Re-run the architecture reviewer (step 7) — note this may spawn architecture-fixer, which writes `diagrams.json` directly
+- Update `diagrams.json` with the revised diagrams (skip if the fixer already wrote it directly during the reviewer re-run above)
+- Re-run `node <scripts_dir>/validate-diagrams.mjs` — the same gate as Step 8. If it exits non-zero or prints `VALIDATION FAILED`, fix the flagged issues in `diagrams.json` and re-validate before continuing. Do not tell the user to refresh until it passes; revised diagrams are at least as likely to contain syntax errors as first drafts. Placed here, after the last `diagrams.json` write in this loop, this one gate also catches anything the architecture-fixer changed during the reviewer re-run above.
+- Tell the user to refresh their browser (the server reloads `diagrams.json` on page refresh)
 - Ask the confirmation question again
 
 Repeat until the user confirms the design is correct.

@@ -95,11 +95,11 @@ Create the `docs/architecture-designer/plan/` directory if it doesn't exist.
 
 ## Data models
 
-- [ ] `src/models/User.ts` — User entity
+- [ ] `src/models/User.ts` — [{diagram-name}] User entity
 
 ## API routes
 
-- [ ] `src/routes/auth.ts` — Authentication endpoints (from sequence diagram)
+- [ ] `src/routes/auth.ts` — [{diagram-name}] Authentication endpoints (from sequence diagram)
 
 ## Configuration
 

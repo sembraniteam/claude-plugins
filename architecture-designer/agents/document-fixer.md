@@ -56,7 +56,7 @@ These require accurate content from the requirements summary:
 
 - **C5 — Missing diagrams**: For each diagram that should be present but is missing from the document, add a section: a heading, a one-paragraph description of what the diagram shows, and the Mermaid code block from diagrams.json.
 
-- **C5a — Missing ERD index table**: After the ERD mermaid block, add the index list table. Use these exact columns: `| Index Name | Table | Column(s) | Type | Reason |` with separator row. Populate from the `companionTable` field in diagrams.json or the database-designer output.
+- **C5a — Missing ERD index table**: After the ERD mermaid block, add the index list table. Use these exact columns: `| Index Name | Table | Column(s) | Type | Reason |` with separator row. Populate from the `indexPlan` field in diagrams.json or the database-designer output.
 
 - **C6 — Content accuracy**: Correct the specific discrepancy cited in the report. Do not change any content that wasn't flagged.
 

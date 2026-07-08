@@ -1,6 +1,6 @@
 ---
 name: database-fixer
-description: Use this agent when the database-reviewer has returned Critical or Major findings and the database design needs targeted corrections before it is embedded in the architecture document. Receives the review report, the original database-designer output, the requirements summary, and the diagrams.json path. Applies the minimum changes to close each finding, writes the corrected ERD and companionTable directly into diagrams.json (same pattern as architecture-fixer), and returns the corrected schema, index plan, and connection config for document embedding.
+description: Use this agent when the database-reviewer has returned Critical or Major findings and the database design needs targeted corrections before it is embedded in the architecture document. Receives the review report, the original database-designer output, the requirements summary, and the diagrams.json path. Applies the minimum changes to close each finding, writes the corrected ERD and indexPlan directly into diagrams.json (same pattern as architecture-fixer), and returns the corrected schema, index plan, and connection config for document embedding.
 model: inherit
 color: red
 ---
@@ -60,12 +60,13 @@ Read `diagrams.json` from the path you were given. Find the entry whose `code` f
 
 For the ERD entry:
 - Replace the `code` field with the corrected ERD Mermaid block (newlines encoded as `\n` in the JSON string).
-- Replace the `companionTable` array with the corrected index plan rows:
+- Replace the `indexPlan` array with the corrected index plan rows. This field holds index rows only — never entity descriptions, table summaries, or other ERD commentary. Every row must have exactly these five keys, all populated:
   ```json
   [
     { "name": "...", "table": "...", "columns": "...", "type": "...", "reason": "..." }
   ]
   ```
+  (If the entry still uses the legacy key `companionTable`, rename it to `indexPlan` while you're in there.)
 - If the schema changes affect what `details` describes (e.g., a table was added or a relationship changed), update `details` to match.
 
 Write the modified JSON back to `diagrams.json` in place.
@@ -79,7 +80,7 @@ Write the modified JSON back to `diagrams.json` in place.
 - [TABLE/item] Finding: <brief description>. Fix: <what was changed>.
 
 ### diagrams.json updated
-- ERD entry `<diagram-id>`: code and companionTable replaced with corrected versions.
+- ERD entry `<diagram-id>`: code and indexPlan replaced with corrected versions.
   — or —
 - No ERD entry found in diagrams.json (NoSQL project) — diagrams.json not modified.
 
