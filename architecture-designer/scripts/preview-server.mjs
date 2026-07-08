@@ -73,14 +73,14 @@ function isBlankIndexPlanValue(value) {
 // index rows — most often this is the model filling the field with entity descriptions
 // instead of an index plan, or leaving a placeholder. Surface that loudly rather than
 // silently rendering an empty or partial grid.
-function buildCompanionTable(rows) {
+function buildIndexPlanTable(rows) {
   if (rows === undefined || rows === null) return '';
   if (!Array.isArray(rows) || rows.length === 0) return '';
 
   const malformed = rows.filter(r => !r || typeof r !== 'object' || INDEX_PLAN_KEYS.some(k => !(k in r) || isBlankIndexPlanValue(r[k])));
   if (malformed.length > 0) {
-    return `<div class="companion-table-wrapper companion-table-warning">
-      <div class="companion-table-title">⚠ Index plan malformed</div>
+    return `<div class="index-plan-table-wrapper index-plan-table-warning">
+      <div class="index-plan-table-title">⚠ Index plan malformed</div>
       <p>${malformed.length} of ${rows.length} row(s) are missing one of the required keys or have an empty value (${INDEX_PLAN_KEYS.join(', ')}).
       This usually means the field was filled with entity descriptions or other ERD notes instead of index rows, or left as a placeholder.
       Fix <code>indexPlan</code> in diagrams.json and re-run validate-diagrams.mjs.</p>
@@ -95,14 +95,14 @@ function buildCompanionTable(rows) {
       <td>${esc(String(r.type ?? ''))}</td>
       <td>${esc(String(r.reason ?? ''))}</td>
     </tr>`).join('');
-  return `<div class="companion-table-wrapper">
-      <div class="companion-table-title">Index plan</div>
-      <table class="companion-table"><thead>${header}</thead><tbody>${body}</tbody></table>
+  return `<div class="index-plan-table-wrapper">
+      <div class="index-plan-table-title">Index plan</div>
+      <table class="index-plan-table"><thead>${header}</thead><tbody>${body}</tbody></table>
     </div>`;
 }
 
 function buildSection(d) {
-  const companionBlock = buildCompanionTable(d.indexPlan ?? d.companionTable);
+  const indexPlanBlock = buildIndexPlanTable(d.indexPlan ?? d.companionTable);
   const detailsBlock = d.details
     ? `<details class="diagram-meta">
         <summary>Details</summary>
@@ -131,7 +131,7 @@ function buildSection(d) {
           <pre class="mermaid">${esc(d.code)}</pre>
         </div>
       </div>
-      ${companionBlock}${detailsBlock}${rationaleBlock}
+      ${indexPlanBlock}${detailsBlock}${rationaleBlock}
     </section>`;
 }
 
@@ -189,19 +189,19 @@ function buildHtml(data) {
     .diagram-inner { transform-origin: 0 0; display: inline-block; padding: 20px; will-change: transform; }
     .diagram-inner svg { max-width: none !important; height: auto; display: block; }
     .mermaid { display: block; }
-    .companion-table-wrapper { margin-top: 16px; border-top: 1px solid #e5e7eb; padding-top: 14px; overflow-x: auto; }
-    .companion-table-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+    .index-plan-table-wrapper { margin-top: 16px; border-top: 1px solid #e5e7eb; padding-top: 14px; overflow-x: auto; }
+    .index-plan-table-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
       letter-spacing: 0.6px; color: #6b7280; margin-bottom: 8px; }
-    .companion-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
-    .companion-table th { background: #f3f4f6; text-align: left; padding: 7px 10px;
+    .index-plan-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .index-plan-table th { background: #f3f4f6; text-align: left; padding: 7px 10px;
       font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb; white-space: nowrap; }
-    .companion-table td { padding: 6px 10px; border-bottom: 1px solid #f3f4f6; color: #374151; vertical-align: top; }
-    .companion-table tr:last-child td { border-bottom: none; }
-    .companion-table tbody tr:hover td { background: #f9fafb; }
-    .companion-table-warning { border-top-color: #fca5a5; background: #fef2f2; padding: 12px 14px;
+    .index-plan-table td { padding: 6px 10px; border-bottom: 1px solid #f3f4f6; color: #374151; vertical-align: top; }
+    .index-plan-table tr:last-child td { border-bottom: none; }
+    .index-plan-table tbody tr:hover td { background: #f9fafb; }
+    .index-plan-table-warning { border-top-color: #fca5a5; background: #fef2f2; padding: 12px 14px;
       border-radius: 6px; }
-    .companion-table-warning .companion-table-title { color: #b91c1c; }
-    .companion-table-warning p { font-size: 0.82rem; color: #7f1d1d; margin: 0; line-height: 1.5; }
+    .index-plan-table-warning .index-plan-table-title { color: #b91c1c; }
+    .index-plan-table-warning p { font-size: 0.82rem; color: #7f1d1d; margin: 0; line-height: 1.5; }
     .diagram-meta { border-top: 1px solid #e5e7eb; margin-top: 14px; }
     .diagram-meta summary { cursor: pointer; font-size: 0.8rem; font-weight: 600;
       color: #6b7280; padding: 10px 0; user-select: none; list-style: none; }

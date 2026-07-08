@@ -75,7 +75,7 @@ FAIL if justifications are absent.
 Every diagram that was created during the design session must appear in the document. Cross-check against `docs/architecture-designer/diagrams.json` in the project root — read it with the Read tool if available. Each diagram must have a title heading and a description paragraph before its mermaid block.
 FAIL if any diagram is missing or has no description.
 
-**C5a — ERD index companion table present**
+**C5a — ERD index plan table present**
 If an `erDiagram` block is present, there must be a markdown index list table immediately after it (before the next section heading). The table must have columns: Index Name, Table, Column(s), Type, Reason.
 FAIL if an `erDiagram` block exists but no index list table follows it.
 

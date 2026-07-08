@@ -1,11 +1,13 @@
 ---
 name: design
-description: Use this skill when the user wants to design a new application's architecture or infrastructure, says "design my architecture", "help me plan the architecture", "create architecture diagrams", "I need to plan a new system", "design the infrastructure for my app", "architecture planning", "help me architect", "create Mermaid diagrams for my system", "I'm starting a new project and need architecture help", or begins a new software project and needs a structured design process. Also trigger when the user mentions HLD, LLD, high-level design, low-level design, API contracts, or system design. Always use this skill for new architecture design — it guides from requirements gathering through capacity planning, technology selection, diagram generation, low-level design, document saving, and code skeleton implementation. Do not skip this skill just because the user has already started describing their system.
+description: Use this skill when the user wants to design a new application's architecture or infrastructure — says "design my architecture", "help me plan the architecture", "create architecture diagrams", "I need to plan a new system", or is starting a new project and needs a structured design process. Also trigger when the user mentions HLD, LLD, API contracts, or system design. Guides from requirements gathering through capacity planning, technology selection, diagram generation, low-level design, document saving, and code skeleton implementation.
 ---
 
 # Architecture Designer — Main Design Workflow
 
 This skill guides the user through a six-stage architecture design process (with seven post-design steps for review, preview, LLD, document save, and implementation), ending with browser-rendered Mermaid diagrams, low-level design artifacts (API contracts, business rules, DTOs, error catalog), a reviewed and approved document, and an optional code skeleton.
+
+Always use this skill for new architecture design, even if the user has already started describing their system in the conversation — do not skip straight to diagram generation or freeform advice.
 
 **Scripts live two levels up from this file:** `../../scripts/find-port.mjs` and `../../scripts/preview-server.mjs`. At runtime, resolve these paths by taking the absolute path of this SKILL.md and navigating up two directories to find `scripts/`.
 
@@ -37,11 +39,13 @@ Do not proceed until the user confirms. After each stage is confirmed, persist t
   "stage5": { "architecturePattern": "...", "backend": "...", "frontend": "...", "database": "...", "infrastructure": "...", "supportingServices": "...", "authentication": "...", "observability": "...", "disasterRecovery": "..." },
   "stage6b": { "tool": "...", "stateBackend": "...", "modules": "...", "envStrategy": "...", "driftDetection": "..." },
   "stage6c": { "platform": "...", "stages": "...", "branchingStrategy": "...", "envPromotion": "...", "secretInjection": "...", "artifactManagement": "..." },
-  "documentPath": "/absolute/path/to/docs/architecture-designer/architecture/YYYYMMDD-topic.md"
+  "documentPaths": ["/absolute/path/to/docs/architecture-designer/architecture/YYYYMMDD-topic.md"]
 }
 ```
 
-Sub-agents receive the full contents of this file as input and must read it tolerantly — inner field names are illustrative, not contractual. The only guaranteed top-level keys are `stage1`–`stage5` and (after Step 11) `documentPath`. `stage6b` and `stage6c` are written after Stage 6b/6c confirmation and must be included when passing session context to sub-agents. `remediationPlanPath` may also appear if the user has previously run `/architecture-designer:review` — it is written by the review skill, not this skill, and must be passed to the architecture-implementer when present.
+Sub-agents receive the full contents of this file as input and must read it tolerantly — inner field names are illustrative, not contractual. The only guaranteed top-level keys are `stage1`–`stage5` and (after Step 11) `documentPaths`. `stage6b` and `stage6c` are written after Stage 6b/6c confirmation and must be included when passing session context to sub-agents. `remediationPlanPaths` may also appear if the user has previously run `/architecture-designer:review` — it is written by the review skill, not this skill, and must be passed to the architecture-implementer when present.
+
+**`documentPaths` and `remediationPlanPaths` are arrays, not single values.** Every time a workflow saves a new architecture document or remediation plan, it appends the new file's path to the relevant array instead of overwriting a previous entry — documents and plans are themselves never overwritten on disk (each revision is a new versioned file), so the array preserves that same history in `session.json`. Treat the last element of each array as the current one unless a step says otherwise.
 
 ---
 
@@ -235,25 +239,11 @@ Generate Mermaid diagrams relevant to the project. **All diagrams are optional**
 
 **ERD special requirement**: Since `erDiagram` has no native index notation, mark indexed columns via attribute comments (`"idx"`) and include an index list table (from the database-designer agent) as a markdown table immediately after the ERD mermaid block. See `references/diagrams-guide.md` for the exact format.
 
-### 6e. Mermaid v11.16 compatibility rules
+### 6e. Mermaid compatibility and diagrams.json
 
-- Use `flowchart` instead of `graph` for flowcharts (both work, `flowchart` is preferred)
-- `stateDiagram-v2` not `stateDiagram`
-- `C4Context` and `C4Container` require `securityLevel: 'loose'` — already set in the preview server
-- For `architecture-beta`: node types are `service`, `group`, and `junction` only. `cloud`, `database`, `disk`, `internet`, `server` are built-in **icon names** used in the `(icon)` slot — e.g., `service db(database)[PostgreSQL]`, not `database db[PostgreSQL]`. Edge labels are not supported — put traffic descriptions in the diagram's `description` field instead.
-- Avoid HTML tags inside node labels — use plain text only
-- Do not use `%%` comments on the same line as syntax (put them on their own line)
-- Keep node IDs alphanumeric with underscores — no spaces, hyphens in IDs
-- For long labels, use quotes: `A["Long label text"]`
+Read `references/diagrams-guide.md` § "Mermaid v11.16 Compatibility Rules" and § "Preventing Node Overlap" before finalizing diagram code — they cover required syntax (e.g. `flowchart` not `graph`, `architecture-beta` icon slots) and anti-overlap rules (ELK layout, `align` directives, label length, C4 layout config).
 
-**Anti-overlap rules** (read `references/diagrams-guide.md` § "Preventing Node Overlap" for full detail):
-
-- **ELK layout** (flowchart): add `%%{init: {'layout': 'elk'}}%%` as the first line of any `flowchart` diagram with 3+ subgraph nesting levels, 12+ nodes, or cross-boundary edges. Required for deployment (flowchart style) and CI/CD pipeline diagrams.
-- **`align` directives** (architecture-beta): add `align row` and `align column` statements before any edge declarations to lock nodes into a grid. Without them the layout engine scatters nodes unpredictably. See `references/diagrams-guide.md` § "Preventing Node Overlap" Rule 4.
-- **Label length**: keep node label text under 28 characters per line. Use `<br/>` for multi-line labels. Subgraph titles: 35 characters max.
-- **C4 layout**: every `C4Context` and `C4Container` must end with `UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")`. Use `"2"` per row when shapes have long description text.
-
-After applying layout rules and finalizing all diagram code, **immediately write `docs/architecture-designer/diagrams.json`** following the schema in Step 8.1 (create `docs/architecture-designer/` if needed). This must happen before Step 7 — the architecture-fixer reads and updates the file in place during the review cycle and will fail if the file does not exist.
+After applying those rules and finalizing all diagram code, **immediately write `docs/architecture-designer/diagrams.json`** following the schema in `references/diagrams-guide.md` § "`diagrams.json` Schema" (create `docs/architecture-designer/` if needed). This must happen before Step 7 — the architecture-fixer reads and updates the file in place during the review cycle and will fail if the file does not exist.
 
 ---
 
@@ -283,38 +273,7 @@ Do not open the browser preview until the reviewer reports `REVIEW PASSED` or `R
 
 ## Step 8 — Browser Preview
 
-1. **Confirm `diagrams.json` is current** at `docs/architecture-designer/diagrams.json`. The file was written at the end of Stage 6d and may have been updated by the architecture-fixer in Step 7 — if so it is already correct. If validation in step 8.2 flags issues, re-write the corrected diagram code into the file. The schema the file must follow:
-
-```json
-{
-  "title": "<Project Title>",
-  "topic": "<project-topic-kebab>",
-  "generatedAt": "<ISO 8601 timestamp from JavaScript Date — never the shell date command>",
-  "diagrams": [
-    {
-      "id": "<kebab-id>",
-      "title": "<Human-readable title>",
-      "description": "<One sentence describing what this diagram shows>",
-      "details": "<Multi-paragraph explanation — see field guide below>",
-      "rationale": "<Why this diagram was created — see field guide below>",
-      "indexPlan": [
-        { "name": "<index name>", "table": "<table name>", "columns": "<column(s)>", "type": "<index type>", "reason": "<justification>" }
-      ],
-      "code": "<Raw Mermaid syntax — newlines as \\n>"
-    }
-  ]
-}
-```
-
-`generatedAt`: use the JavaScript `new Date().toISOString()` equivalent — format as `YYYY-MM-DDTHH:MM:SS.mmmZ`. Never use shell commands.
-
-**Field guide for `details`, `rationale`, and `indexPlan`** — all three are rendered in the browser preview directly below the diagram:
-
-- **`details`** (2–4 paragraphs): Explain what each major component or group represents, how data or control flows through the diagram, the key relationships and their significance, and what a developer needs to understand to implement based on this diagram. Separate paragraphs with `\n\n` in the JSON string. Rendered as a collapsible block.
-
-- **`rationale`** (1–3 paragraphs): State why this specific diagram type was chosen for this concern, what design decisions are encoded in the diagram (e.g., why the ERD is normalized this way, why the sequence diagram shows this particular auth flow), what alternatives were considered and why they were not chosen, and which requirements or constraints from stages 1–5 drove the visible choices. Separate paragraphs with `\n\n` in the JSON string. Rendered as a collapsible block.
-
-- **`indexPlan`** (optional, ERD diagrams only): Copy the index plan rows from the database-designer output into this structured array — nothing else. This is not a general-purpose "companion table" for entity descriptions or other ERD commentary; every entry is one database index. Each row maps to one index and must have exactly these five keys: `name` is the index identifier (e.g., `idx_users_email`), `table` is the table it belongs to, `columns` is the indexed column(s) as a string, `type` is the index type (e.g., `UNIQUE B-TREE`, `B-TREE`, `GIN`), and `reason` is the query it serves. Rendered as a visible HTML table immediately below the ERD titled "Index plan" — omit this field entirely for all non-ERD diagrams and for ERD diagrams with no indexes to report; do not fill it with anything else. `validate-diagrams.mjs` checks that every row has all five keys and will fail loudly if not.
+1. **Confirm `diagrams.json` is current** at `docs/architecture-designer/diagrams.json`. The file was written at the end of Stage 6d and may have been updated by the architecture-fixer in Step 7 — if so it is already correct. It must follow the schema in `references/diagrams-guide.md` § "`diagrams.json` Schema". If validation in step 2 below flags issues, re-write the corrected diagram code into the file per that schema.
 
 2. **Validate diagrams**: run `node <scripts_dir>/validate-diagrams.mjs`. If the script exits non-zero or prints `VALIDATION FAILED`, fix the flagged issues in the diagram code and re-write `docs/architecture-designer/diagrams.json`. Do not proceed to step 3 until validation passes.
 
@@ -381,7 +340,7 @@ docs/architecture-designer/architecture/{yyyymmdd}-{topic}.md
 - `{topic}`: the project/application name in kebab-case (lowercase, hyphens, no spaces)
 - If a file with this name already exists, append `-2`, `-3`, etc. until the filename is unique
 
-After saving, update `docs/architecture-designer/session.json`: add (or overwrite) a top-level `"documentPath"` key with the full absolute path of the saved file. This lets `/architecture-designer:implement` locate the document without asking.
+After saving, update `docs/architecture-designer/session.json`: append the full absolute path of the saved file to the top-level `"documentPaths"` array (create it with this one entry if it doesn't exist yet). This lets `/architecture-designer:implement` locate the latest document — the last entry in the array — without asking.
 
 **The document must begin with this metadata table on line 1:**
 
@@ -439,9 +398,20 @@ After the document is approved, ask:
 
 > **"The architecture document is approved. Would you like me to proceed with implementation — generating the project skeleton, data models, and infrastructure files based on this document?"**
 
-If the user says yes: quickly scan the working directory for signs of an existing project — look for `package.json`, `go.mod`, `Cargo.toml`, `requirements.txt`, `pyproject.toml`, `pom.xml`, and source directories (`src/`, `app/`, `lib/`, `cmd/`, `internal/`). Then spawn the `architecture-designer:architecture-implementer` agent. Pass it:
+If the user says yes: quickly scan the working directory for signs of an existing project — look for `package.json`, `go.mod`, `Cargo.toml`, `requirements.txt`, `pyproject.toml`, `pom.xml`, and source directories (`src/`, `app/`, `lib/`, `cmd/`, `internal/`).
+
+**If files already exist**: summarize what was found and ask the same merge-strategy question `/architecture-designer:implement` uses:
+> "I found an existing project structure. How would you like to proceed?
+> **(a) Merge** — add missing files from the architecture without overwriting existing code
+> **(b) Fresh start** — generate the complete skeleton; any file that already exists will be flagged before being overwritten — you decide per collision
+> **(c) Let me describe what to keep** — I'll describe my existing layout and we'll work around it"
+> Wait for the answer before proceeding.
+
+**If the scan finds nothing**: no question needed — proceed as a fresh start into an empty project.
+
+Then spawn the `architecture-designer:architecture-implementer` agent. Pass it:
 - The path to the approved document
-- **Existing project summary** — what was found in the scan; if nothing was found, pass "fresh start — no existing project detected"
+- **Existing project summary** — what was found in the scan, translated into the agent's expected strategy label: `Fresh start (empty project)` if nothing was found; `Merge` if the user chose (a); `Fresh start (existing project)` if the user chose (b); `User-described layout` if the user chose (c)
 - The technology stack from stage 5
 
 If the user says no: congratulate them and let them know they can run `/architecture-designer:review` at any time to revisit and revise the architecture.

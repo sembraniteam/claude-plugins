@@ -15,11 +15,11 @@ This skill reviews an existing architecture (from a document, the codebase, or b
 
 Check for `docs/architecture-designer/session.json`:
 
-- **If the file exists**: read it in full, then run `node <scripts_dir>/validate-session.mjs` and show its output. This orients you on which requirement stages are confirmed and reveals gaps before the review begins. If the check reports missing stages, proceed anyway — the review is still useful — but note the incomplete context. The session contents serve as the original requirements baseline for the architecture-reviewer and any revision agents.
+- **If the file exists**: read it in full, then run `node <scripts_dir>/validate-session.mjs` and show its output. This shows which requirement stages are confirmed and reveals gaps before the review begins. If the check reports missing stages, proceed anyway — the review is still useful — but note the incomplete context. The session contents serve as the original requirements baseline for the architecture-reviewer and any revision agents.
 
 - **If the file does not exist**: proceed without session context. Inform the user: "No session.json found — I won't have the original confirmed requirements on hand. The review will rely on the document and/or codebase alone. Sharing the original requirements now will improve the review quality."
 
-**Check for an existing remediation plan**: if `session.json` contains a `"remediationPlanPath"` key, read that file. Then:
+**Check for an existing remediation plan**: if `session.json` contains a `"remediationPlanPaths"` array, read the file at its last entry (the most recently saved remediation plan). Then:
 
 - **If the file no longer exists at the stored path**: note it and continue without loading it.
 - **If the file exists and has `[ ]` (deferred) items**: surface them before Step 1:
@@ -187,7 +187,7 @@ Rules:
 
 This file is a **living document**: in future review sessions, re-open it, tick off deferred items (`[ ]` → `[x]`, with suffix `*(addressed in revision — code pending)*`), and update `Status` to `Complete` when every `[x]` item reads `*(code aligned)*` and no `[ ]` items remain.
 
-After saving, update `docs/architecture-designer/session.json`: add or overwrite the top-level `"remediationPlanPath"` key with the full absolute path of this file. Then note the path — you will pass it to the implementer in step 4h.
+After saving, update `docs/architecture-designer/session.json`: append the full absolute path of this file to the top-level `"remediationPlanPaths"` array (create it with this one entry if it doesn't exist yet). Note the path for use when passing it to the implementer in step 4h.
 
 ### 4f. Save the revised document
 
@@ -212,7 +212,7 @@ The metadata table:
 
 Generate timestamps using JavaScript `Date`, not shell commands.
 
-After saving, update `docs/architecture-designer/session.json`: add or overwrite the top-level `"documentPath"` key with the full absolute path of the saved file. This lets `/architecture-designer:implement` find the latest approved document without asking.
+After saving, update `docs/architecture-designer/session.json`: append the full absolute path of the saved file to the top-level `"documentPaths"` array (create it with this one entry if it doesn't exist yet). This lets `/architecture-designer:implement` find the latest approved document — the last entry in the array — without asking.
 
 The document body follows the same structure as the design workflow (all sections, all diagrams). This is a standalone document, not a diff — someone reading it without the previous version should have complete context.
 
@@ -233,12 +233,22 @@ After approval:
 
 > **"The revised architecture document is approved. Would you like me to regenerate the project skeleton based on the updated architecture?"**
 
-If yes: scan the working directory for signs of an existing project (look for `package.json`, `go.mod`, `Cargo.toml`, `requirements.txt`, `pyproject.toml`, `pom.xml`, and source directories `src/`, `app/`, `lib/`, `cmd/`, `internal/`). Then spawn `architecture-designer:architecture-implementer`. Pass it:
+If yes: scan the working directory for signs of an existing project (look for `package.json`, `go.mod`, `Cargo.toml`, `requirements.txt`, `pyproject.toml`, `pom.xml`, and source directories `src/`, `app/`, `lib/`, `cmd/`, `internal/`).
+
+**If files already exist**: summarize what was found and ask the same merge-strategy question `/architecture-designer:implement` uses:
+> "I found an existing project structure. How would you like to proceed?
+> **(a) Merge** — add missing files from the architecture without overwriting existing code
+> **(b) Fresh start** — generate the complete skeleton; any file that already exists will be flagged before being overwritten — you decide per collision
+> **(c) Let me describe what to keep** — I'll describe my existing layout and we'll work around it"
+> Wait for the answer before proceeding.
+
+**If the scan finds nothing**: no question needed — there is no existing codebase to merge into, so treat this as a fresh start into an empty project regardless of the remediation plan's existence.
+
+Then spawn `architecture-designer:architecture-implementer`. Pass it:
 - The path to the approved document
-- **Existing project summary** — what was found in the scan; if nothing was found, pass "fresh start — no existing project detected"
+- **Existing project summary** — what was found in the scan, translated into the agent's expected strategy label: `Fresh start (empty project)` if the scan found nothing; `Merge` if the user chose (a); `Fresh start (existing project)` if the user chose (b); `User-described layout` if the user chose (c)
 - **Technology stack** — from the architecture document's Technology Decisions section (section 5)
-- **Remediation plan path** — the full path to the `{yyyymmdd}-{topic}-remediation.md` file saved in step 4e (always present in the review flow)
-- **Mode** — `merge`, because a review implies an existing codebase; the implementer must add or modify files without overwriting content that already exists
+- **Remediation plan path** — the full path to the `{yyyymmdd}-{topic}-remediation.md` file saved in step 4e (always present in the review flow). A remediation plan does not by itself imply an existing codebase — the scan result above is what determines the actual strategy; trust the scan, not the plan's mere presence.
 
 ---
 

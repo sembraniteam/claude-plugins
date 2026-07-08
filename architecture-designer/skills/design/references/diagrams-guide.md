@@ -4,6 +4,8 @@ Detailed specifications for each Mermaid diagram type supported by architecture-
 
 ## Contents
 
+- [Mermaid v11.16 Compatibility Rules](#mermaid-v1116-compatibility-rules)
+- [`diagrams.json` Schema](#diagramsjson-schema)
 1. [Use Case Diagram (`flowchart LR`)](#use-case-diagram-flowchart-lr)
 2. [Business Process Flow (`flowchart TD`)](#business-process-flow-flowchart-td)
 3. [Entity Relationship Diagram (`erDiagram`)](#entity-relationship-diagram-erdiagram)
@@ -14,6 +16,60 @@ Detailed specifications for each Mermaid diagram type supported by architecture-
 8. [C4 Container Diagram (`C4Container`)](#c4-container-diagram-c4container)
 9. [Deployment / Infrastructure Diagram (`flowchart TD` or `architecture-beta`)](#deployment--infrastructure-diagram-flowchart-td-or-architecture-beta)
 10. [CI/CD Pipeline Diagram (`flowchart TD`)](#cicd-pipeline-diagram-flowchart-td)
+
+---
+
+## Mermaid v11.16 Compatibility Rules
+
+- Use `flowchart` instead of `graph` for flowcharts (both work, `flowchart` is preferred)
+- `stateDiagram-v2` not `stateDiagram`
+- `C4Context` and `C4Container` require `securityLevel: 'loose'` — already set in the preview server
+- For `architecture-beta`: node types are `service`, `group`, and `junction` only. `cloud`, `database`, `disk`, `internet`, `server` are built-in **icon names** used in the `(icon)` slot — e.g., `service db(database)[PostgreSQL]`, not `database db[PostgreSQL]`. Edge labels are not supported — put traffic descriptions in the diagram's `description` field instead.
+- Avoid HTML tags inside node labels — use plain text only
+- Do not use `%%` comments on the same line as syntax (put them on their own line)
+- Keep node IDs alphanumeric with underscores — no spaces, hyphens in IDs
+- For long labels, use quotes: `A["Long label text"]`
+
+See "Preventing Node Overlap" below for layout-specific anti-overlap rules (ELK layout, `align` directives, label length, C4 layout config).
+
+---
+
+## `diagrams.json` Schema
+
+After applying layout rules and finalizing all diagram code, write `docs/architecture-designer/diagrams.json` (create `docs/architecture-designer/` if needed) following this schema:
+
+```json
+{
+  "title": "<Project Title>",
+  "topic": "<project-topic-kebab>",
+  "generatedAt": "<ISO 8601 timestamp from JavaScript Date — never the shell date command>",
+  "diagrams": [
+    {
+      "id": "<kebab-id>",
+      "title": "<Human-readable title>",
+      "description": "<One sentence describing what this diagram shows>",
+      "details": "<Multi-paragraph explanation — see field guide below>",
+      "rationale": "<Why this diagram was created — see field guide below>",
+      "indexPlan": [
+        { "name": "<index name>", "table": "<table name>", "columns": "<column(s)>", "type": "<index type>", "reason": "<justification>" }
+      ],
+      "code": "<Raw Mermaid syntax — newlines as \\n>"
+    }
+  ]
+}
+```
+
+`generatedAt`: use the JavaScript `new Date().toISOString()` equivalent — format as `YYYY-MM-DDTHH:MM:SS.mmmZ`. Never use shell commands.
+
+**Field guide for `details`, `rationale`, and `indexPlan`** — all three are rendered in the browser preview directly below the diagram:
+
+- **`details`** (2–4 paragraphs): Explain what each major component or group represents, how data or control flows through the diagram, the key relationships and their significance, and what a developer needs to understand to implement based on this diagram. Separate paragraphs with `\n\n` in the JSON string. Rendered as a collapsible block.
+
+- **`rationale`** (1–3 paragraphs): State why this specific diagram type was chosen for this concern, what design decisions are encoded in the diagram (e.g., why the ERD is normalized this way, why the sequence diagram shows this particular auth flow), what alternatives were considered and why they were not chosen, and which requirements or constraints from stages 1–5 drove the visible choices. Separate paragraphs with `\n\n` in the JSON string. Rendered as a collapsible block.
+
+- **`indexPlan`** (optional, ERD diagrams only): Copy the index plan rows from the database-designer output into this structured array — nothing else. This is not a general-purpose "companion table" for entity descriptions or other ERD commentary; every entry is one database index. Each row maps to one index and must have exactly these five keys: `name` is the index identifier (e.g., `idx_users_email`), `table` is the table it belongs to, `columns` is the indexed column(s) as a string, `type` is the index type (e.g., `UNIQUE B-TREE`, `B-TREE`, `GIN`), and `reason` is the query it serves. Rendered as a visible HTML table immediately below the ERD titled "Index plan" — omit this field entirely for all non-ERD diagrams and for ERD diagrams with no indexes to report; do not fill it with anything else. `validate-diagrams.mjs` checks that every row has all five keys and will fail loudly if not.
+
+This must happen before Step 7 in the design workflow — the architecture-fixer reads and updates the file in place during the review cycle and will fail if the file does not exist.
 
 ---
 
