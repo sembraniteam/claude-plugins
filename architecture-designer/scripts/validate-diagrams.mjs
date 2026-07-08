@@ -194,20 +194,25 @@ async function validateCode(id, code) {
 }
 
 // ── indexPlan contract check ──────────────────────────────────────────────────
-// A row missing one of the five keys is not an index row — usually it means the
-// field was filled with entity descriptions or other ERD notes instead of an
-// index plan. Catch that mechanically rather than relying on the writer to have
+// A row missing one of the five keys — or carrying one as an empty/blank string —
+// is not an index row — usually it means the field was filled with entity
+// descriptions or other ERD notes instead of an index plan, or left as a
+// placeholder. Catch that mechanically rather than relying on the writer to have
 // followed the field guide.
 
 const INDEX_PLAN_KEYS = ['name', 'table', 'columns', 'type', 'reason'];
+
+function isBlankIndexPlanValue(value) {
+  return value === undefined || value === null || String(value).trim() === '';
+}
 
 function validateIndexPlan(rows) {
   if (!Array.isArray(rows)) return ['indexPlan must be an array of index rows'];
   return rows.flatMap((row, i) => {
     if (!row || typeof row !== 'object') return [`indexPlan row ${i + 1} is not an object`];
-    const missing = INDEX_PLAN_KEYS.filter(k => !(k in row));
+    const missing = INDEX_PLAN_KEYS.filter(k => !(k in row) || isBlankIndexPlanValue(row[k]));
     return missing.length > 0
-      ? [`indexPlan row ${i + 1} missing key(s): ${missing.join(', ')} — looks like an entity description or note, not an index row`]
+      ? [`indexPlan row ${i + 1} missing or empty key(s): ${missing.join(', ')} — looks like an entity description or note, not an index row`]
       : [];
   });
 }

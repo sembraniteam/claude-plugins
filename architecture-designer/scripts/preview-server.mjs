@@ -65,19 +65,24 @@ function renderParagraphs(text) {
 
 const INDEX_PLAN_KEYS = ['name', 'table', 'columns', 'type', 'reason'];
 
-// Rows that don't carry all five keys are not index rows — most often this is the model
-// filling the field with entity descriptions instead of an index plan. Surface that loudly
-// rather than silently rendering an empty or partial grid.
+function isBlankIndexPlanValue(value) {
+  return value === undefined || value === null || String(value).trim() === '';
+}
+
+// Rows that don't carry all five keys — or carry one as an empty/blank string — are not
+// index rows — most often this is the model filling the field with entity descriptions
+// instead of an index plan, or leaving a placeholder. Surface that loudly rather than
+// silently rendering an empty or partial grid.
 function buildCompanionTable(rows) {
   if (rows === undefined || rows === null) return '';
   if (!Array.isArray(rows) || rows.length === 0) return '';
 
-  const malformed = rows.filter(r => !r || typeof r !== 'object' || INDEX_PLAN_KEYS.some(k => !(k in r)));
+  const malformed = rows.filter(r => !r || typeof r !== 'object' || INDEX_PLAN_KEYS.some(k => !(k in r) || isBlankIndexPlanValue(r[k])));
   if (malformed.length > 0) {
     return `<div class="companion-table-wrapper companion-table-warning">
       <div class="companion-table-title">⚠ Index plan malformed</div>
-      <p>${malformed.length} of ${rows.length} row(s) are missing one of the required keys (${INDEX_PLAN_KEYS.join(', ')}).
-      This usually means the field was filled with entity descriptions or other ERD notes instead of index rows.
+      <p>${malformed.length} of ${rows.length} row(s) are missing one of the required keys or have an empty value (${INDEX_PLAN_KEYS.join(', ')}).
+      This usually means the field was filled with entity descriptions or other ERD notes instead of index rows, or left as a placeholder.
       Fix <code>indexPlan</code> in diagrams.json and re-run validate-diagrams.mjs.</p>
     </div>`;
   }
