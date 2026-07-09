@@ -1,6 +1,7 @@
 ---
 name: implement
-description: Use this skill when the user wants to turn an approved architecture document into working code, or wants to generate/scaffold a project after a design or review session — says "implement the architecture", "scaffold the project", "generate the code from my architecture", "create project files from the design", "turn my architecture into code", "create the folder structure", "start implementation", "let's start coding", or "generate the project skeleton".
+description: This skill should be used when the user wants to turn an approved architecture document into working code, or wants to generate/scaffold a project after a design or review session — says "implement the architecture", "scaffold the project", "generate the code from my architecture", "create project files from the design", "turn my architecture into code", "create the folder structure", "start implementation", "let's start coding", or "generate the project skeleton".
+allowed-tools: ["Read", "Glob", "Bash", "Agent"]
 ---
 
 # Architecture Designer — Implementation Workflow
@@ -56,12 +57,14 @@ Wait for the answer before proceeding.
 
 Before spawning, check `docs/architecture-designer/session.json` for a `"remediationPlanPaths"` array. If present and non-empty, and the file at its last entry exists on disk, you will pass that path to the implementer so it can apply the confirmed code changes from the remediation plan.
 
+**Skip if already resolved**: before passing it, also check for an `"implementationPlanPaths"` array in the same `session.json`. If its last entry exists on disk, its `Status` is `Complete`, and its "Modifications to existing files" section contains no `[ ] FAIL` items, the remediation plan has already been fully applied to code — do not pass the remediation plan path to the implementer; there is nothing left for it to apply.
+
 Spawn `architecture-designer:architecture-implementer`. Pass it:
 
 - **Architecture document path** — the file confirmed in Step 1
 - **Existing project summary** — what was found in Step 2, translated into the agent's expected strategy label: `Fresh start (empty project)` if the project looked empty; `Merge` if the user chose (a); `Fresh start (existing project)` if the user chose (b); `User-described layout` if the user chose (c)
 - **Technology stack** — if a prior design session is still in context, pass the technology stack from stage 5 directly so the agent doesn't have to re-infer it from the document
-- **Remediation plan path** — the last entry of `session.json → remediationPlanPaths`, if it exists on disk (omit if the array is absent, empty, or the file is missing). The strategy label above already reflects what Step 2's scan actually found — do not override it just because a remediation plan is present; a plan does not by itself prove an existing codebase.
+- **Remediation plan path** — the last entry of `session.json → remediationPlanPaths`, if it exists on disk (omit if the array is absent, empty, the file is missing, or the "Skip if already resolved" check above determined it's fully applied). The strategy label above already reflects what Step 2's scan actually found — do not override it just because a remediation plan is present; a plan does not by itself prove an existing codebase.
 
 The agent will:
 1. Read the document and surface any remaining ambiguities (framework choice, ORM vs raw SQL, etc.) — all at once, not one by one

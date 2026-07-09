@@ -1,11 +1,12 @@
 ---
 name: design
-description: Use this skill when the user wants to design a new application's architecture or infrastructure — says "design my architecture", "help me plan the architecture", "create architecture diagrams", "I need to plan a new system", or is starting a new project and needs a structured design process. Also trigger when the user mentions HLD, LLD, API contracts, or system design. Guides from requirements gathering through capacity planning, technology selection, diagram generation, low-level design, document saving, and code skeleton implementation.
+description: This skill should be used when the user wants to design a new application's architecture or infrastructure — says "design my architecture", "help me plan the architecture", "create architecture diagrams", "I need to plan a new system", or is starting a new project and needs a structured design process. Also trigger when the user mentions HLD, LLD, API contracts, or system design. Guides from requirements gathering through capacity planning, technology selection, diagram generation, low-level design, document saving, and code skeleton implementation.
+allowed-tools: ["Read", "Write", "Edit", "Bash", "Agent"]
 ---
 
 # Architecture Designer — Main Design Workflow
 
-This skill guides the user through a six-stage architecture design process (with seven post-design steps for review, preview, LLD, document save, and implementation), ending with browser-rendered Mermaid diagrams, low-level design artifacts (API contracts, business rules, DTOs, error catalog), a reviewed and approved document, and an optional code skeleton.
+This skill guides the user through a six-stage design process plus seven post-design steps (review, preview, LLD, document save, implementation), ending with browser-rendered Mermaid diagrams, low-level design artifacts, a reviewed and approved document, and an optional code skeleton.
 
 Always use this skill for new architecture design, even if the user has already started describing their system in the conversation — do not skip straight to diagram generation or freeform advice.
 
@@ -24,9 +25,9 @@ If they choose to continue: read the completed stages from `session.json`, brief
 Work through the six stages in order (Stages 1–6), then follow Steps 7–13. At the end of each stage, summarize the user's answers and ask:
 > "Does this summary look correct? Shall we move to the next stage?"
 
-Do not proceed until the user confirms. After each stage is confirmed, persist the stage summary to disk: write `docs/architecture-designer/session.json` (create the `docs/architecture-designer/` directory if it does not exist). The file is a JSON object with one key per completed stage, e.g. `{ "stage1": { ... }, "stage2": { ... }, ... }` — append each new stage's summary when the user confirms. Do not keep context only in working memory: working memory degrades over long sessions and is invisible to sub-agents. Sub-agents must be given the contents of `session.json` as part of their input so they do not depend on conversation history that they cannot access.
+Do not proceed until the user confirms. After each stage is confirmed, persist the stage summary to disk: write `docs/architecture-designer/session.json` (create the `docs/architecture-designer/` directory if it does not exist). The file is a JSON object with one key per completed stage, e.g. `{ "stage1": { ... }, "stage2": { ... }, ... }` — append each new stage's summary when the user confirms. Do not rely on working memory alone — it degrades over long sessions and is invisible to sub-agents, which must receive `session.json`'s contents directly rather than depend on conversation history they cannot access.
 
-**session.json write discipline**: Write the exact text the user confirmed — do not produce a fresh paraphrase or condensed re-summary. The goal is to preserve what was actually agreed upon, so that sub-agents work from confirmed facts rather than a re-interpretation that may silently diverge from the user's intent.
+**session.json write discipline**: Write the exact text the user confirmed, not a fresh paraphrase — sub-agents must work from confirmed facts, not a re-interpretation that could silently diverge from intent.
 
 **Canonical session.json schema** — the top-level keys are fixed; the field names inside each stage object are the user's confirmed answers and may vary:
 
@@ -39,13 +40,16 @@ Do not proceed until the user confirms. After each stage is confirmed, persist t
   "stage5": { "architecturePattern": "...", "backend": "...", "frontend": "...", "database": "...", "infrastructure": "...", "supportingServices": "...", "authentication": "...", "observability": "...", "disasterRecovery": "..." },
   "stage6b": { "tool": "...", "stateBackend": "...", "modules": "...", "envStrategy": "...", "driftDetection": "..." },
   "stage6c": { "platform": "...", "stages": "...", "branchingStrategy": "...", "envPromotion": "...", "secretInjection": "...", "artifactManagement": "..." },
-  "documentPaths": ["/absolute/path/to/docs/architecture-designer/architecture/YYYYMMDD-topic.md"]
+  "documentPaths": ["/absolute/path/to/docs/architecture-designer/architecture/YYYYMMDD-topic.md"],
+  "implementationPlanPaths": ["/absolute/path/to/docs/architecture-designer/plan/YYYYMMDD-topic.md"]
 }
 ```
 
-Sub-agents receive the full contents of this file as input and must read it tolerantly — inner field names are illustrative, not contractual. The only guaranteed top-level keys are `stage1`–`stage5` and (after Step 11) `documentPaths`. `stage6b` and `stage6c` are written after Stage 6b/6c confirmation and must be included when passing session context to sub-agents. `remediationPlanPaths` may also appear if the user has previously run `/architecture-designer:review` — it is written by the review skill, not this skill, and must be passed to the architecture-implementer when present.
+Sub-agents receive the full contents of this file as input and must read it tolerantly — inner field names are illustrative, not contractual. The only guaranteed top-level keys are `stage1`–`stage5` and (after Step 11) `documentPaths`. `stage6b` and `stage6c` are written after Stage 6b/6c confirmation and must be included when passing session context to sub-agents. `remediationPlanPaths` may also appear after `/architecture-designer:review` has run — written by that skill, and must be passed to the architecture-implementer when present. `implementationPlanPaths` may also appear after `architecture-designer:architecture-implementer` has run — written by that agent itself after saving its plan file (Step 2.5), not by this skill.
 
-**`documentPaths` and `remediationPlanPaths` are arrays, not single values.** Every time a workflow saves a new architecture document or remediation plan, it appends the new file's path to the relevant array instead of overwriting a previous entry — documents and plans are themselves never overwritten on disk (each revision is a new versioned file), so the array preserves that same history in `session.json`. Treat the last element of each array as the current one unless a step says otherwise.
+**`documentPaths`, `remediationPlanPaths`, and `implementationPlanPaths` are arrays, not single values.** Each save appends the new file's path rather than overwriting — documents and plans are never overwritten on disk (each revision is a new file), so the array preserves that history. Treat the last element as current unless a step says otherwise.
+
+**Resolving `remediationPlanPaths` against `implementationPlanPaths`**: the last entry of each is assumed to correspond — they're always written in that order, since implementation always consumes the latest remediation plan. A step reading `remediationPlanPaths` to check for outstanding work must first read the matching implementation plan: if its `Status` is `Complete` with no `[ ] FAIL` items under "Modifications to existing files", treat the remediation plan as fully resolved rather than re-surfacing it.
 
 ---
 

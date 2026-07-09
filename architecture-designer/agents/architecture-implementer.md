@@ -83,6 +83,8 @@ docs/architecture-designer/plan/{yyyymmdd}-{topic}.md
 
 Create the `docs/architecture-designer/plan/` directory if it doesn't exist.
 
+**Record the path in session.json**: if `docs/architecture-designer/session.json` exists, append the full absolute path of this plan file to its top-level `"implementationPlanPaths"` array (create it with this one entry if it doesn't exist yet). Do this once, immediately after the file is first saved — later updates to this same file's `Status` or checkboxes do not need a new array entry. If `session.json` does not exist, skip this; there is no session to update.
+
 **Plan format** — one checkbox per file, grouped by category:
 
 ```markdown
@@ -95,11 +97,11 @@ Create the `docs/architecture-designer/plan/` directory if it doesn't exist.
 
 ## Data models
 
-- [ ] `src/models/User.ts` — [{diagram-name}] User entity
+- [ ] `src/models/User.ts` — User entity
 
 ## API routes
 
-- [ ] `src/routes/auth.ts` — [{diagram-name}] Authentication endpoints (from sequence diagram)
+- [ ] `src/routes/auth.ts` — Authentication endpoints (from sequence diagram)
 
 ## Configuration
 
@@ -119,6 +121,10 @@ Create the `docs/architecture-designer/plan/` directory if it doesn't exist.
 ## Modifications to existing files
 
 - [ ] `src/auth/middleware.ts` — Switch from JWT to OAuth2 (remediation finding)
+
+## Test files
+
+- [ ] `tests/auth/login.test.ts` - login testing
 ```
 
 > **Note on the "Setup and run commands" section**: these are npm script names, not filesystem paths. They are defined inside `package.json`. The filesystem verification pass (test -f) in Step 3 applies only to sections whose entries are actual file paths — skip this section during the path-existence check and instead verify that `package.json` exists and that its `scripts` field contains the expected keys.

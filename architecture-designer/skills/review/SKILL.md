@@ -1,6 +1,7 @@
 ---
 name: review
-description: Use this skill when the user wants to review or revise an existing architecture, says "review my architecture", "audit my architecture", "check my architecture", "my architecture needs review", "update my architecture document", "revise the architecture", "architecture drift", "compare design vs implementation", "architecture is outdated", "architecture inconsistency", "check if my code matches my design", or wants to compare their architecture document against their current codebase. Also trigger when the user mentions their architecture document needs updating after new features were added or requirements changed.
+description: This skill should be used when the user wants to review or revise an existing architecture, says "review my architecture", "audit my architecture", "check my architecture", "my architecture needs review", "update my architecture document", "revise the architecture", "architecture drift", "compare design vs implementation", "architecture is outdated", "architecture inconsistency", "check if my code matches my design", or wants to compare their architecture document against their current codebase. Also trigger when the user mentions their architecture document needs updating after new features were added or requirements changed.
+allowed-tools: ["Read", "Write", "Edit", "Bash", "Agent"]
 ---
 
 # Architecture Designer — Review and Revision Workflow
@@ -21,6 +22,7 @@ Check for `docs/architecture-designer/session.json`:
 
 **Check for an existing remediation plan**: if `session.json` contains a `"remediationPlanPaths"` array, read the file at its last entry (the most recently saved remediation plan). Then:
 
+- **Cross-check against the implementation plan first**: if `session.json` also contains an `"implementationPlanPaths"` array, read the file at its last entry (it is assumed to correspond to the last `remediationPlanPaths` entry, since implementation always consumes the latest remediation plan available at the time it ran). If that implementation plan's `Status` is `Complete` and its "Modifications to existing files" section has no `[ ] FAIL` items, treat the remediation plan as fully resolved — skip straight to the "fully complete" message below without re-parsing the remediation plan's own checkboxes. Otherwise, fall through to inspecting the remediation plan file directly, as below.
 - **If the file no longer exists at the stored path**: note it and continue without loading it.
 - **If the file exists and has `[ ]` (deferred) items**: surface them before Step 1:
   > "I found a previous remediation plan at `{path}` with **{N} deferred item(s)** not yet addressed. Here they are:
