@@ -7,7 +7,7 @@ allowed-tools: ["Bash", "AskUserQuestion", "Skill"]
 
 # Generate Commit Message
 
-Generate a conventional commit message by analyzing the current git context. Gather user intent first, then analyze and generate, execute confirmed actions, and display a final summary.
+Generate a conventional commit message by analyzing the current git context. Gather user intent first, then analyze and generate, and execute confirmed actions.
 
 ## Pre-flight Questions
 
@@ -21,10 +21,10 @@ Before running any git commands, collect user intent using `AskUserQuestion` in 
 
 **Round 2** — ask only the questions whose condition is met; skip entirely if neither applies:
 
-| Question                                                                         | Condition        | Options  |
-|----------------------------------------------------------------------------------|------------------|----------|
-| "Should this skill run `git checkout -b <branch>` automatically?"                | New branch = Yes | Yes / No |
-| "Should this skill run `git commit` automatically after generating the message?" | Always           | Yes / No |
+| Question                                                                         | Condition                 | Options  |
+|----------------------------------------------------------------------------------|---------------------------|----------|
+| "Should this skill run `git checkout -b <branch>` automatically?"                | New branch = Yes          | Yes / No |
+| "Should this skill run `git commit` automatically after generating the message?" | No condition — always ask | Yes / No |
 
 After all answers, display a confirmation to the user (substitute actual selections from user answers):
 
@@ -108,23 +108,11 @@ EOF
 Run each step below if and only if its condition is met. Skip steps whose condition is not met:
 
 1. **Stage files** (condition: Stage files ≠ No) — run `git add <files>` or `git add --all`
-2. **Generate branch name** (condition: New branch = Yes) — invoke the `git-helper:generate-branch` skill via the Skill tool, passing the commit subject as work description. After the skill completes, **capture the branch name from its output**: look for it in the fenced code block (e.g., `` `feature/add-login` ``) or the Summary table's Branch field. Store this value for step 3.
+2. **Generate branch name** (condition: New branch = Yes) — invoke the `git-helper:generate-branch` skill via the Skill tool, passing the commit subject as work description. After the skill completes, **capture the branch name from its output**: look for it in the fenced code block (e.g., `` `feature/add-login` ``) or the branch name output. Store this value for step 3.
 3. **Checkout branch** (condition: New branch = Yes AND Checkout = Yes) — run `git checkout -b <branch-name-captured-in-step-2>`
 4. **Execute commit** (condition: Auto-commit = Yes) — run the commit command using subject + body + BREAKING CHANGE footer. Add `Co-Authored-By` trailer only if the user explicitly requested it.
 
 If no actions were confirmed, inform the user the message is ready to use manually.
-
-## Summary
-
-After completing all actions, display a summary block:
-
-| Field               | Value                                                            | Reason                                              |
-|---------------------|------------------------------------------------------------------|-----------------------------------------------------|
-| **Type**            | `feat`                                                           | Why this type was selected                          |
-| **Scope**           | `auth` *(omit row if no scope)*                                  | Where the changes were inferred from                |
-| **Commit message**  | `feat(auth): add OAuth2 login support`                           | N/A                                                 |
-| **Breaking change** | Yes / No                                                         | What triggered the flag, or N/A if not breaking     |
-| **Branch**          | `feature/add-oauth2-login` *(omit row if no branch was created)* | N/A                                                 |
 
 ## Additional Resources
 

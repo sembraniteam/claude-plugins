@@ -16,12 +16,3 @@ Migrate to /api/v2/auth which accepts Bearer tokens.
 EOF
 )"
 ```
-
-**Summary table:**
-
-| Field               | Value                                              | Reason                                        |
-|---------------------|----------------------------------------------------|-----------------------------------------------|
-| **Type**            | `fix`                                              | Removes broken/deprecated behavior            |
-| **Scope**           | `api`                                              | Inferred from `src/api/` file paths           |
-| **Commit message**  | `fix(api)!: remove deprecated basic auth endpoint` | N/A                                           |
-| **Breaking change** | Yes                                                | Public endpoint removed; clients must migrate |

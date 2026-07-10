@@ -14,12 +14,3 @@ Reason: caused regression in session token renewal for existing users.
 EOF
 )"
 ```
-
-**Summary table:**
-
-| Field               | Value                                                   | Reason                                    |
-|---------------------|---------------------------------------------------------|-------------------------------------------|
-| **Type**            | `revert`                                                | Undoing a previous commit                 |
-| **Scope**           | *(omitted)*                                             | Scope mirrors the original commit's scope |
-| **Commit message**  | `revert: revert "feat(auth): add OAuth2 login support"` | N/A                                       |
-| **Breaking change** | No                                                      | Revert restores previous behavior         |

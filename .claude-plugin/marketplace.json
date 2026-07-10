@@ -39,7 +39,7 @@
     {
       "name": "git-helper",
       "description": "Generate conventional commit messages and branch names from git context and user descriptions.",
-      "version": "0.10.0",
+      "version": "0.10.1",
       "source": "./git-helper",
       "author": {
         "name": "Ahmad Rifa'i",

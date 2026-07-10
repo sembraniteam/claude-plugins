@@ -79,18 +79,9 @@ Alternative: hotfix/fix-login-crash  ← use this if the fix is urgent
 
 **When invoked via the Skill tool by another skill** (e.g., `generate-commit`): always output the branch name in the fenced code block so the calling skill can extract it. Do not ask the user to confirm checkout — the calling skill owns that step.
 
-## Summary
-
-After generating the branch name, display a summary block:
-
-| Field      | Value                      | Reason                        |
-|------------|----------------------------|-------------------------------|
-| **Branch** | `feature/add-oauth2-login` | N/A                           |
-| **Prefix** | `feature/`                 | Why this prefix was selected  |
-
 ## Execution
 
-**When invoked directly by the user** (not via the Skill tool): after displaying the branch name and summary, use `AskUserQuestion` to ask:
+**When invoked directly by the user** (not via the Skill tool): after displaying the branch name, use `AskUserQuestion` to ask:
 
 > "Do you want me to create and switch to this branch now?"
 > Options: Yes / No
@@ -117,4 +108,4 @@ If the user answers **No**, leave the command displayed for the user to run manu
 
 ### Scripts
 
-- **`scripts/validate-branch.sh`** — Validates a branch name against team naming rules. Exit 0 = valid, exit 1 = invalid with reasons listed. Run as: `./scripts/validate-branch.sh <branch-name>`
+- **`scripts/validate-branch.sh`** — Standalone utility for external/CI use, not invoked as part of this skill's workflow. Validates a branch name against team naming rules. Exit 0 = valid, exit 1 = invalid with reasons listed. Run as: `./scripts/validate-branch.sh <branch-name>`
