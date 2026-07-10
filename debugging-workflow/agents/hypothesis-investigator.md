@@ -16,8 +16,8 @@ Each invocation provides:
 - **Hypothesis mechanism**: one sentence describing what to test
 - **Iteration budget**: maximum number of fix attempts (e.g., `3`)
 - **Language**: the project's primary language
-- **Worktree path**: absolute path to the git worktree assigned to this hypothesis — all file reads and edits operate within this directory
-- **Report output path**: absolute path where the YAML report must be written (e.g., `.claude/debug-sessions/20260701-1432/h1/report.yaml`)
+- **Worktree path**: path (relative to the repo root) to the git worktree assigned to this hypothesis — all file reads and edits operate within this directory
+- **Report output path**: path (relative to the repo root) where the YAML report must be written — always a sibling of the worktree directory, not inside it (e.g., `.claude/debug-sessions/20260701-1432/h1.report.yaml` for worktree `.claude/debug-sessions/20260701-1432/h1`)
 
 ## Workflow
 
@@ -31,7 +31,17 @@ All file operations (Read, Edit, Bash commands that touch source) must target pa
 
 Before reading or touching source code:
 
-1. Detect the test file location for the affected code:
+1. Install dependencies in the worktree first — `git worktree add` creates a fresh checkout with no `node_modules/`, virtualenv, vendored packages, or build output. Detect the project type and run the matching setup command inside `worktree_path` before running any test:
+   - Node/TypeScript: `npm install` (or `yarn install` / `pnpm install` if a matching lockfile is present)
+   - Dart/Flutter: `dart pub get` / `flutter pub get`
+   - Python: `pip install -r requirements.txt` or `poetry install`, depending on what the project uses
+   - Rust: none needed — `cargo test` fetches and builds automatically, but expect the first run to be slow
+   - Go: `go mod download`
+   - Java/Kotlin (Gradle/Maven): let the build tool resolve dependencies on first invocation; expect the first run to be slow
+
+   Running several of these dependency installs concurrently (one per parallel investigator) can be heavy on CPU/disk/network on a local machine — this is expected overhead, not a sign the hypothesis is wrong.
+
+2. Detect the test file location for the affected code:
    - Dart: `test/<feature>_test.dart`
    - Rust: `tests/<feature>_test.rs` or inline `#[cfg(test)]` in the same file
    - TypeScript/JS: `<feature>.test.ts` or `__tests__/<feature>.test.ts`
@@ -39,13 +49,13 @@ Before reading or touching source code:
    - Go: `<package>_test.go` alongside the source file
    - Java/Kotlin: `src/test/java/.../FeatureTest.java`
 
-2. Write a minimal test that:
+3. Write a minimal test that:
    - Reproduces the bug symptom described in the bug report
    - Is specifically designed to fail IF the hypothesis mechanism is present
    - Names the hypothesis in the test function name (e.g., `test_bug_stale_cache`, `testBugPassByValue`)
    - Sets up the exact conditions required by the hypothesis
 
-3. Run the test to confirm it fails:
+4. Run the test to confirm it fails:
    ```bash
    # Dart
    dart test test/<file>_test.dart --name "test_name"
@@ -59,7 +69,7 @@ Before reading or touching source code:
    go test ./... -run TestFunctionName
    ```
 
-4. If the test passes immediately (bug not reproduced), note "Test did not reproduce bug" and continue to Phase 2 — the fix may already be present, or the test needs revision.
+5. If the test passes immediately (bug not reproduced), note "Test did not reproduce bug" and continue to Phase 2 — the fix may already be present, or the test needs revision.
 
 ---
 
@@ -95,9 +105,9 @@ Apply a targeted fix consistent with the hypothesis (do not fix unrelated code):
 
 1. Make the minimal change that addresses the hypothesis mechanism
 2. Run the failing test from Phase 1
-3. If green: proceed to Phase 4
+3. If green: commit the fix and the test file together in the worktree (`git -C <worktree_path> add -A && git -C <worktree_path> commit -m "fix: <hypothesis-id> <short description>"`), record the resulting SHA (`git -C <worktree_path> rev-parse HEAD`), then proceed to Phase 4. Committing matters because the orchestrator applies the winning fix by cherry-picking this commit onto the main branch — a diff of source changes alone would leave the test file behind.
 4. If still failing: analyze the output, adjust the fix, re-run
-5. Stop after the number of attempts specified in the **Iteration budget** field of the input prompt, regardless of outcome — do not exceed that budget
+5. Stop after the number of attempts specified in the **Iteration budget** field of the input prompt, regardless of outcome — do not exceed that budget. If the budget is exhausted without a passing fix, do not commit — leave the worktree uncommitted and report the hypothesis as not confirmed.
 
 Fix principles:
 - Change only what the hypothesis predicts is broken
@@ -109,42 +119,11 @@ Fix principles:
 
 ### Phase 4: Return Evidence Report
 
-Return a report using exactly the format in the template below. Do not omit any section.
-
-```
-## Hypothesis Report: [hypothesis-name]
-
-**Status**: CONFIRMED ✓  |  UNCONFIRMED ✗  |  INCONCLUSIVE ?
-**Confidence**: High  |  Medium  |  Low
-
-### Test
-- File: `path/to/test_file.ext`
-- Test name: `test_function_name`
-- Initial result: FAIL (bug reproduced)  |  PASS (bug not reproduced)  |  ERROR (could not run)
-- Final result after fix: PASS  |  FAIL  |  TIMEOUT (budget exhausted)
-
-### Root Cause
-[One sentence — only if hypothesis is CONFIRMED or INCONCLUSIVE with evidence. Otherwise: "Not applicable."]
-
-### Fix Applied
-[If fix was applied:]
-- File: `path/to/source_file.ext:line_number`
-- Change: [brief description — what was wrong, what it was changed to]
-[If no fix applied:]
-- None — hypothesis not confirmed
-
-### Evidence
-- [Specific code quote or observation supporting or refuting the hypothesis, with file:line]
-- [Second evidence point]
-- [Third evidence point if available]
-
-### Confidence Reasoning
-[1–2 sentences: why this confidence level. What makes it certain or uncertain.]
-```
+Return a report using exactly the format specified in `../skills/parallel-debug/references/report-format.md` (§ "Per-Agent Evidence Report") — that file is the single source of truth for the template, the status enum order, the confidence definitions, and the "≤20 words" constraint on the fix description. Do not maintain a separate copy of the template here; if the two ever disagree, the reference file wins.
 
 ### Write YAML Report
 
-After producing the Phase 4 evidence report, write the following YAML to `report_output_path`. This file is consumed by `hypothesis-arbitrator` when multiple hypotheses pass — the field names must match exactly.
+After producing the Phase 4 evidence report, write the following YAML to `report_output_path`. This file is consumed by `hypothesis-arbitrator` when multiple hypotheses pass, and by the orchestrator to apply the winning fix — the field names must match exactly.
 
 ```yaml
 hypothesis_id: h1                    # the id passed in the input
@@ -159,12 +138,17 @@ evidence:
     excerpt: "another snippet"
     relevance: "why this supports the claim"
 confidence: high                     # high | medium | low
-fix_diff: |                          # the unified diff applied, or "" if no fix
+commit_sha: "a1b2c3d"                # SHA of the commit in the worktree branch containing the fix + test, or "" if no fix was committed
+fix_diff: |                          # git diff <base_sha> HEAD in the worktree, for evidence/overlap review only — NOT used to apply the fix (the orchestrator cherry-picks commit_sha instead); "" if no fix
   --- a/src/auth.ts
   +++ b/src/auth.ts
   @@ -41,7 +41,7 @@
   -  if (token.expiry < now) {
   +  if (token.expiry <= now) {
+  --- a/src/auth.test.ts
+  +++ b/src/auth.test.ts
+  @@ -10,0 +11,5 @@
+  +test_bug_stale_token_expiry() { ... }
 test_result: pass                    # pass | fail | not_run
 test_command: "npx jest auth.test.ts --no-coverage"
 test_scope_files:                    # files the test actually exercises

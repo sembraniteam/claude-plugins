@@ -1,6 +1,6 @@
 # Hypothesis Catalog
 
-Organized by symptom. For each bug report, match the observed symptom to a category, then select the 3–5 most plausible hypotheses to investigate. Prefer hypotheses that align with recently changed code (`git diff`) and the detected language.
+Organized by symptom. For each bug report, match the observed symptom to a category, then select the most plausible hypotheses to investigate — `hypothesis_count` of them (2–4, default 3; see `.claude/debugging-workflow.local.md`). Prefer hypotheses that align with recently changed code (`git diff`) and the detected language.
 
 ---
 
@@ -142,4 +142,4 @@ When generating hypotheses for a specific bug report, apply this order of prefer
 3. **Language affinity** — prefer hypotheses common in the detected language
 4. **Intermittency** — if the bug is intermittent, bias toward async/concurrency hypotheses
 5. **"Works on my machine"** — if the bug is environment-specific, bias toward config/env/dependency hypotheses
-6. **Diversity** — ensure the 3–5 selected hypotheses cover distinct failure mechanisms (don't pick five variations of "null pointer")
+6. **Diversity** — ensure the selected hypotheses cover distinct failure mechanisms (don't pick multiple variations of "null pointer")

@@ -18,20 +18,27 @@ Use `parallel-debug` when:
 
 ## Installation
 
-### Local project
+### Option 1: Install from this repo (marketplace)
 
 ```bash
-# Copy plugin into project
-cp -r debugging-workflow /path/to/your-project/.claude/plugins/
+# Add this repo as a marketplace source
+/plugin marketplace add sembraniteam/claude-plugins
 
-# Or install via Claude Code marketplace
-cc --install-plugin debugging-workflow
+# Install the plugin
+/plugin install debugging-workflow@sembraniteam-claude-plugins
 ```
 
-### Test locally
+### Option 2: Local install (development)
 
 ```bash
-cc --plugin-dir /path/to/debugging-workflow
+# Clone the repo
+git clone https://github.com/sembraniteam/claude-plugins.git
+
+# Add the local repo as a marketplace
+/plugin marketplace add /path/to/claude-plugins
+
+# Install
+/plugin install debugging-workflow@sembraniteam-claude-plugins
 ```
 
 ## Usage
@@ -56,17 +63,17 @@ Create `.claude/debugging-workflow.local.md` in your project root to customize b
 
 ```markdown
 ---
-max_parallel_agents: 5
+max_parallel_agents: 4
 time_budget_minutes: 5
-hypothesis_count: 5
+hypothesis_count: 3
 ---
 ```
 
-| Field                 | Type    | Default | Description                                                       |
-|-----------------------|---------|---------|-------------------------------------------------------------------|
-| `max_parallel_agents` | integer | `5`     | Maximum number of hypothesis agents to spawn concurrently (2–5). |
-| `time_budget_minutes` | integer | `5`     | Total time budget; each agent gets `time_budget // 2` iterations. |
-| `hypothesis_count`    | integer | `5`     | Number of hypotheses to generate (3–5, clamped to max_parallel_agents). |
+| Field                 | Type    | Default | Description                                                                                                                                                                    |
+|-----------------------|---------|---------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `max_parallel_agents` | integer | `4`     | Maximum number of hypothesis agents to spawn concurrently (2–5).                                                                                                               |
+| `time_budget_minutes` | integer | `5`     | Approximate time budget *per agent*, in minutes (agents run in parallel, so this is not a total). See `references/report-format.md` for the exact minutes-to-iterations table. |
+| `hypothesis_count`    | integer | `3`     | Number of hypotheses to generate (2–4, clamped to max_parallel_agents).                                                                                                        |
 
 A template is at `skills/parallel-debug/examples/debugging-workflow.local.md`.
 
@@ -76,13 +83,13 @@ A template is at `skills/parallel-debug/examples/debugging-workflow.local.md`.
 
 ## Parallel Debug Workflow Steps
 
-1. **Session setup** — Create `.claude/debug-sessions/{id}/`, verify clean working tree, record base SHA
+1. **Session setup** — Create `.claude/debug-sessions/{id}/` (add this path to your project's `.gitignore` — it's untracked working state, not source), verify clean working tree (tracked files only), record base SHA
 2. **Generate hypotheses** — Produce 2–4 distinct, falsifiable hypotheses using the error message and hypothesis catalog
 3. **Create worktrees** — Each hypothesis gets an isolated git worktree and branch
-4. **Spawn investigators** — All `hypothesis-investigator` agents launch in parallel; each writes a YAML report
+4. **Spawn investigators** — All `hypothesis-investigator` agents launch in parallel; each installs project dependencies in its worktree, writes a failing test, applies a fix, commits fix + test together, and writes a YAML report to `{id}/hN.report.yaml` (outside the worktree, so it survives cleanup)
 5. **Gate arbitration** — If exactly one hypothesis passes, apply directly; if multiple pass, invoke `hypothesis-arbitrator`
-6. **Apply fix** — Cherry-pick the winning diff onto the original branch and re-run tests
-7. **Cleanup** — Remove all worktrees and branches; keep YAML reports for audit
+6. **Apply fix** — Cherry-pick the winning commit(s) onto the original branch and re-run tests
+7. **Cleanup** — Remove all worktrees and branches; the `hN.report.yaml` files remain on disk for audit since they were never inside the deleted worktrees
 
 ## Plugin Structure
 

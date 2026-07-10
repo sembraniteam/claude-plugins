@@ -25,7 +25,8 @@ evidence:
     excerpt: string
     relevance: string          # why this snippet supports the claim
 confidence: high | medium | low
-fix_diff: string                # diff applied in an isolated worktree/branch, NOT yet merged
+commit_sha: string               # commit in the worktree branch containing the fix + test, "" if no fix
+fix_diff: string                 # git diff of that commit against the base SHA — for your evidence/overlap review only, not the application mechanism
 test_result: pass | fail | not_run
 test_command: string            # exact command that was run to produce test_result
 test_scope_files: string[]      # files the test run actually covered, if known
@@ -33,7 +34,7 @@ side_effects_flagged: string[]  # files touched outside the hypothesis's stated 
 worktree_path: string           # path to the isolated worktree/branch holding this fix
 ```
 
-Assume each investigator worked in its own isolated git worktree or branch. None of their diffs have been merged into the main branch yet. You are the gate that decides what gets merged.
+Assume each investigator worked in its own isolated git worktree or branch and, if a fix passed, committed it there (fix + test together). None of these commits have been merged into the main branch yet. You are the gate that decides which commit(s) the orchestrator should cherry-pick.
 
 Do not treat `test_result` as ground truth just because it says `pass`. A `pass` from a test command that clearly does not exercise the files touched by `fix_diff` is not real verification.
 
@@ -52,7 +53,7 @@ If evidence does not hold up under this check, downgrade that hypothesis's confi
 **Step 3 — Check for file overlap between surviving fix_diffs.**
 Compare which files each `fix_diff` touches.
 
-- **No overlap, evidence independent** → likely two separate real bugs. Go to `MERGE_FIXES`: combine both diffs, then run the full test suite against the merged result before finalizing. If the merge itself fails mechanically (patch does not apply cleanly, conflicting hunks) — this is NOT a MERGE_FIXES success. Stop and output `ESCALATE_TO_USER` with the mechanical conflict noted in `reasoning`; do not attempt to hand-resolve the conflict yourself. If the merged result fails tests that individually passed, also treat this as a NEW conflict and escalate — do not silently pick one side.
+- **No overlap, evidence independent** → likely two separate real bugs. Go to `MERGE_FIXES`: select both hypothesis ids (the orchestrator will cherry-pick both commits, in sequence, onto the main branch and run the full test suite against the merged result). If cherry-picking the second commit on top of the first reports a conflict — this is NOT a MERGE_FIXES success. Stop and output `ESCALATE_TO_USER` with the mechanical conflict noted in `reasoning`; do not attempt to hand-resolve the conflict yourself. If the merged result fails tests that individually passed, also treat this as a NEW conflict and escalate — do not silently pick one side.
 
 - **Overlap exists, but one hypothesis's re-verified evidence is substantially stronger** (direct causal evidence — e.g., the exact line that throws/produces the bug — versus indirect/correlational evidence) → go to `ONE_WINNER`.
 
@@ -64,8 +65,7 @@ Compare which files each `fix_diff` touches.
 
 ```yaml
 decision: ONE_WINNER | MERGE_FIXES | ESCALATE_TO_USER
-selected_hypotheses: [hypothesis_id, ...]   # empty list if ESCALATE_TO_USER
-final_diff: string                          # ready to apply to main branch; omit if ESCALATE_TO_USER
+selected_hypotheses: [hypothesis_id, ...]   # empty list if ESCALATE_TO_USER; the orchestrator looks up each id's commit_sha from its report.yaml and cherry-picks it — you do not author a diff yourself
 reasoning: string                           # why this decision, in 2-4 sentences
 rejected:
   - id: hypothesis_id

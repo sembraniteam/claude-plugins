@@ -106,11 +106,11 @@ The parallel-debug skill assembles all agent reports into this final format.
 
 ## Summary Table
 
-| Rank | Hypothesis     | Status           | Confidence | Test        |
+| Rank | Hypothesis     | Status           | Confidence |    Test     |
 |-----:|----------------|------------------|:----------:|:-----------:|
-|    1 | [name]         | CONFIRMED ✓      | High       | PASS        |
-|    2 | [name]         | INCONCLUSIVE ?   | Medium     | FAIL        |
-|    3 | [name]         | UNCONFIRMED ✗    | Low        | ERROR       |
+|    1 | [name]         | CONFIRMED ✓      |    High    |    PASS     |
+|    2 | [name]         | INCONCLUSIVE ?   |   Medium   |    FAIL     |
+|    3 | [name]         | UNCONFIRMED ✗    |    Low     |    ERROR    |
 
 **Agents spawned**: [N] — **Confirmed**: [N] — **Inconclusive**: [N] — **Unconfirmed**: [N]
 ```
@@ -140,13 +140,15 @@ evidence_count:
   1 point   → 1
 ```
 
+`test_final_result` is derived from the YAML `test_result` field written by each investigator: `pass` → `PASS`, `fail` → `FAIL`, `not_run` → `ERROR` (an agent that timed out or crashed produced no verifiable result, so it scores the same as a run that errored out).
+
 In case of a tie: prefer the hypothesis with a code quote (specific file:line) over general observations.
 
 ---
 
 ## Iteration Budget to Minutes Mapping
 
-Settings value → approximate agent runtime:
+`time_budget_minutes` is an approximate time budget per agent, not a total (agents run in parallel). Look up the iteration budget from this table — it is the single source of truth; do not recompute it from a formula:
 
 | `time_budget_minutes` | Iteration budget passed to agents |
 |-----------------------|-----------------------------------|
@@ -155,5 +157,3 @@ Settings value → approximate agent runtime:
 | 5–7                   | 3 iterations (default)            |
 | 8–10                  | 4 iterations                      |
 | 11–15                 | 5 iterations                      |
-
-Formula: `max(1, time_budget_minutes // 2)`

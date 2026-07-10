@@ -2,7 +2,7 @@
 name: parallel-debug
 description: This skill should be used when the user invokes /debugging-workflow:parallel-debug, asks to "debug in parallel", "try all hypotheses at once", "spawn multiple agents for this bug", "investigate multiple root causes", "parallel hypothesis testing", "parallel investigation", "I can't figure out what's causing this", "investigate from multiple angles", "I have multiple theories about this bug", or reports a complex or intermittent bug where the root cause is unclear and multiple theories need testing simultaneously.
 argument-hint: "[error message, stack trace, or bug description]"
-allowed-tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "TaskCreate", "TaskUpdate", "Agent"]
+allowed-tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "Agent"]
 license: MIT
 ---
 
@@ -24,12 +24,12 @@ For bugs with an obvious root cause, a direct sequential investigation is faster
 
 ## Step 0 — Session setup
 
-1. Create a session directory: `.claude/debug-sessions/{session_id}/` where `session_id` is a short timestamp-based slug (e.g. `20260701-1432`).
-2. Confirm the repo has no uncommitted changes on the current branch before proceeding. If it does, ask the user whether to stash them first — do not silently stash or discard user work.
+1. Create a session directory: `.claude/debug-sessions/{session_id}/` where `session_id` is a short timestamp-based slug (e.g. `20260701-1432`). If the project's `.gitignore` does not already exclude `.claude/debug-sessions/`, tell the user to add it — otherwise session directories and reports show up as untracked files in `git status`. "No uncommitted changes" in step 2 refers only to tracked files; untracked leftover session directories from a prior run do not block a new session, but should still be cleaned up if stale.
+2. Confirm the repo has no uncommitted changes to tracked files on the current branch before proceeding. If it does, ask the user whether to stash them first — do not silently stash or discard user work.
 3. Record the base commit SHA in `.claude/debug-sessions/{session_id}/base.txt`. Every investigator worktree and the final merge will be diffed against this SHA.
 4. Read `.claude/debugging-workflow.local.md` if it exists. Parse the YAML frontmatter:
    - `max_parallel_agents` — integer 2–5, default `4`
-   - `time_budget_minutes` — integer 1–15, default `5`
+   - `time_budget_minutes` — integer 1–15, default `5`, approximate time budget per agent (agents run in parallel, so this is not a total)
    - `hypothesis_count` — integer 2–4, default `3`
 
    Compute the **iteration budget** from `time_budget_minutes` using the table in `references/report-format.md` (default with `time_budget_minutes: 5` → 3 iterations).
@@ -62,7 +62,7 @@ If worktree creation fails (dirty tree, disk space, etc.), stop before spawning 
 
 ## Step 3 — Collect reports
 
-Each `hypothesis-investigator` writes its YAML report to `.claude/debug-sessions/{session_id}/hN/report.yaml`.
+Each `hypothesis-investigator` writes its YAML report to `.claude/debug-sessions/{session_id}/hN.report.yaml` — a sibling of the `hN/` worktree directory, not inside it. This matters: Step 7 deletes the `hN/` worktree entirely, so a report written inside it would be destroyed before it could be read for audit.
 
 Spawn all agents in a single message via `subagent_type: "debugging-workflow:hypothesis-investigator"`. Pass each agent a prompt with this structure:
 
@@ -74,7 +74,7 @@ Hypothesis id: hN
 Hypothesis mechanism: [one sentence describing what to test]
 Iteration budget: [iteration_budget from Step 0] attempts
 Worktree path: .claude/debug-sessions/{session_id}/hN
-Report output path: .claude/debug-sessions/{session_id}/hN/report.yaml
+Report output path: .claude/debug-sessions/{session_id}/hN.report.yaml
 ```
 
 Wait for all instances to finish. If an agent times out or crashes, treat it as `test_result: not_run` for that hypothesis and proceed with the remaining ones — still clean up its worktree in Step 7. Read all `report.yaml` files into memory before proceeding.
@@ -95,11 +95,11 @@ This gating keeps the common case cheap — arbitration only runs when there is 
 
 ## Step 5 — Apply the final result
 
-Based on the outcome (single passing hypothesis from Step 4, or the arbitrator's `ONE_WINNER`/`MERGE_FIXES` decision):
+Based on the outcome (single passing hypothesis from Step 4, or the arbitrator's `ONE_WINNER`/`MERGE_FIXES` decision), identify the winning hypothesis id(s) and look up each one's `commit_sha` from the `report.yaml` already read in Step 3 — investigators commit their fix (source + test) to their own worktree branch, so the commit is the unit of application, not the `fix_diff` text.
 
 1. Check out the branch the user was originally on.
-2. Apply the `final_diff` (or the single winning `fix_diff`) with `git apply`.
-3. Re-run the affected test command one more time on the main branch — a diff that passed in an isolated worktree can still fail once merged with the real working tree state. If it fails, revert the apply and escalate to the user with the specific failure — do not retry silently.
+2. Cherry-pick the winning commit(s): `git cherry-pick <commit_sha>`. For `MERGE_FIXES` with two selected hypotheses, cherry-pick both SHAs in sequence. If a cherry-pick reports a conflict, run `git cherry-pick --abort` and escalate to the user with the conflicting hypothesis ids — do not hand-resolve the conflict yourself.
+3. Re-run the affected test command one more time on the main branch — a commit that passed in an isolated worktree can still fail once merged with the real working tree state. Since the investigator committed the test file alongside the fix, it is now present on the main branch and the command is runnable. If the test fails, run `git reset --hard HEAD~<N>` to undo the cherry-pick(s) and escalate to the user with the specific failure — do not retry silently.
 4. Report to the user: which hypothesis/hypotheses were applied, and the arbitrator's `reasoning` if arbitration ran.
 
 ---
@@ -130,7 +130,7 @@ for hN in <all hypothesis ids>; do
 done
 ```
 
-Run this even on the escalation path, once the user's final choice has been applied. Keep `.claude/debug-sessions/{session_id}/*.yaml` reports on disk for audit purposes — only remove the git worktrees and branches.
+Run this even on the escalation path, once the user's final choice has been applied. This only removes the `hN/` worktree directories and their branches — the `.claude/debug-sessions/{session_id}/hN.report.yaml` reports live one level up, outside the worktrees, so they survive cleanup on disk for audit purposes. The commits themselves also remain reachable in the repo's object store (via the `commit_sha` recorded in each report) even after the branch ref is deleted, until garbage collected.
 
 ---
 
