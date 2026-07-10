@@ -42,7 +42,7 @@ Before spawning agents, produce a list of `hypothesis_count` (default: 3) distin
 
 Consult `references/hypothesis-catalog.md` to match the error symptom to known patterns and select diverse, falsifiable hypotheses.
 
-If you cannot articulate at least 2 genuinely distinct hypotheses, stop and tell the user: the bug likely has a single identifiable cause — ask them to provide more context or investigate it directly.
+If fewer than 2 genuinely distinct hypotheses can be articulated, stop and tell the user: the bug likely has a single identifiable cause — ask them to provide more context or investigate it directly.
 
 ---
 
@@ -77,7 +77,7 @@ Worktree path: .claude/debug-sessions/{session_id}/hN
 Report output path: .claude/debug-sessions/{session_id}/hN.report.yaml
 ```
 
-Wait for all instances to finish. If an agent times out or crashes, treat it as `test_result: not_run` for that hypothesis and proceed with the remaining ones — still clean up its worktree in Step 7. Read all `report.yaml` files into memory before proceeding.
+Wait for all instances to finish. If an agent times out or crashes, treat it as `test_result: not_run` for that hypothesis and proceed with the remaining ones — still clean up its worktree in Step 7. Read all `hN.report.yaml` files into memory before proceeding.
 
 ---
 
@@ -87,7 +87,7 @@ Do NOT call `hypothesis-arbitrator` unconditionally. Check first:
 
 - **Exactly one report passes** → skip arbitration. Go directly to Step 5 with that hypothesis selected.
 - **Zero reports pass** → skip arbitration. Go to Step 6b.
-- **Two or more reports pass** → call `hypothesis-arbitrator` (`subagent_type: "debugging-workflow:hypothesis-arbitrator"`) with all passing reports as input.
+- **Two or more reports pass** → call `hypothesis-arbitrator` (`subagent_type: "debugging-workflow:hypothesis-arbitrator"`) with all passing reports as input, plus the `base_sha` recorded in Step 0. The arbitrator needs `base_sha` to re-verify each hypothesis's evidence citations against the pre-fix state of the code (see the arbitrator's Step 2) — the worktrees themselves already contain each investigator's applied fix by this point, so reading `worktree_path` directly would show post-fix code, not the buggy pattern the evidence describes.
 
 This gating keeps the common case cheap — arbitration only runs when there is something to arbitrate.
 
@@ -95,12 +95,14 @@ This gating keeps the common case cheap — arbitration only runs when there is 
 
 ## Step 5 — Apply the final result
 
-Based on the outcome (single passing hypothesis from Step 4, or the arbitrator's `ONE_WINNER`/`MERGE_FIXES` decision), identify the winning hypothesis id(s) and look up each one's `commit_sha` from the `report.yaml` already read in Step 3 — investigators commit their fix (source + test) to their own worktree branch, so the commit is the unit of application, not the `fix_diff` text.
+Based on the outcome (single passing hypothesis from Step 4, or the arbitrator's `ONE_WINNER`/`MERGE_FIXES` decision), identify the winning hypothesis id(s) and look up each one's `commit_sha` from the `hN.report.yaml` already read in Step 3 — investigators commit their fix (source + test) to their own worktree branch, so the commit is the unit of application, not the `fix_diff` text.
 
 1. Check out the branch the user was originally on.
-2. Cherry-pick the winning commit(s): `git cherry-pick <commit_sha>`. For `MERGE_FIXES` with two selected hypotheses, cherry-pick both SHAs in sequence. If a cherry-pick reports a conflict, run `git cherry-pick --abort` and escalate to the user with the conflicting hypothesis ids — do not hand-resolve the conflict yourself.
-3. Re-run the affected test command one more time on the main branch — a commit that passed in an isolated worktree can still fail once merged with the real working tree state. Since the investigator committed the test file alongside the fix, it is now present on the main branch and the command is runnable. If the test fails, run `git reset --hard HEAD~<N>` to undo the cherry-pick(s) and escalate to the user with the specific failure — do not retry silently.
-4. Report to the user: which hypothesis/hypotheses were applied, and the arbitrator's `reasoning` if arbitration ran.
+2. Record `pre_apply_sha=$(git rev-parse HEAD)` before cherry-picking anything. This is the single rollback point for the rest of this step — use it instead of computing how many commits to unwind, regardless of whether the failure happens on the first cherry-pick, the second (`MERGE_FIXES`), or the test re-run.
+3. Cherry-pick the winning commit(s): `git cherry-pick <commit_sha>`. For `MERGE_FIXES` with two selected hypotheses, cherry-pick both SHAs in sequence.
+   - If any cherry-pick in the sequence reports a conflict: run `git cherry-pick --abort` (this only cancels the pick currently in progress — it does NOT undo an earlier commit in the same sequence that already applied cleanly), then run `git reset --hard $pre_apply_sha` to return the branch to exactly its pre-apply state. Escalate to the user with the conflicting hypothesis ids — do not hand-resolve the conflict yourself.
+4. Re-run the affected test command one more time on the main branch — a commit that passed in an isolated worktree can still fail once merged with the real working tree state. Since the investigator committed the test file alongside the fix, it is now present on the main branch and the command is runnable. If the test fails, run `git reset --hard $pre_apply_sha` (the same rollback point from step 2, regardless of how many commits were applied) and escalate to the user with the specific failure — do not retry silently.
+5. Report to the user using the **Final Ranked Report** format from `references/report-format.md`: sort all `hN.report.yaml` entries (not just the winner) with the Ranking Algorithm in that file, render the Ranked Results / Summary Table, and fill in the Recommendation section noting which hypothesis/hypotheses were applied and the arbitrator's `reasoning` if arbitration ran.
 
 ---
 
@@ -114,7 +116,7 @@ Based on the outcome (single passing hypothesis from Step 4, or the arbitrator's
 
 ## Step 6b — No hypothesis passed
 
-Report which hypotheses were tried and why each failed (from their `test_result`/evidence). Ask whether to:
+Report using the same **Final Ranked Report** format as Step 5 (all hypotheses will rank as INCONCLUSIVE or UNCONFIRMED here) so the user can see which lead came closest, then fill in the "All unconfirmed"/"Inconclusive only" Recommendation variant from `references/report-format.md`. Ask whether to:
 - Broaden the hypothesis list and retry
 - Investigate the bug manually, starting from the most promising lead
 - Provide additional reproduction steps or context

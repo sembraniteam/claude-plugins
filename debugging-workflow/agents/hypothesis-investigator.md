@@ -23,7 +23,7 @@ Each invocation provides:
 
 Follow these four phases in order. Do not skip any phase.
 
-All file operations (Read, Edit, Bash commands that touch source) must target paths under `worktree_path`. Never modify files outside your assigned worktree.
+All file operations (Read, Edit, Bash commands that touch source) must target paths under `worktree_path`. Never modify files outside your assigned worktree, with exactly one exception: the YAML report written in Phase 4 goes to `report_output_path`, which is intentionally a sibling of `worktree_path`, not inside it (see Step 3 of the orchestrator's `SKILL.md`). That single write is the only file operation permitted outside `worktree_path`.
 
 ---
 
@@ -31,12 +31,12 @@ All file operations (Read, Edit, Bash commands that touch source) must target pa
 
 Before reading or touching source code:
 
-1. Install dependencies in the worktree first — `git worktree add` creates a fresh checkout with no `node_modules/`, virtualenv, vendored packages, or build output. Detect the project type and run the matching setup command inside `worktree_path` before running any test:
-   - Node/TypeScript: `npm install` (or `yarn install` / `pnpm install` if a matching lockfile is present)
-   - Dart/Flutter: `dart pub get` / `flutter pub get`
-   - Python: `pip install -r requirements.txt` or `poetry install`, depending on what the project uses
+1. Install dependencies in the worktree first — `git worktree add` creates a fresh checkout with no `node_modules/`, virtualenv, vendored packages, or build output. Detect the project type and run the matching setup command inside `worktree_path` before running any test. Prefer the non-mutating variant when a lockfile is present, since a command that rewrites the lockfile leaves a diff that has nothing to do with the hypothesis and would otherwise ride along into the fix commit:
+   - Node/TypeScript: `npm ci` if `package-lock.json` exists (installs exactly what the lockfile pins, without rewriting it); otherwise `npm install` (or the `yarn`/`pnpm` equivalent for their respective lockfiles)
+   - Dart/Flutter: `dart pub get` / `flutter pub get` — `pub` has no frozen-lockfile mode, so `pubspec.lock` may still change; if it does and the hypothesis has nothing to do with dependencies, exclude it in Phase 3's commit
+   - Python: prefer a lockfile-respecting install (`poetry install`, or `pip install` against a hash-pinned `requirements.txt`) into a virtualenv the project's `.gitignore` already excludes
    - Rust: none needed — `cargo test` fetches and builds automatically, but expect the first run to be slow
-   - Go: `go mod download`
+   - Go: `go mod download` (only rewrites `go.sum` if something is actually missing from it)
    - Java/Kotlin (Gradle/Maven): let the build tool resolve dependencies on first invocation; expect the first run to be slow
 
    Running several of these dependency installs concurrently (one per parallel investigator) can be heavy on CPU/disk/network on a local machine — this is expected overhead, not a sign the hypothesis is wrong.
@@ -105,7 +105,7 @@ Apply a targeted fix consistent with the hypothesis (do not fix unrelated code):
 
 1. Make the minimal change that addresses the hypothesis mechanism
 2. Run the failing test from Phase 1
-3. If green: commit the fix and the test file together in the worktree (`git -C <worktree_path> add -A && git -C <worktree_path> commit -m "fix: <hypothesis-id> <short description>"`), record the resulting SHA (`git -C <worktree_path> rev-parse HEAD`), then proceed to Phase 4. Committing matters because the orchestrator applies the winning fix by cherry-picking this commit onto the main branch — a diff of source changes alone would leave the test file behind.
+3. If green: run `git -C <worktree_path> status --short` before staging anything. Stage only the files the fix actually touches — the changed source file(s) and the test file — with `git -C <worktree_path> add <source_file> <test_file>`, never `git add -A`. Phase 1's dependency install can leave a rewritten lockfile or stray build artifacts on disk; a blanket `add -A` would sweep those into the commit as noise that then rides the cherry-pick onto the main branch. If `git status` shows any other changed path that isn't an intentional part of the hypothesis (e.g., an unrelated lockfile bump), leave it unstaged and record it in `side_effects_flagged` in the YAML report. Then commit (`git -C <worktree_path> commit -m "fix: <hypothesis-id> <short description>"`), record the resulting SHA (`git -C <worktree_path> rev-parse HEAD`), and proceed to Phase 4. Committing matters because the orchestrator applies the winning fix by cherry-picking this commit onto the main branch — a diff of source changes alone would leave the test file behind.
 4. If still failing: analyze the output, adjust the fix, re-run
 5. Stop after the number of attempts specified in the **Iteration budget** field of the input prompt, regardless of outcome — do not exceed that budget. If the budget is exhausted without a passing fix, do not commit — leave the worktree uncommitted and report the hypothesis as not confirmed.
 
@@ -154,7 +154,7 @@ test_command: "npx jest auth.test.ts --no-coverage"
 test_scope_files:                    # files the test actually exercises
   - src/auth.ts
   - src/auth.test.ts
-side_effects_flagged:                # files touched outside the hypothesis scope, or []
+side_effects_flagged:                # files changed outside the hypothesis scope (e.g. a lockfile the dependency install rewrote) — left uncommitted per Phase 3, or []
   []
 worktree_path: ".claude/debug-sessions/20260701-1432/h1"
 ```
