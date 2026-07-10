@@ -5,39 +5,19 @@ assembled by the parallel-debug skill.
 
 ---
 
-## Per-Agent Evidence Report
+## Per-Agent Report
 
-Each hypothesis-investigator agent returns a report in this exact format. All fields are required; use "N/A" or "None"
-for sections that do not apply.
+Each hypothesis-investigator agent produces exactly one report artifact: the `hN.report.yaml` file written in its own
+Phase 4 (see `../../agents/hypothesis-investigator.md`). There is no separate markdown report — a single artifact
+means there is only ever one version of the truth for a hypothesis's outcome, since the orchestrator, the arbitrator,
+and any human auditor all read the same file.
 
-```markdown
-## Hypothesis Report: [hypothesis-slug]
+The investigator's final conversational message is a short receipt only (2–3 sentences: status, test result, one-line
+root cause claim, report path) — a completion signal for the orchestrator and a skim-friendly note for a human watching
+the live transcript. It is never a data source: nothing downstream re-derives report fields from it, and it is not
+available at all for a crashed or timed-out agent, unlike the YAML file which the orchestrator can still act on.
 
-**Status**: CONFIRMED ✓  |  INCONCLUSIVE ?  |  UNCONFIRMED ✗
-**Confidence**: High  |  Medium  |  Low
-
-### Test
-- File: `path/to/test_file.ext`
-- Test name: `test_function_name`
-- Initial result: FAIL (bug reproduced)  |  PASS (bug not reproduced)  |  ERROR (could not run)
-- Final result after fix: PASS  |  FAIL  |  TIMEOUT (budget exhausted)
-
-### Root Cause
-[One sentence — only if CONFIRMED or INCONCLUSIVE with evidence. If UNCONFIRMED: "Not applicable."]
-
-### Fix Applied
-- File: `path/to/source_file.ext:line_number`
-- Change: [what was wrong → what it was changed to, in ≤20 words]
-[If no fix: "None — hypothesis not confirmed."]
-
-### Evidence
-- [Specific code quote or test output, with file:line reference]
-- [Second evidence point]
-- [Third evidence point if available, otherwise omit]
-
-### Confidence Reasoning
-[1–2 sentences explaining the confidence level: what makes it certain or uncertain]
-```
+The `status` and `confidence` fields in the YAML report follow these definitions:
 
 ### Status Definitions
 
@@ -59,9 +39,9 @@ for sections that do not apply.
 
 ## Final Ranked Report
 
-The parallel-debug skill assembles this final format from the persisted `hN.report.yaml` files alone — not from the markdown
-message an investigator returned in the conversation, which is not available for a crashed or timed-out agent. Map YAML
-fields to the template as follows:
+The parallel-debug skill assembles this final format from the persisted `hN.report.yaml` files alone — not from the short
+receipt message an investigator returned in the conversation, which is not available for a crashed or timed-out agent. Map
+YAML fields to the template as follows:
 
 - `status` → the Status badge: `confirmed`→`CONFIRMED ✓`, `inconclusive`→`INCONCLUSIVE ?`, `unconfirmed`→`UNCONFIRMED ✗`
 - `confidence` → Confidence

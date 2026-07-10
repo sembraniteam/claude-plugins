@@ -26,9 +26,9 @@ Used to compute the iteration budget passed to each agent — see the mapping ta
 `references/report-format.md` ("Iteration Budget to Minutes Mapping"), which is the single source of truth.
 
 Examples:
-- `time_budget_minutes: 3`   — quick pass, 2 iterations per agent
-- `time_budget_minutes: 5`   — default, 3 iterations per agent
-- `time_budget_minutes: 10`  — thorough pass, 4 iterations per agent
+- `time_budget_minutes: 3`   — quick pass
+- `time_budget_minutes: 5`   — default
+- `time_budget_minutes: 10`  — thorough pass
 
 **`hypothesis_count`** (integer, 2–4, default: 3)
 Number of hypotheses to generate and investigate.

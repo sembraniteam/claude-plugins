@@ -54,7 +54,7 @@ For each hypothesis `hN`:
 git worktree add .claude/debug-sessions/{session_id}/hN -b debug/{session_id}/hN {base_sha}
 ```
 
-Each `hypothesis-investigator` instance is given exactly one hypothesis and one worktree path. It must never touch files outside its assigned worktree. Launch all instances in parallel (not sequentially).
+Each `hypothesis-investigator` instance is given exactly one hypothesis and one worktree path. It must never touch files outside its assigned worktree. See Step 3 for how instances are batched and spawned.
 
 If worktree creation fails (dirty tree, disk space, etc.), stop before spawning any investigator and report the error — do not partially spawn agents into a broken session state.
 

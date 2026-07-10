@@ -18,7 +18,7 @@ For each hypothesis-investigator, you will be given a report in this shape:
 
 ```yaml
 hypothesis_id: string
-status: confirmed | inconclusive | unconfirmed  # the investigator's own verdict; pass through unchanged into your output, do not recompute it
+status: confirmed | inconclusive | unconfirmed  # the investigator's own verdict; do not recompute or override it — the orchestrator reads status directly from the hN.report.yaml file, not from your output
 claim: string                 # the root cause the investigator believes is correct
 evidence:
   - file: path

@@ -117,17 +117,13 @@ Fix principles:
 
 ---
 
-### Phase 4: Return Evidence Report
+### Phase 4: Write YAML Report
 
-Return a report using exactly the format specified in `../skills/parallel-debug/references/report-format.md` (§ "Per-Agent Evidence Report") — that file is the single source of truth for the template, the status enum order, the confidence definitions, and the "≤20 words" constraint on the fix description. Do not maintain a separate copy of the template here; if the two ever disagree, the reference file wins.
-
-### Write YAML Report
-
-After producing the Phase 4 evidence report, write the following YAML to `report_output_path`. This file is consumed by `hypothesis-arbitrator` when multiple hypotheses pass, and by the orchestrator to apply the winning fix — the field names must match exactly.
+Write the following YAML to `report_output_path`. This is the only report artifact this agent produces — there is no separate markdown report. The file is consumed by `hypothesis-arbitrator` when multiple hypotheses pass, and by the orchestrator to apply the winning fix and build the Final Ranked Report — the field names must match exactly. For the `status` and `confidence` values, use the criteria in `../skills/parallel-debug/references/report-format.md` ("Status Definitions" and "Confidence Definitions") — that file is the single source of truth for those enums.
 
 ```yaml
 hypothesis_id: h1                    # the id passed in the input
-status: confirmed                    # confirmed | inconclusive | unconfirmed — same criteria as the Status field in the Phase 4 markdown report (see report-format.md "Status Definitions"); this is the field the orchestrator's Final Ranked Report reads, since that report is built from this YAML file, not from the markdown message
+status: confirmed                    # confirmed | inconclusive | unconfirmed — see report-format.md "Status Definitions"; this is the field the orchestrator's Final Ranked Report reads, since that report is built from this YAML file, not from the agent's conversational message
 claim: "one sentence root cause"     # only if CONFIRMED or INCONCLUSIVE; otherwise "Not applicable."
 evidence:
   - file: path/to/file.ext
@@ -165,6 +161,19 @@ worktree_path: ".claude/debug-sessions/20260701-1432/h1"
 ```
 
 Write the file even if the hypothesis was not confirmed — a clear refutation is valuable for the orchestrator and the user.
+
+### Final Message
+
+After writing the YAML report, return a short conversational receipt — not a second copy of the report. The orchestrator never reads this message for data (it reads `report_output_path` directly, per Phase 4), but the message is still the completion signal for the orchestrator and the only thing a human skimming the live transcript sees. Keep it to 2–3 sentences covering exactly:
+
+1. Status and final test result (e.g., "CONFIRMED — test passes after fix")
+2. The one-line root cause claim (or "not applicable" if unconfirmed)
+3. The path to the report file just written
+
+Do not restate evidence, the fix diff, or confidence reasoning here — that level of detail exists only in the YAML file. A receipt this short has no room to drift from the report it summarizes.
+
+Example:
+> CONFIRMED, high confidence — test `test_bug_stale_token_expiry` passes after fix. Root cause: token expiry check used `<` instead of `<=`, rejecting still-valid tokens one tick early. Report written to `.claude/debug-sessions/20260701-1432/h1.report.yaml`.
 
 ## Constraints
 
