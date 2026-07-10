@@ -59,7 +59,21 @@ for sections that do not apply.
 
 ## Final Ranked Report
 
-The parallel-debug skill assembles all agent reports into this final format.
+The parallel-debug skill assembles this final format from the persisted `hN.report.yaml` files alone — not from the markdown
+message an investigator returned in the conversation, which is not available for a crashed or timed-out agent. Map YAML
+fields to the template as follows:
+
+- `status` → the Status badge: `confirmed`→`CONFIRMED ✓`, `inconclusive`→`INCONCLUSIVE ?`, `unconfirmed`→`UNCONFIRMED ✗`
+- `confidence` → Confidence
+- `test_result` / `test_command` → the Test line
+- `test_file` / `test_name` → the `path/to/test.ext::test_name` reference
+- `claim` → Root cause
+- `fix_summary` → Fix
+- `evidence` → Key evidence
+
+For a hypothesis whose agent timed out or crashed (no `hN.report.yaml` was ever written), render its row using the synthetic
+`test_result: not_run` record from Step 3 of `SKILL.md`, with `status: unconfirmed` and the remaining qualitative fields
+as "N/A".
 
 ```markdown
 # Parallel Debug Report
@@ -143,6 +157,11 @@ evidence_count:
 `test_final_result` is derived from the YAML `test_result` field written by each investigator: `pass` → `PASS`, `fail` → `FAIL`, `not_run` → `ERROR` (an agent that timed out or crashed produced no verifiable result, so it scores the same as a run that errored out).
 
 In case of a tie: prefer the hypothesis with a code quote (specific file:line) over general observations.
+
+This scoring only orders entries within the Final Ranked Report table; it is independent of the pass/fail gate in
+`SKILL.md` Step 4, which additionally requires `status: confirmed` (not just `test_result: pass`) before a hypothesis
+can be auto-applied or sent to arbitration. A high-scoring `inconclusive` report can rank above a lower-scoring
+`confirmed` one in this table without becoming eligible for that gate.
 
 ---
 

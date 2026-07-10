@@ -127,6 +127,7 @@ After producing the Phase 4 evidence report, write the following YAML to `report
 
 ```yaml
 hypothesis_id: h1                    # the id passed in the input
+status: confirmed                    # confirmed | inconclusive | unconfirmed — same criteria as the Status field in the Phase 4 markdown report (see report-format.md "Status Definitions"); this is the field the orchestrator's Final Ranked Report reads, since that report is built from this YAML file, not from the markdown message
 claim: "one sentence root cause"     # only if CONFIRMED or INCONCLUSIVE; otherwise "Not applicable."
 evidence:
   - file: path/to/file.ext
@@ -138,8 +139,12 @@ evidence:
     excerpt: "another snippet"
     relevance: "why this supports the claim"
 confidence: high                     # high | medium | low
+test_file: "path/to/test_file.ext"   # test file written in Phase 1
+test_name: "test_bug_stale_token_expiry"  # test name written in Phase 1
+initial_test_result: fail            # fail (bug reproduced) | pass (bug not reproduced) | error — result from Phase 1 step 4, before any fix
+fix_summary: "what was wrong -> what it was changed to, in <=20 words"  # "" if no fix committed
 commit_sha: "a1b2c3d"                # SHA of the commit in the worktree branch containing the fix + test, or "" if no fix was committed
-fix_diff: |                          # git diff <base_sha> HEAD in the worktree, for evidence/overlap review only — NOT used to apply the fix (the orchestrator cherry-picks commit_sha instead); "" if no fix
+fix_diff: |                          # git diff HEAD~1 HEAD in the worktree — equivalent to diffing against base_sha, since the worktree branched at base_sha and holds exactly this one commit; for evidence/overlap review only, NOT used to apply the fix (the orchestrator cherry-picks commit_sha instead); "" if no fix
   --- a/src/auth.ts
   +++ b/src/auth.ts
   @@ -41,7 +41,7 @@
@@ -149,7 +154,7 @@ fix_diff: |                          # git diff <base_sha> HEAD in the worktree,
   +++ b/src/auth.test.ts
   @@ -10,0 +11,5 @@
   +test_bug_stale_token_expiry() { ... }
-test_result: pass                    # pass | fail | not_run
+test_result: pass                    # pass | fail | not_run — final result after the fix (or after exhausting the iteration budget)
 test_command: "npx jest auth.test.ts --no-coverage"
 test_scope_files:                    # files the test actually exercises
   - src/auth.ts

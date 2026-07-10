@@ -18,6 +18,7 @@ For each hypothesis-investigator, you will be given a report in this shape:
 
 ```yaml
 hypothesis_id: string
+status: confirmed | inconclusive | unconfirmed  # the investigator's own verdict; pass through unchanged into your output, do not recompute it
 claim: string                 # the root cause the investigator believes is correct
 evidence:
   - file: path
@@ -25,13 +26,17 @@ evidence:
     excerpt: string
     relevance: string          # why this snippet supports the claim
 confidence: high | medium | low
+test_file: string                # test file written by the investigator
+test_name: string                # test name written by the investigator
+initial_test_result: fail | pass | error  # result before the fix was applied
+fix_summary: string               # ≤20 words, what was wrong -> what changed
 commit_sha: string               # commit in the worktree branch containing the fix + test, "" if no fix
 fix_diff: string                 # git diff of that commit against the base SHA — for your evidence/overlap review only, not the application mechanism
 test_result: pass | fail | not_run
 test_command: string            # exact command that was run to produce test_result
 test_scope_files: string[]      # files the test run actually covered, if known
 side_effects_flagged: string[]  # files touched outside the hypothesis's stated scope, if any
-worktree_path: string           # path to the isolated worktree/branch holding this fix
+worktree_path: string           # path to the isolated worktree/branch holding this fix — already contains the post-fix code by the time you receive this report; do not Read files here for citation re-verification, use `git show base_sha:<file>` instead (see Step 2)
 ```
 
 You will also be given `base_sha` — the commit every investigator's worktree branched from. Use it in Step 2 below: each hypothesis's `evidence` describes the pre-fix root cause as it was investigated in Phase 2, before that investigator applied and committed its fix in Phase 3. By the time you receive the report, `worktree_path` already contains the post-fix code, so reading files there directly can show a line that no longer matches the cited excerpt even when the citation was accurate at the time it was made.

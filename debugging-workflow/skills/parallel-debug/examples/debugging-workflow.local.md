@@ -13,7 +13,7 @@ Copy this file to `.claude/debugging-workflow.local.md` in your project root.
 ## Settings
 
 **`max_parallel_agents`** (integer, 2–5, default: 4)
-Maximum number of hypothesis-investigator agents to spawn in parallel.
+Maximum number of hypothesis-investigator agents to spawn concurrently in a single batch.
 Reduce to `2` or `3` on slower machines or when API concurrency is limited.
 
 Examples:
@@ -22,15 +22,8 @@ Examples:
 
 **`time_budget_minutes`** (integer, 1–15, default: 5)
 Approximate time budget per agent in minutes.
-Used to compute the iteration budget passed to each agent.
-
-| Setting value | Iteration budget       |
-|---------------|------------------------|
-| 1–2           | 1 iteration            |
-| 3–4           | 2 iterations           |
-| 5–7           | 3 iterations (default) |
-| 8–10          | 4 iterations           |
-| 11–15         | 5 iterations           |
+Used to compute the iteration budget passed to each agent — see the mapping table in
+`references/report-format.md` ("Iteration Budget to Minutes Mapping"), which is the single source of truth.
 
 Examples:
 - `time_budget_minutes: 3`   — quick pass, 2 iterations per agent
@@ -39,7 +32,8 @@ Examples:
 
 **`hypothesis_count`** (integer, 2–4, default: 3)
 Number of hypotheses to generate and investigate.
-Must be ≤ `max_parallel_agents`.
+When it exceeds `max_parallel_agents`, `SKILL.md` Step 3 runs the investigators in
+multiple sequential batches instead of all at once — no hard constraint between the two settings.
 
 Set to `2` for a fast targeted pass when you have a strong hunch.
 Set to `4` for maximum coverage on genuinely mysterious bugs.

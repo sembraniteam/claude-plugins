@@ -28,7 +28,7 @@ For bugs with an obvious root cause, a direct sequential investigation is faster
 2. Confirm the repo has no uncommitted changes to tracked files on the current branch before proceeding. If it does, ask the user whether to stash them first — do not silently stash or discard user work.
 3. Record the base commit SHA in `.claude/debug-sessions/{session_id}/base.txt`. Every investigator worktree and the final merge will be diffed against this SHA.
 4. Read `.claude/debugging-workflow.local.md` if it exists. Parse the YAML frontmatter:
-   - `max_parallel_agents` — integer 2–5, default `4`
+   - `max_parallel_agents` — integer 2–5, default `4`; caps how many `hypothesis-investigator` agents run concurrently (see the batching rule in Step 3), independent of `hypothesis_count`
    - `time_budget_minutes` — integer 1–15, default `5`, approximate time budget per agent (agents run in parallel, so this is not a total)
    - `hypothesis_count` — integer 2–4, default `3`
 
@@ -64,7 +64,7 @@ If worktree creation fails (dirty tree, disk space, etc.), stop before spawning 
 
 Each `hypothesis-investigator` writes its YAML report to `.claude/debug-sessions/{session_id}/hN.report.yaml` — a sibling of the `hN/` worktree directory, not inside it. This matters: Step 7 deletes the `hN/` worktree entirely, so a report written inside it would be destroyed before it could be read for audit.
 
-Spawn all agents in a single message via `subagent_type: "debugging-workflow:hypothesis-investigator"`. Pass each agent a prompt with this structure:
+Spawn agents in batches of at most `max_parallel_agents` (from Step 0) — this is that setting's actual effect: capping how many investigators run concurrently, independent of `hypothesis_count`. If `hypothesis_count` ≤ `max_parallel_agents` (the common case), there is only one batch: spawn all agents in a single message via `subagent_type: "debugging-workflow:hypothesis-investigator"`. If `hypothesis_count` > `max_parallel_agents`, spawn the first `max_parallel_agents` hypotheses in one message, wait for that batch to finish, then spawn the remaining hypotheses as the next batch the same way. Pass each agent a prompt with this structure:
 
 ```
 Bug description: [full error message and symptom]
@@ -77,16 +77,16 @@ Worktree path: .claude/debug-sessions/{session_id}/hN
 Report output path: .claude/debug-sessions/{session_id}/hN.report.yaml
 ```
 
-Wait for all instances to finish. If an agent times out or crashes, treat it as `test_result: not_run` for that hypothesis and proceed with the remaining ones — still clean up its worktree in Step 7. Read all `hN.report.yaml` files into memory before proceeding.
+Wait for all instances across all batches to finish. If an agent times out or crashes, no `hN.report.yaml` was ever written for it — synthesize a minimal in-memory record with `test_result: not_run`, `status: unconfirmed`, and the remaining qualitative fields set to "N/A", and proceed with the remaining hypotheses — still clean up its worktree in Step 7. Read all `hN.report.yaml` files into memory before proceeding.
 
 ---
 
 ## Step 4 — Decide whether arbitration is needed
 
-Do NOT call `hypothesis-arbitrator` unconditionally. Check first:
+Do NOT call `hypothesis-arbitrator` unconditionally. A report counts as **passing** for this gate only when both `status: confirmed` AND `test_result: pass` — a report with `status: inconclusive` does not count as passing here even if its `test_result` happens to be `pass` (that combination means the test went green but the investigator's own evidence review found the mechanism didn't fully explain the bug; see the Status Definitions in `references/report-format.md`). Such a report is never auto-applied; it still appears in the Final Ranked Report. Check first:
 
 - **Exactly one report passes** → skip arbitration. Go directly to Step 5 with that hypothesis selected.
-- **Zero reports pass** → skip arbitration. Go to Step 6b.
+- **Zero reports pass** → skip arbitration. Go to Step 6b (this includes the case where only `inconclusive` and/or `unconfirmed` reports exist).
 - **Two or more reports pass** → call `hypothesis-arbitrator` (`subagent_type: "debugging-workflow:hypothesis-arbitrator"`) with all passing reports as input, plus the `base_sha` recorded in Step 0. The arbitrator needs `base_sha` to re-verify each hypothesis's evidence citations against the pre-fix state of the code (see the arbitrator's Step 2) — the worktrees themselves already contain each investigator's applied fix by this point, so reading `worktree_path` directly would show post-fix code, not the buggy pattern the evidence describes.
 
 This gating keeps the common case cheap — arbitration only runs when there is something to arbitrate.
@@ -97,12 +97,16 @@ This gating keeps the common case cheap — arbitration only runs when there is 
 
 Based on the outcome (single passing hypothesis from Step 4, or the arbitrator's `ONE_WINNER`/`MERGE_FIXES` decision), identify the winning hypothesis id(s) and look up each one's `commit_sha` from the `hN.report.yaml` already read in Step 3 — investigators commit their fix (source + test) to their own worktree branch, so the commit is the unit of application, not the `fix_diff` text.
 
-1. Check out the branch the user was originally on.
+1. Confirm the main working tree is still on the branch the user was originally on — it never left, since all investigation happened in separate worktrees.
 2. Record `pre_apply_sha=$(git rev-parse HEAD)` before cherry-picking anything. This is the single rollback point for the rest of this step — use it instead of computing how many commits to unwind, regardless of whether the failure happens on the first cherry-pick, the second (`MERGE_FIXES`), or the test re-run.
 3. Cherry-pick the winning commit(s): `git cherry-pick <commit_sha>`. For `MERGE_FIXES` with two selected hypotheses, cherry-pick both SHAs in sequence.
    - If any cherry-pick in the sequence reports a conflict: run `git cherry-pick --abort` (this only cancels the pick currently in progress — it does NOT undo an earlier commit in the same sequence that already applied cleanly), then run `git reset --hard $pre_apply_sha` to return the branch to exactly its pre-apply state. Escalate to the user with the conflicting hypothesis ids — do not hand-resolve the conflict yourself.
-4. Re-run the affected test command one more time on the main branch — a commit that passed in an isolated worktree can still fail once merged with the real working tree state. Since the investigator committed the test file alongside the fix, it is now present on the main branch and the command is runnable. If the test fails, run `git reset --hard $pre_apply_sha` (the same rollback point from step 2, regardless of how many commits were applied) and escalate to the user with the specific failure — do not retry silently.
-5. Report to the user using the **Final Ranked Report** format from `references/report-format.md`: sort all `hN.report.yaml` entries (not just the winner) with the Ranking Algorithm in that file, render the Ranked Results / Summary Table, and fill in the Recommendation section noting which hypothesis/hypotheses were applied and the arbitrator's `reasoning` if arbitration ran.
+4. Re-run the tests one more time on the main branch — a commit that passed in an isolated worktree can still fail once merged with the real working tree state. Since the investigator(s) committed the test file(s) alongside the fix(es), they are now present on the main branch and runnable.
+   - **Single hypothesis (Step 4 single-pass or arbitrator `ONE_WINNER`)**: re-run that hypothesis's `test_command`.
+   - **`MERGE_FIXES`**: re-run both selected hypotheses' `test_command`s, then the full test suite — two independent fixes can interact even when each `test_command` passes on its own, and the full suite is what actually surfaces that interaction.
+
+   If any test fails, run `git reset --hard $pre_apply_sha` (the same rollback point from step 2, regardless of how many commits were applied) and escalate to the user with the specific failure — do not retry silently.
+5. Report to the user using the **Final Ranked Report** format from `references/report-format.md`, built entirely from the `hN.report.yaml` files (including the synthetic records from Step 3) — not from any agent's conversational message. Sort all entries (not just the winner) with the Ranking Algorithm in that file, render the Ranked Results / Summary Table using each entry's `status`, `confidence`, `test_file`/`test_name`, and `fix_summary` fields, and fill in the Recommendation section noting which hypothesis/hypotheses were applied and the arbitrator's `reasoning` if arbitration ran.
 
 ---
 
