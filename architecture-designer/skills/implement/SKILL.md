@@ -53,13 +53,13 @@ Wait for the answer before proceeding.
 
 ---
 
-## Step 3 — Spawn the architecture-implementer agent
+## Step 3 — Spawn the implementation-planner agent
 
-Before spawning, check `docs/architecture-designer/session.json` for a `"remediationPlanPaths"` array. If present and non-empty, and the file at its last entry exists on disk, you will pass that path to the implementer so it can apply the confirmed code changes from the remediation plan.
+Before spawning, check `docs/architecture-designer/session.json` for a `"remediationPlanPaths"` array. If present and non-empty, and the file at its last entry exists on disk, you will pass that path to the planner so it can list the confirmed code changes as plan checklist items.
 
-**Skip if already resolved**: before passing it, also check for an `"implementationPlanPaths"` array in the same `session.json`. If its last entry exists on disk, its `Status` is `Complete`, and its "Modifications to existing files" section contains no `[ ] FAIL` items, the remediation plan has already been fully applied to code — do not pass the remediation plan path to the implementer; there is nothing left for it to apply.
+**Skip if already resolved**: before passing it, also check for an `"implementationPlanPaths"` array in the same `session.json`. If its last entry exists on disk, its `Status` is `Complete`, and its "Modifications to existing files" section contains no `[ ] FAIL` items, the remediation plan has already been fully applied to code — do not pass the remediation plan path to the planner; there is nothing left for it to plan.
 
-Spawn `architecture-designer:architecture-implementer`. Pass it:
+Spawn `architecture-designer:implementation-planner`. Pass it:
 
 - **Architecture document path** — the file confirmed in Step 1
 - **Existing project summary** — what was found in Step 2, translated into the agent's expected strategy label: `Fresh start (empty project)` if the project looked empty; `Merge` if the user chose (a); `Fresh start (existing project)` if the user chose (b); `User-described layout` if the user chose (c)
@@ -68,18 +68,37 @@ Spawn `architecture-designer:architecture-implementer`. Pass it:
 
 The agent will:
 1. Read the document and surface any remaining ambiguities (framework choice, ORM vs raw SQL, etc.) — all at once, not one by one
-2. Propose a full folder structure as an ASCII tree, annotating any files that already exist; if fresh-starting into an existing project, ask how to handle collisions before writing anything
-3. Wait for your confirmation or adjustments before writing anything
-4. Save an implementation plan to `docs/architecture-designer/plan/{yyyymmdd}-{topic}.md` — a markdown checklist of every file to be created, grouped by category
-5. Implement every file — models from the ERD, route stubs from sequence diagrams, configuration files, Docker setup, infrastructure as code
-6. Update the plan file: mark completed files `[x]`, skipped files `[~]`, and set Status to Complete
-7. Offer an optional smoke test — installs dependencies and verifies the project compiles or starts (requires your confirmation since it modifies the project directory)
+2. Propose a full folder structure as an ASCII tree, annotating any files that already exist; if fresh-starting into an existing project, ask how to handle collisions before saving anything
+3. Wait for your confirmation or adjustments before saving the plan
+4. Save an implementation plan to `docs/architecture-designer/plan/{yyyymmdd}-{topic}.md` — a markdown checklist of every file to be created, grouped by category — and create one task per file group
+5. Report back the plan file path once it's saved and confirmed
+
+Wait for the agent to complete and confirm the plan was saved successfully before proceeding to Step 4. If it reports it could not save a confirmed plan (e.g., ambiguities were never resolved), do not proceed to Step 4 — resolve the blocker with the user and re-spawn it instead.
+
+---
+
+## Step 4 — Spawn the architecture-implementer agent
+
+Spawn `architecture-designer:architecture-implementer`. Pass it:
+
+- **Implementation plan path** — reported by implementation-planner in Step 3. This is required; do not spawn the agent without it.
+- **Architecture document path** — the same file passed to the planner in Step 3
+- **Existing project summary** — the same strategy label passed to the planner in Step 3
+- **Technology stack** — the same value passed to the planner in Step 3, if any
+- **Remediation plan path** — the same value passed to the planner in Step 3, if any
+
+The agent will:
+1. Read the plan and confirm it's `In progress` — refuses to proceed otherwise
+2. Read the architecture document for the technical detail needed to write each file
+3. Implement every file — models from the ERD, route stubs from sequence diagrams, configuration files, Docker setup, infrastructure as code
+4. Update the plan file: mark completed files `[x]`, skipped files `[~]`, failed files `[ ] FAIL: {reason}`, and set Status to Complete
+5. Offer an optional smoke test — installs dependencies and verifies the project compiles or starts (requires your confirmation since it modifies the project directory)
 
 Wait for the agent to complete. You do not need to guide it further — it has complete instructions.
 
 ---
 
-## Step 4 — Wrap up
+## Step 5 — Wrap up
 
 Once the agent reports completion, remind the user:
 

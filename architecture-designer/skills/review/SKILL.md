@@ -246,11 +246,13 @@ If yes: scan the working directory for signs of an existing project (look for `p
 
 **If the scan finds nothing**: no question needed — there is no existing codebase to merge into, so treat this as a fresh start into an empty project regardless of the remediation plan's existence.
 
-Then spawn `architecture-designer:architecture-implementer`. Pass it:
+Then spawn `architecture-designer:implementation-planner`. Pass it:
 - The path to the approved document
 - **Existing project summary** — what was found in the scan, translated into the agent's expected strategy label: `Fresh start (empty project)` if the scan found nothing; `Merge` if the user chose (a); `Fresh start (existing project)` if the user chose (b); `User-described layout` if the user chose (c)
 - **Technology stack** — from the architecture document's Technology Decisions section (section 5)
 - **Remediation plan path** — the full path to the `{yyyymmdd}-{topic}-remediation.md` file saved in step 4e (always present in the review flow). A remediation plan does not by itself imply an existing codebase — the scan result above is what determines the actual strategy; trust the scan, not the plan's mere presence.
+
+Wait for it to report the plan was saved and confirmed. Then spawn `architecture-designer:architecture-implementer`, passing it the implementation plan path from that report plus the same document path, existing project summary, technology stack, and remediation plan path. Do not spawn architecture-implementer if implementation-planner did not report a confirmed plan.
 
 ---
 

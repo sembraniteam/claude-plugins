@@ -45,7 +45,7 @@ Do not proceed until the user confirms. After each stage is confirmed, persist t
 }
 ```
 
-Sub-agents receive the full contents of this file as input and must read it tolerantly — inner field names are illustrative, not contractual. The only guaranteed top-level keys are `stage1`–`stage5` and (after Step 11) `documentPaths`. `stage6b` and `stage6c` are written after Stage 6b/6c confirmation and must be included when passing session context to sub-agents. `remediationPlanPaths` may also appear after `/architecture-designer:review` has run — written by that skill, and must be passed to the architecture-implementer when present. `implementationPlanPaths` may also appear after `architecture-designer:architecture-implementer` has run — written by that agent itself after saving its plan file (Step 2.5), not by this skill.
+Sub-agents receive the full contents of this file as input and must read it tolerantly — inner field names are illustrative, not contractual. The only guaranteed top-level keys are `stage1`–`stage5` and (after Step 11) `documentPaths`. `stage6b` and `stage6c` are written after Stage 6b/6c confirmation and must be included when passing session context to sub-agents. `remediationPlanPaths` may also appear after `/architecture-designer:review` has run — written by that skill, and must be passed to implementation-planner when present. `implementationPlanPaths` may also appear after `architecture-designer:implementation-planner` has run — written by that agent itself after saving its plan file (Step 3), not by this skill. architecture-implementer never writes to `session.json`; it only reads the plan path passed to it.
 
 **`documentPaths`, `remediationPlanPaths`, and `implementationPlanPaths` are arrays, not single values.** Each save appends the new file's path rather than overwriting — documents and plans are never overwritten on disk (each revision is a new file), so the array preserves that history. Treat the last element as current unless a step says otherwise.
 
@@ -413,9 +413,16 @@ If the user says yes: quickly scan the working directory for signs of an existin
 
 **If the scan finds nothing**: no question needed — proceed as a fresh start into an empty project.
 
-Then spawn the `architecture-designer:architecture-implementer` agent. Pass it:
+Before spawning, check `docs/architecture-designer/session.json` for a `"remediationPlanPaths"` array. If present and non-empty, and the file at its last entry exists on disk, you will pass that path along too, so implementation-planner can list any still-outstanding code changes as plan checklist items.
+
+**Skip if already resolved**: before passing it, also check for an `"implementationPlanPaths"` array in the same `session.json`. If its last entry exists on disk, its `Status` is `Complete`, and its "Modifications to existing files" section contains no `[ ] FAIL` items, the remediation plan has already been fully applied to code — do not pass the remediation plan path; there is nothing left to plan or implement.
+
+Then spawn the `architecture-designer:implementation-planner` agent. Pass it:
 - The path to the approved document
 - **Existing project summary** — what was found in the scan, translated into the agent's expected strategy label: `Fresh start (empty project)` if nothing was found; `Merge` if the user chose (a); `Fresh start (existing project)` if the user chose (b); `User-described layout` if the user chose (c)
 - The technology stack from stage 5
+- **Remediation plan path** — the last entry of `session.json → remediationPlanPaths`, if it exists on disk and the "Skip if already resolved" check above didn't rule it out
+
+Wait for it to report the plan was saved and confirmed. Then spawn `architecture-designer:architecture-implementer`, passing it the implementation plan path from that report plus the same document path, existing project summary, technology stack, and remediation plan path (if any was passed to the planner). Do not spawn architecture-implementer if implementation-planner did not report a confirmed plan.
 
 If the user says no: congratulate them and let them know they can run `/architecture-designer:review` at any time to revisit and revise the architecture.

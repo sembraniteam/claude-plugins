@@ -37,9 +37,8 @@ Turns an approved architecture document into a working project skeleton. Can be 
 1. Locates the architecture document — from session context or lets you choose from saved documents
 2. Scans the working directory for an existing project structure
 3. Asks how to proceed: merge into existing code, fresh start, or work around a described layout
-4. Spawns `architecture-implementer` to propose a folder structure and wait for your confirmation
-5. Saves an implementation plan to `docs/architecture-designer/plan/{yyyymmdd}-{topic}.md` — a markdown checklist of every file to be created, grouped by category (models, routes, config, infrastructure, scripts)
-6. Generates all files; updates the plan checkboxes to `[x]` / `[~]` when done
+4. Spawns `implementation-planner` to propose a folder structure, wait for your confirmation, and save an implementation plan to `docs/architecture-designer/plan/{yyyymmdd}-{topic}.md` — a markdown checklist of every file to be created, grouped by category (models, routes, config, infrastructure, scripts)
+5. Spawns `architecture-implementer`, which reads the confirmed plan and generates all files; updates the plan checkboxes to `[x]` / `[~]` / `[ ] FAIL` when done
 
 ## Design workflow
 
@@ -64,19 +63,20 @@ flowchart TD
     DF --> DR
     DR -->|DOCUMENT REVIEW PASSED| Approved([Document approved])
     Approved --> Scaffold{Scaffold project?}
-    Scaffold -->|Yes| Impl["architecture-implementer agent<br/>propose structure → save plan → implement"]
+    Scaffold -->|Yes| Plan["implementation-planner agent<br/>resolve ambiguities → propose structure → save plan"]
     Scaffold -->|No| Done([Done])
-    Impl --> Plan["docs/.../plan/{yyyymmdd}-{topic}.md<br/>checkbox per file · updated when done"]
-    Plan --> Done
+    Plan --> PlanFile["docs/.../plan/{yyyymmdd}-{topic}.md<br/>checkbox per file"]
+    PlanFile --> Impl["architecture-implementer agent<br/>read plan → implement → verify"]
+    Impl --> Done
 ```
 
 The `/architecture-designer:review` skill follows the same reviewer → fixer loop for any diagrams or database changes, then saves a new versioned document through the same document-reviewer pass.
 
-`/architecture-designer:implement` can be invoked standalone — it finds the architecture document, checks for an existing project structure, and delegates to `architecture-implementer` after you confirm the folder layout.
+`/architecture-designer:implement` can be invoked standalone — it finds the architecture document, checks for an existing project structure, delegates to `implementation-planner` to confirm the folder layout and save the plan, then delegates to `architecture-implementer` to build it. `architecture-implementer` refuses to run without a confirmed plan from `implementation-planner`.
 
 ## Sub-agents
 
-Each reviewer has a paired fixer agent. When a reviewer returns findings, the skill spawns the fixer to apply targeted corrections, then re-runs the reviewer. This loop runs until the reviewer passes — no manual editing required.
+Each reviewer has a paired fixer agent. When a reviewer returns findings, the skill spawns the fixer to apply targeted corrections, then re-runs the reviewer. This loop runs until the reviewer passes — no manual editing required. Implementation follows a similar two-step split: `implementation-planner` produces and confirms the plan, then `architecture-implementer` executes it — the implementer never runs without a plan the planner has already saved.
 
 | Agent                                            | Role                                                                                                                                                                                                                                              |
 |--------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -87,7 +87,8 @@ Each reviewer has a paired fixer agent. When a reviewer returns findings, the sk
 | `architecture-designer:database-fixer`           | Corrects schema, ERD, index plan, and connection config; writes the corrected ERD and `indexPlan` directly into `diagrams.json` (same pattern as `architecture-fixer`), and returns corrected schema and connection config for document embedding |
 | `architecture-designer:document-reviewer`        | Audits saved documents for format compliance (F1–F7) and content completeness (C1–C6); returns DOCUMENT REVIEW PASSED / FAILED                                                                                                                    |
 | `architecture-designer:document-fixer`           | Fixes specific format and content failures in the document based on reviewer findings; overwrites the draft in place                                                                                                                              |
-| `architecture-designer:architecture-implementer` | Implements project skeleton, data models, routes, and infrastructure files from an approved document                                                                                                                                              |
+| `architecture-designer:implementation-planner`   | Resolves implementation ambiguities, proposes a folder structure, waits for confirmation, and saves the implementation plan; does not write application code                                                                                     |
+| `architecture-designer:architecture-implementer` | Reads the confirmed implementation plan and the approved document, then implements project skeleton, data models, routes, and infrastructure files; refuses to run without a confirmed plan                                                     |
 
 ## Scripts
 
