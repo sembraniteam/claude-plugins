@@ -28,11 +28,13 @@ evidence:
 confidence: high | medium | low
 test_file: string                # test file written by the investigator
 test_name: string                # test name written by the investigator
-initial_test_result: fail | pass | error  # result before the fix was applied
+initial_test_result: fail | pass | error | not_run  # result before the fix was applied — CONFIRMED requires this to be fail (see Step 1)
+initial_test_output_excerpt: string  # verbatim last 5-10 lines of the Phase 1 test command's actual output, "" if not_run
 fix_summary: string               # ≤20 words, what was wrong -> what changed
 commit_sha: string               # commit in the worktree branch containing the fix + test, "" if no fix
 fix_diff: string                 # git diff of that commit against the base SHA — for your evidence/overlap review only, not the application mechanism
 test_result: pass | fail | not_run
+final_test_output_excerpt: string    # verbatim last 5-10 lines of the final test command's actual output, "" if not_run
 test_command: string            # exact command that was run to produce test_result
 test_scope_files: string[]      # files the test run actually covered, if known
 side_effects_flagged: string[]  # files touched outside the hypothesis's stated scope, if any
@@ -48,7 +50,7 @@ Do not treat `test_result` as ground truth just because it says `pass`. A `pass`
 # Decision procedure — follow this exact order
 
 **Step 1 — Filter by test result.**
-Discard any hypothesis where `test_result: fail`. For every remaining hypothesis, inspect `test_command` and `test_scope_files`. If the command does not plausibly cover the files touched by `fix_diff` (e.g., a unit test command that never touches the changed module, or a scope list missing the changed files), do NOT trust `test_result: pass` at face value — downgrade this hypothesis to "unverified" and treat it as if `test_result: not_run` for the rest of this procedure. If ALL hypotheses fail their tests (or are downgraded to unverified), stop and output `decision: ESCALATE_TO_USER` with reason "no hypothesis passed verification" — do not attempt to pick a "least bad" option.
+Discard any hypothesis where `test_result: fail`. Also discard any hypothesis where `initial_test_result` is not `fail` — a `test_result: pass` on a test that never reproduced the bug in the first place is a tautological pass, proves nothing, and cannot support `status: confirmed` regardless of what the `status` field says (see the hard rule in `../skills/parallel-debug/references/report-format.md` "Status Definitions"). For every remaining hypothesis, inspect `test_command` and `test_scope_files`. If the command does not plausibly cover the files touched by `fix_diff` (e.g., a unit test command that never touches the changed module, or a scope list missing the changed files), do NOT trust `test_result: pass` at face value — downgrade this hypothesis to "unverified" and treat it as if `test_result: not_run` for the rest of this procedure. If `initial_test_output_excerpt` or `final_test_output_excerpt` is present, skim it for plausibility — a generic or template-like excerpt that doesn't resemble a real test runner transcript is a signal the command may not have actually been run, and is grounds for the same downgrade. If ALL hypotheses fail their tests (or are downgraded to unverified), stop and output `decision: ESCALATE_TO_USER` with reason "no hypothesis passed verification" — do not attempt to pick a "least bad" option.
 
 **Step 2 — Re-verify the surviving evidence yourself, against the pre-fix checkout.**
 For each hypothesis that passed Step 1, read the `file`/`line` citation as it existed at `base_sha` — not the live copy under `worktree_path`, which already has the fix applied and may no longer contain the cited pattern. Use `git show <base_sha>:<file>` (via your Bash tool) rather than a plain Read of the worktree copy. Confirm:

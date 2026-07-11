@@ -54,8 +54,9 @@ Before reading or touching source code:
    - Is specifically designed to fail IF the hypothesis mechanism is present
    - Names the hypothesis in the test function name (e.g., `test_bug_stale_cache`, `testBugPassByValue`)
    - Sets up the exact conditions required by the hypothesis
+   - Asserts the specific incorrect value or behavior the hypothesis predicts — not merely that the code path executes without throwing. A test that would pass regardless of whether the bug is present is tautological: it can never legitimately produce `status: confirmed` later, because Phase 4's hard rule requires this test to have actually failed here in step 4 below.
 
-4. Run the test to confirm it fails:
+4. Run the test and record its actual output verbatim — this becomes `initial_test_output_excerpt` in the Phase 4 report (last 5–10 lines of the real command output, not a paraphrase):
    ```bash
    # Dart
    dart test test/<file>_test.dart --name "test_name"
@@ -69,7 +70,9 @@ Before reading or touching source code:
    go test ./... -run TestFunctionName
    ```
 
-5. If the test passes immediately (bug not reproduced), note "Test did not reproduce bug" and continue to Phase 2 — the fix may already be present, or the test needs revision.
+   Never infer this result from reading the test code instead of running it. If the command genuinely cannot be executed (e.g., the project doesn't build), record `initial_test_result: not_run` — a truthful `not_run` is worth more than a guessed `pass` or `fail`.
+
+5. If the test passes immediately (bug not reproduced), note "Test did not reproduce bug" and continue to Phase 2 — the fix may already be present, or the test needs revision. This hypothesis is now capped at `inconclusive` at best (see Phase 4's hard rule): a test that never failed cannot later support `status: confirmed`, regardless of what Phase 3 finds.
 
 ---
 
@@ -104,7 +107,7 @@ With a failing test established, investigate the source code:
 Apply a targeted fix consistent with the hypothesis (do not fix unrelated code):
 
 1. Make the minimal change that addresses the hypothesis mechanism
-2. Run the failing test from Phase 1
+2. Run the failing test from Phase 1 and record its actual output verbatim — this becomes `final_test_output_excerpt` once the test goes green. Never infer green/red from reading the diff instead of running the command.
 3. If green: run `git -C <worktree_path> status --short` before staging anything. Stage only the files the fix actually touches — the changed source file(s) and the test file — with `git -C <worktree_path> add <source_file> <test_file>`, never `git add -A`. Phase 1's dependency install can leave a rewritten lockfile or stray build artifacts on disk; a blanket `add -A` would sweep those into the commit as noise that then rides the cherry-pick onto the main branch. If `git status` shows any other changed path that isn't an intentional part of the hypothesis (e.g., an unrelated lockfile bump), leave it unstaged and record it in `side_effects_flagged` in the YAML report. Then commit (`git -C <worktree_path> commit -m "fix: <hypothesis-id> <short description>"`), record the resulting SHA (`git -C <worktree_path> rev-parse HEAD`), and proceed to Phase 4. Committing matters because the orchestrator applies the winning fix by cherry-picking this commit onto the main branch — a diff of source changes alone would leave the test file behind.
 4. If still failing: analyze the output, adjust the fix, re-run
 5. Stop after the number of attempts specified in the **Iteration budget** field of the input prompt, regardless of outcome — do not exceed that budget. If the budget is exhausted without a passing fix, do not commit — leave the worktree uncommitted and report the hypothesis as not confirmed.
@@ -119,11 +122,11 @@ Fix principles:
 
 ### Phase 4: Write YAML Report
 
-Write the following YAML to `report_output_path`. This is the only report artifact this agent produces — there is no separate markdown report. The file is consumed by `hypothesis-arbitrator` when multiple hypotheses pass, and by the orchestrator to apply the winning fix and build the Final Ranked Report — the field names must match exactly. For the `status` and `confidence` values, use the criteria in `../skills/parallel-debug/references/report-format.md` ("Status Definitions" and "Confidence Definitions") — that file is the single source of truth for those enums.
+Write the following YAML to `report_output_path`. This is the only report artifact this agent produces — there is no separate markdown report. The file is consumed by `hypothesis-arbitrator` when multiple hypotheses pass, and by the orchestrator to apply the winning fix and build the Final Ranked Report — the field names must match exactly. For the `status` and `confidence` values, use the criteria in `../skills/parallel-debug/references/report-format.md` ("Status Definitions" and "Confidence Definitions") — that file is the single source of truth for those enums, including the hard rule that `status: confirmed` requires `initial_test_result: fail` and `test_result: pass` on the same test.
 
 ```yaml
 hypothesis_id: h1                    # the id passed in the input
-status: confirmed                    # confirmed | inconclusive | unconfirmed — see report-format.md "Status Definitions"; this is the field the orchestrator's Final Ranked Report reads, since that report is built from this YAML file, not from the agent's conversational message
+status: confirmed                    # confirmed | inconclusive | unconfirmed — see report-format.md "Status Definitions"; this is the field the orchestrator's Final Ranked Report reads, since that report is built from this YAML file, not from the agent's conversational message. HARD RULE: never write "confirmed" unless initial_test_result is fail AND test_result is pass on this same test — a test that never failed before the fix proves nothing, regardless of how the fix looks
 claim: "one sentence root cause"     # only if CONFIRMED or INCONCLUSIVE; otherwise "Not applicable."
 evidence:
   - file: path/to/file.ext
@@ -134,10 +137,17 @@ evidence:
     line: 17
     excerpt: "another snippet"
     relevance: "why this supports the claim"
-confidence: high                     # high | medium | low
+confidence: high                     # high | medium | low — see report-format.md "Confidence Definitions" for the observable checklist each level requires; do not assign "high" without a verbatim evidence match
 test_file: "path/to/test_file.ext"   # test file written in Phase 1
 test_name: "test_bug_stale_token_expiry"  # test name written in Phase 1
-initial_test_result: fail            # fail (bug reproduced) | pass (bug not reproduced) | error — result from Phase 1 step 4, before any fix
+initial_test_result: fail            # fail (bug reproduced) | pass (bug not reproduced) | error | not_run — result from Phase 1 step 4, before any fix. Write not_run if the command was never actually executed — never infer this from reading code instead of running it
+initial_test_output_excerpt: |       # verbatim last 5-10 lines of the Phase 1 test command's actual output — proof the command ran, not a paraphrase; "" if not_run
+  FAIL src/auth.test.ts
+  ✗ test_bug_stale_token_expiry (12 ms)
+    expect(received).toBe(expected)
+    Expected: true
+    Received: false
+  Tests: 1 failed, 1 total
 fix_summary: "what was wrong -> what it was changed to, in <=20 words"  # "" if no fix committed
 commit_sha: "a1b2c3d"                # SHA of the commit in the worktree branch containing the fix + test, or "" if no fix was committed
 fix_diff: |                          # git diff HEAD~1 HEAD in the worktree — equivalent to diffing against base_sha, since the worktree branched at base_sha and holds exactly this one commit; for evidence/overlap review only, NOT used to apply the fix (the orchestrator cherry-picks commit_sha instead); "" if no fix
@@ -150,7 +160,11 @@ fix_diff: |                          # git diff HEAD~1 HEAD in the worktree — 
   +++ b/src/auth.test.ts
   @@ -10,0 +11,5 @@
   +test_bug_stale_token_expiry() { ... }
-test_result: pass                    # pass | fail | not_run — final result after the fix (or after exhausting the iteration budget)
+test_result: pass                    # pass | fail | not_run — final result after the fix (or after exhausting the iteration budget). Write not_run if the command was never actually executed — never infer this from reading code; a truthful not_run is worth more than a fabricated pass
+final_test_output_excerpt: |         # verbatim last 5-10 lines of the final test command's actual output; "" if not_run
+  PASS src/auth.test.ts
+  ✓ test_bug_stale_token_expiry (9 ms)
+  Tests: 1 passed, 1 total
 test_command: "npx jest auth.test.ts --no-coverage"
 test_scope_files:                    # files the test actually exercises
   - src/auth.ts
@@ -182,3 +196,5 @@ Example:
 - Do not exceed the iteration budget
 - If the project does not compile, report that as the finding and stop
 - Write the YAML report even if the hypothesis was not confirmed — the orchestrator needs every agent's outcome to make the correct decision
+- Never infer a test result from reading code — always execute the test command and read its actual output. If a command could not be run for any reason, record `not_run`, never a guessed `pass`/`fail`
+- Never write `status: confirmed` unless `initial_test_result: fail` and `test_result: pass` hold for the same test — see report-format.md "Status Definitions" for why this is a hard rule, not a judgment call

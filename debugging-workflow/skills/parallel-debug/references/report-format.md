@@ -8,7 +8,7 @@ assembled by the parallel-debug skill.
 ## Per-Agent Report
 
 Each hypothesis-investigator agent produces exactly one report artifact: the `hN.report.yaml` file written in its own
-Phase 4 (see `../../agents/hypothesis-investigator.md`). There is no separate markdown report — a single artifact
+Phase 4 (see `../../../agents/hypothesis-investigator.md`). There is no separate markdown report — a single artifact
 means there is only ever one version of the truth for a hypothesis's outcome, since the orchestrator, the arbitrator,
 and any human auditor all read the same file.
 
@@ -21,19 +21,25 @@ The `status` and `confidence` fields in the YAML report follow these definitions
 
 ### Status Definitions
 
-| Status           | Meaning                                                                                                                       |
-|------------------|-------------------------------------------------------------------------------------------------------------------------------|
-| `CONFIRMED ✓`    | Test reproduced the bug; fix made the test pass; root cause is clearly the hypothesized mechanism                             |
-| `UNCONFIRMED ✗`  | Evidence does not support the hypothesis; the predicted code pattern was not found or test showed a different failure         |
-| `INCONCLUSIVE ?` | Mixed evidence: test reproduced the bug but fix did not fully resolve it, or code pattern is present but may not be the cause |
+**Hard rule:** `CONFIRMED` requires both `initial_test_result: fail` and `test_result: pass` on the *same* test. A test that never failed before the fix proves nothing about the fix — no matter how confidently the investigator narrates it, a report claiming `status: confirmed` without that pairing is invalid. This is not a guideline the investigator applies at its own discretion: the orchestrator recomputes this pairing directly from the raw fields at `SKILL.md` Step 4 rather than trusting the `status` field at face value, and treats a mismatch as a failed gate. This closes the most likely hallucination path in this plugin — a tautological test that trivially passes both before and after a fix, honestly reported as `pass` while proving nothing.
+
+| Status           | Meaning                                                                                                                                          | Required field values                                    |
+|------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------|
+| `CONFIRMED ✓`    | The test reproduced the bug before the fix and passes after it; root cause is clearly the hypothesized mechanism                                 | `initial_test_result: fail` AND `test_result: pass`         |
+| `UNCONFIRMED ✗`  | Evidence does not support the hypothesis; the predicted code pattern was not found, or the test showed a different failure                       | `test_result: fail` after the fix, or the hypothesis is explicitly refuted |
+| `INCONCLUSIVE ?` | Mixed evidence — test reproduced the bug but the fix didn't fully resolve it, code pattern is present but may not be the cause, or the test passed both before and after the fix (a tautological pass that never actually exercised the bug) | Any pairing that doesn't satisfy CONFIRMED's or UNCONFIRMED's required values above — including `initial_test_result` not being `fail` |
 
 ### Confidence Definitions
 
-| Level    | Criteria                                                                                            |
-|----------|-----------------------------------------------------------------------------------------------------|
-| `High`   | Test was green after fix; root cause directly matches hypothesis; no alternative explanations       |
-| `Medium` | Test improved or partially passed; hypothesis explains most but not all observations                |
-| `Low`    | Hypothesis is plausible but evidence is circumstantial; test could not definitively confirm or deny |
+Each level is an observable checklist against the report's own fields, not a subjective read of how convincing the narrative sounds:
+
+| Level    | Criteria (all must hold)                                                                                                                                        |
+|----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `High`   | `status: confirmed` per the hard rule above, AND at least one `evidence` entry whose `excerpt` verbatim-matches the code at that `file`/`line` in `base_sha`        |
+| `Medium` | `status: confirmed` or `inconclusive`, evidence points at the right area of code, but no entry is a verbatim match against `base_sha`, or the match exists but the causal link in `relevance` is indirect |
+| `Low`    | Hypothesis is plausible but evidence is circumstantial — no verbatim code match against `base_sha`, or the claim rests on general reasoning about behavior rather than a specific cited line               |
+
+A `high` confidence report whose citation does not actually verbatim-match `base_sha` is a defect in the report, not a matter of degree — see the arbitrator's Step 2 re-verification and the single-winner spot-check at `SKILL.md` Step 5, both of which exist specifically to catch this before a fix is applied.
 
 ---
 
@@ -54,6 +60,11 @@ YAML fields to the template as follows:
 For a hypothesis whose agent timed out or crashed (no `hN.report.yaml` was ever written), render its row using the synthetic
 `test_result: not_run` record from Step 3 of `SKILL.md`, with `status: unconfirmed` and the remaining qualitative fields
 as "N/A".
+
+`initial_test_output_excerpt` and `final_test_output_excerpt` are not rendered in the table — they exist for audit, not
+summary. Consult them directly in the `hN.report.yaml` file when a status or citation looks suspicious (e.g., an excerpt
+that reads like a paraphrase rather than an actual test runner transcript is a signal the command may not have really
+been run).
 
 ```markdown
 # Parallel Debug Report

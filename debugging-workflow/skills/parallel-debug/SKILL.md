@@ -1,6 +1,6 @@
 ---
 name: parallel-debug
-description: This skill should be used when the user invokes /debugging-workflow:parallel-debug, asks to "debug in parallel", "try all hypotheses at once", "spawn multiple agents for this bug", "investigate multiple root causes", "parallel hypothesis testing", "parallel investigation", "I can't figure out what's causing this", "investigate from multiple angles", "I have multiple theories about this bug", or reports a complex or intermittent bug where the root cause is unclear and multiple theories need testing simultaneously.
+description: This skill should be used when the user invokes /debugging-workflow:parallel-debug, asks to "debug in parallel", "try all hypotheses at once", "spawn multiple agents for this bug", "investigate multiple root causes", "parallel hypothesis testing", "parallel investigation", "I can't figure out what's causing this and have a few theories", "investigate from multiple angles", "I have multiple theories about this bug", or reports a complex or intermittent bug where the root cause is unclear and multiple theories need testing simultaneously.
 argument-hint: "[error message, stack trace, or bug description]"
 allowed-tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "Agent"]
 license: MIT
@@ -79,11 +79,13 @@ Report output path: .claude/debug-sessions/{session_id}/hN.report.yaml
 
 Wait for all instances across all batches to finish. If an agent times out or crashes, no `hN.report.yaml` was ever written for it — synthesize a minimal in-memory record with `test_result: not_run`, `status: unconfirmed`, and the remaining qualitative fields set to "N/A", and proceed with the remaining hypotheses — still clean up its worktree in Step 7. Read all `hN.report.yaml` files into memory before proceeding.
 
+While reading each report, validate it against the schema in the investigator's Phase 4 (`../../agents/hypothesis-investigator.md`): all required fields present, and `status`/`confidence`/`initial_test_result`/`test_result` hold only their documented enum values. A malformed or incomplete report is treated the same as a crashed agent — downgrade it to `status: unconfirmed` / `test_result: not_run` rather than interpreting missing or malformed fields charitably. The orchestrator does not guess at what a broken report meant.
+
 ---
 
 ## Step 4 — Decide whether arbitration is needed
 
-Do NOT call `hypothesis-arbitrator` unconditionally. A report counts as **passing** for this gate only when both `status: confirmed` AND `test_result: pass` — a report with `status: inconclusive` does not count as passing here even if its `test_result` happens to be `pass` (that combination means the test went green but the investigator's own evidence review found the mechanism didn't fully explain the bug; see the Status Definitions in `references/report-format.md`). Such a report is never auto-applied; it still appears in the Final Ranked Report. Check first:
+Do NOT call `hypothesis-arbitrator` unconditionally. A report counts as **passing** for this gate only when all three raw fields hold: `status: confirmed` AND `test_result: pass` AND `initial_test_result: fail`. Check the raw fields directly rather than trusting `status` alone — see `references/report-format.md` ("Status Definitions") for why a report can claim `status: confirmed` or `status: inconclusive` without actually satisfying this pairing. Either case fails this gate exactly like a plain `unconfirmed` report would; flag the inconsistency when presenting results rather than silently correcting or trusting it. Such a report is never auto-applied, but it still appears in the Final Ranked Report. Check first:
 
 - **Exactly one report passes** → skip arbitration. Go directly to Step 5 with that hypothesis selected.
 - **Zero reports pass** → skip arbitration. Go to Step 6b (this includes the case where only `inconclusive` and/or `unconfirmed` reports exist).
@@ -97,16 +99,20 @@ This gating keeps the common case cheap — arbitration only runs when there is 
 
 Based on the outcome (single passing hypothesis from Step 4, or the arbitrator's `ONE_WINNER`/`MERGE_FIXES` decision), identify the winning hypothesis id(s) and look up each one's `commit_sha` from the `hN.report.yaml` already read in Step 3 — investigators commit their fix (source + test) to their own worktree branch, so the commit is the unit of application, not the `fix_diff` text.
 
-1. Confirm the main working tree is still on the branch the user was originally on — it never left, since all investigation happened in separate worktrees.
-2. Record `pre_apply_sha=$(git rev-parse HEAD)` before cherry-picking anything. This is the single rollback point for the rest of this step — use it instead of computing how many commits to unwind, regardless of whether the failure happens on the first cherry-pick, the second (`MERGE_FIXES`), or the test re-run.
-3. Cherry-pick the winning commit(s): `git cherry-pick <commit_sha>`. For `MERGE_FIXES` with two selected hypotheses, cherry-pick both SHAs in sequence.
+1. **Verify the artifacts before trusting them** (see `references/apply-verification.md` for why each check below exists). For each winning hypothesis id:
+   - Confirm the commit actually exists: `git cat-file -e <commit_sha>^{commit}`. If it does not resolve, do not cherry-pick it — escalate to the user with the hypothesis id and the fact that its commit reference is invalid.
+   - Confirm the commit's actual contents are consistent with the report: `git show --name-only <commit_sha>` should include the report's `test_file` and be consistent with `test_scope_files`/`side_effects_flagged`. If not, escalate rather than apply silently.
+   - **If this hypothesis reached Step 5 without going through arbitration** (the single-passing-report path from Step 4), spot-check at least one evidence citation yourself: run `git show <base_sha>:<evidence[0].file>` and confirm `evidence[0].excerpt` actually appears at `evidence[0].line`. If the citation doesn't check out, treat the report as unverified: do not apply it, and escalate to the user with what the citation actually showed.
+2. Confirm the main working tree is still on the branch the user was originally on — it never left, since all investigation happened in separate worktrees.
+3. Record `pre_apply_sha=$(git rev-parse HEAD)` before cherry-picking anything. This is the single rollback point for the rest of this step — use it instead of computing how many commits to unwind, regardless of whether the failure happens on the first cherry-pick, the second (`MERGE_FIXES`), or the test re-run.
+4. Cherry-pick the winning commit(s): `git cherry-pick <commit_sha>`. For `MERGE_FIXES` with two selected hypotheses, cherry-pick both SHAs in sequence.
    - If any cherry-pick in the sequence reports a conflict: run `git cherry-pick --abort` (this only cancels the pick currently in progress — it does NOT undo an earlier commit in the same sequence that already applied cleanly), then run `git reset --hard $pre_apply_sha` to return the branch to exactly its pre-apply state. Escalate to the user with the conflicting hypothesis ids — do not hand-resolve the conflict yourself.
-4. Re-run the tests one more time on the main branch — a commit that passed in an isolated worktree can still fail once merged with the real working tree state. Since the investigator(s) committed the test file(s) alongside the fix(es), they are now present on the main branch and runnable.
+5. Re-run the tests one more time on the main branch — a commit that passed in an isolated worktree can still fail once merged with the real working tree state. Since the investigator(s) committed the test file(s) alongside the fix(es), they are now present on the main branch and runnable.
    - **Single hypothesis (Step 4 single-pass or arbitrator `ONE_WINNER`)**: re-run that hypothesis's `test_command`.
    - **`MERGE_FIXES`**: re-run both selected hypotheses' `test_command`s, then the full test suite — two independent fixes can interact even when each `test_command` passes on its own, and the full suite is what actually surfaces that interaction.
 
-   If any test fails, run `git reset --hard $pre_apply_sha` (the same rollback point from step 2, regardless of how many commits were applied) and escalate to the user with the specific failure — do not retry silently.
-5. Report to the user using the **Final Ranked Report** format from `references/report-format.md`, built entirely from the `hN.report.yaml` files (including the synthetic records from Step 3) — not from any agent's conversational message. Sort all entries (not just the winner) with the Ranking Algorithm in that file, render the Ranked Results / Summary Table using each entry's `status`, `confidence`, `test_file`/`test_name`, and `fix_summary` fields, and fill in the Recommendation section noting which hypothesis/hypotheses were applied and the arbitrator's `reasoning` if arbitration ran.
+   If any test fails, run `git reset --hard $pre_apply_sha` (the same rollback point from step 3, regardless of how many commits were applied) and escalate to the user with the specific failure — do not retry silently.
+6. Report to the user using the **Final Ranked Report** format from `references/report-format.md`, built entirely from the `hN.report.yaml` files (including the synthetic records from Step 3) — not from any agent's conversational message. Sort all entries (not just the winner) with the Ranking Algorithm in that file, render the Ranked Results / Summary Table using each entry's `status`, `confidence`, `test_file`/`test_name`, and `fix_summary` fields, and fill in the Recommendation section noting which hypothesis/hypotheses were applied and the arbitrator's `reasoning` if arbitration ran.
 
 ---
 
@@ -152,6 +158,7 @@ Run this even on the escalation path, once the user's final choice has been appl
 
 - **`references/hypothesis-catalog.md`** — Full hypothesis library organized by symptom; used in Step 1
 - **`references/report-format.md`** — Evidence report spec and ranking algorithm
+- **`references/apply-verification.md`** — Rationale behind the Step 5 artifact-verification checks
 - **`examples/debugging-workflow.local.md`** — Complete settings template
 - **`../../agents/hypothesis-investigator.md`** — Per-hypothesis investigation agent
 - **`../../agents/hypothesis-arbitrator.md`** — Conflict-resolution agent invoked in Step 4 when multiple hypotheses pass
