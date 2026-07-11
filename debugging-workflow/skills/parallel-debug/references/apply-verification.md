@@ -6,10 +6,15 @@ Why `SKILL.md` Step 5 verifies artifacts before applying them, referenced inline
 
 An agent's report is not proof by itself. A `commit_sha` that does not resolve via
 `git cat-file -e <commit_sha>^{commit}` is a hallucinated field, not a typo to route around — never cherry-pick it.
-Likewise, a commit whose actual contents (`git show --name-only <commit_sha>`) touch files the report never
-mentioned (missing from `test_file`, `test_scope_files`, or `side_effects_flagged`) is a discrepancy between claim
-and artifact, not a detail to reconcile silently. Both cases must escalate to the user rather than be routed around
-or corrected automatically.
+Likewise, a commit's actual contents (`git show --name-only <commit_sha>`) must line up exactly with what the report
+claims: the same paths as `fix_diff`, the report's `test_file` present, and none of the `side_effects_flagged` paths.
+`side_effects_flagged` files were deliberately left unstaged by the investigator (Phase 3 of
+`../../../agents/hypothesis-investigator.md`) precisely because they fell outside the hypothesis's scope — finding
+one of them in the commit means the investigator's own staging discipline failed, not that the commit is "consistent"
+with the report. `test_scope_files` records what the test run exercised, which is a different question from what the
+commit contains (a test can pass while exercising code the fix never touched); it plays no part in this check.
+Any mismatch is a discrepancy between claim and artifact, not a detail to reconcile silently — escalate to the user
+rather than route around it or correct it automatically.
 
 ## Why the single-winner spot-check exists
 

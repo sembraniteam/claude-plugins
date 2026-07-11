@@ -17,7 +17,7 @@ root cause claim, report path) — a completion signal for the orchestrator and 
 the live transcript. It is never a data source: nothing downstream re-derives report fields from it, and it is not
 available at all for a crashed or timed-out agent, unlike the YAML file which the orchestrator can still act on.
 
-The `status` and `confidence` fields in the YAML report follow these definitions:
+The `status` and `confidence` fields in the YAML report follow these definitions. Note up front: a `test_result: not_run` record — whether written by an investigator that genuinely couldn't run its test, or synthesized by the orchestrator for a crashed/timed-out/malformed report (`SKILL.md` Step 3) — always maps to `UNCONFIRMED`, never `INCONCLUSIVE`, since no-evidence is a stronger negative than mixed evidence.
 
 ### Status Definitions
 
@@ -26,8 +26,8 @@ The `status` and `confidence` fields in the YAML report follow these definitions
 | Status           | Meaning                                                                                                                                          | Required field values                                    |
 |------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------|
 | `CONFIRMED ✓`    | The test reproduced the bug before the fix and passes after it; root cause is clearly the hypothesized mechanism                                 | `initial_test_result: fail` AND `test_result: pass`         |
-| `UNCONFIRMED ✗`  | Evidence does not support the hypothesis; the predicted code pattern was not found, or the test showed a different failure                       | `test_result: fail` after the fix, or the hypothesis is explicitly refuted |
-| `INCONCLUSIVE ?` | Mixed evidence — test reproduced the bug but the fix didn't fully resolve it, code pattern is present but may not be the cause, or the test passed both before and after the fix (a tautological pass that never actually exercised the bug) | Any pairing that doesn't satisfy CONFIRMED's or UNCONFIRMED's required values above — including `initial_test_result` not being `fail` |
+| `UNCONFIRMED ✗`  | Evidence does not support the hypothesis; the predicted code pattern was not found, or the test showed a different failure                       | `test_result: fail` after the fix, the hypothesis is explicitly refuted, or the investigation never ran / produced no evidence — including the orchestrator's synthetic `test_result: not_run` records for a crashed, timed-out, or malformed report (`SKILL.md` Step 3) |
+| `INCONCLUSIVE ?` | Mixed evidence — test reproduced the bug but the fix didn't fully resolve it, code pattern is present but may not be the cause, or the test passed both before and after the fix (a tautological pass that never actually exercised the bug) | Any pairing that doesn't satisfy CONFIRMED's or UNCONFIRMED's required values above — including `initial_test_result` not being `fail`, but excluding the no-evidence `not_run` cases now covered by UNCONFIRMED |
 
 ### Confidence Definitions
 

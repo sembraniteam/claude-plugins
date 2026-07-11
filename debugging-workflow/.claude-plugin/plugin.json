@@ -1,6 +1,6 @@
 {
   "name": "debugging-workflow",
-  "version": "0.8.3",
+  "version": "0.8.4",
   "description": "Parallel hypothesis debugging — generates multiple root-cause hypotheses and investigates them concurrently via autonomous agents",
   "author": {
     "name": "Ahmad Rifa'i",
