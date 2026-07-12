@@ -1,12 +1,6 @@
 # Release Notes Platform Guide
 
-## Platform Rules Summary
-
-| Platform   | File                      | Char Limit   | Items       | Tone              |
-|------------|---------------------------|--------------|-------------|-------------------|
-| Play Store | `RELEASE_NOTES_PLAYSTORE` | 500 / lang   | 3–5 (max 6) | Short, clear      |
-| App Store  | `RELEASE_NOTES_APPSTORE`  | 4,000 / lang | 5–6 (max 6) | Warm, detailed    |
-| Web        | `RELEASE_NOTES`           | None         | Up to 6     | Full, informative |
+For char limits, output files, and recommended item counts per platform, see the Platform Reference and Recommended Items tables in `SKILL.md`. This guide covers tone, writing style, and localization only.
 
 ---
 
@@ -148,10 +142,10 @@ Thank you to everyone who submitted feedback and bug reports. Keep them coming!
 
 ## Priority Order for Item Selection
 
-When character limits require trimming, remove in this order (last removed = highest priority):
+Items are kept/extracted in priority order: Breaking Changes → Added → Changed → Fixed → Reverted (see `SKILL.md`). When trimming for a character limit, remove from the end of that order first:
 
 1. Reverted (remove first)
-2. Changed
-3. Fixed
+2. Fixed
+3. Changed
 4. Added
 5. Breaking Changes (remove last — always include if present)

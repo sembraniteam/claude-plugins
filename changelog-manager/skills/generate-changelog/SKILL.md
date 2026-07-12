@@ -1,6 +1,6 @@
 ---
 name: generate-changelog
-description: This skill should be used when the user asks to "generate changelog", "update changelog", "create changelog", "add changelog entry", "summarize commits for changelog", "prepare a new version", "bump version", "what changed since last release", "write a release entry", or "tag this version". Also trigger when the user mentions updating CHANGELOG.md or documenting recent commits.
+description: This skill should be used when the user asks to "generate changelog", "update changelog", "create changelog", "add changelog entry", "summarize commits for changelog", "prepare a new version", "bump version", "what changed since last release", or "write a release entry". Also trigger when the user mentions updating CHANGELOG.md or documenting recent commits.
 argument-hint: "[version override]  e.g. v2.0.0"
 allowed-tools: ["Read", "Write", "Bash", "Skill", "AskUserQuestion"]
 ---
@@ -28,7 +28,7 @@ Check whether `.claude/changelog-manager.local.md` exists:
 
 ## Pre-flight Questions
 
-Ask all questions at once:
+Ask all questions at once using the AskUserQuestion tool:
 
 1. **Release notes** — Do you want release notes generated after the changelog is created?
 2. **Platform(s)** *(only if #1 = Yes)* — Which platform(s)? Show current value from settings as default.
@@ -37,7 +37,6 @@ Ask all questions at once:
    - C. Web
    - Accept single or multiple answers (e.g., "A", "A and B", "all").
 3. **Languages** *(only if #1 = Yes)* — Which languages? Show current value from settings as default. (Locale codes in `language_REGION` format, e.g. `en_US, id_ID`)
-4. **Git tag** — Do you want to create a new git tag based on the computed version?
 
 After answers, confirm selections:
 
@@ -45,7 +44,6 @@ After answers, confirm selections:
 > - Release notes: Yes / No
 > - Platform(s): App Store / Play Store / Web *(omit if release notes = No)*
 > - Languages: `en_US, id_ID` *(omit if release notes = No)*
-> - Git tag: Yes / No
 
 ## Commit Analysis
 
@@ -65,6 +63,8 @@ The JSON output contains:
 | `next_version` | Computed next semver tag                               |
 | `date`         | Today's date (YYYY-MM-DD)                              |
 | `commits`      | Array of `{ category, message, pr, breaking }` objects |
+
+**Version override** — if the user supplied a version argument (e.g. `v2.0.0`), use it in place of `next_version` for the rest of this workflow instead of the computed value. Still use the script's `commits` array to populate the entry. Normalize it to `vMAJOR.MINOR.PATCH` format (add a leading `v` if missing); if it doesn't parse as semver, ask the user to confirm or re-enter it before proceeding.
 
 ## Write CHANGELOG.md
 
@@ -104,33 +104,19 @@ Omit empty sections. Format entries as:
 
 **If CHANGELOG.md exists** — prepend the new version block after `## [Unreleased]` (or after the header if no Unreleased section). Never overwrite or remove existing entries.
 
-## Confirmed Actions
-
-Execute in order, showing output for each:
-
-1. **Create git tag** (if confirmed) — run `git tag <next_version>`. Show command and output. Do not push.
-2. **Generate release notes** (if confirmed) — invoke `changelog-manager:generate-release-notes` via Skill tool. Map platform answers: A → `appstore`, B → `playstore`, C → `web`. Pass platform(s) and language codes as context — do not ask again.
-
-If both git tag and release notes were No, stop after writing CHANGELOG.md.
-
-## Summary
-
-After completing all actions, display a summary block:
-
-| Field                | Value                         | Reason                                   |
-|----------------------|-------------------------------|------------------------------------------|
-| **Previous version** | `v1.1.0`                      | N/A                                      |
-| **Next version**     | `v1.2.0`                      | Semver bump based on commit types        |
-| **Entries added**    | `3`                           | N/A                                      |
-| **CHANGELOG.md**     | Created / Updated             | N/A                                      |
-| **Git tag**          | `v1.2.0` / Not created        | N/A                                      |
-| **Release notes**    | Generated / Not generated     | N/A                                      |
-
 ## Rules
 
 - `bump`, `test`, `ci`, `chore`, and `docs` commits are always excluded — never add them manually
 - Breaking changes (commits ending with `!` or containing `BREAKING CHANGE`) override other categories and always appear in `### Breaking Changes`
 - Preserve all existing CHANGELOG entries unchanged when updating
+
+## Confirmed Actions
+
+**Generate release notes** (if confirmed) — invoke `changelog-manager:generate-release-notes` via Skill tool. Map platform answers: A → `appstore`, B → `playstore`, C → `web`. Pass platform(s) and language codes as context — do not ask again.
+
+If release notes were No, stop after writing CHANGELOG.md.
+
+Report the new version number and confirm CHANGELOG.md was created or updated before finishing.
 
 ## Additional Resources
 

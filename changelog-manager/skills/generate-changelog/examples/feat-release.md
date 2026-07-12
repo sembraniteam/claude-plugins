@@ -80,14 +80,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ```
 
 The new version block is prepended after `## [Unreleased]`. Existing entries are unchanged.
-
-## Summary Output
-
-| Field                | Value              | Reason                                    |
-|----------------------|--------------------|-------------------------------------------|
-| **Previous version** | `v1.1.0`           | N/A                                       |
-| **Next version**     | `v1.2.0`           | MINOR bump — new `feat` commits, no break |
-| **Entries added**    | `4`                | N/A                                       |
-| **CHANGELOG.md**     | Updated            | N/A                                       |
-| **Git tag**          | Not created        | N/A                                       |
-| **Release notes**    | Not generated      | N/A                                       |

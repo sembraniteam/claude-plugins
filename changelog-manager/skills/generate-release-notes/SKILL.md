@@ -2,7 +2,7 @@
 name: generate-release-notes
 description: This skill should be used when the user asks to "generate release notes", "create release notes", "prepare App Store release", "prepare Play Store release", "bilingual release notes", "translate release notes", "write what's new section", "update store listing", "draft app update description", or references RELEASE_NOTES, RELEASE_NOTES_APPSTORE, or RELEASE_NOTES_PLAYSTORE files.
 argument-hint: "[platform]  e.g. playstore | appstore | web"
-allowed-tools: ["Read", "Bash"]
+allowed-tools: ["Read", "Bash", "Agent"]
 ---
 
 # Generate Release Notes
@@ -62,48 +62,34 @@ python3 $CLAUDE_PLUGIN_ROOT/scripts/generate-release-notes.py \
 | `appstore`  | 5–6 (can expand on key features)                 |
 | `web`       | Up to 6 significant changes, in full detail      |
 
-For Play Store, prioritize: Breaking Changes > Added > Changed > Fixed > Reverted.
-
 **`--outro`** (optional, strongly recommended) — 1-sentence closing appended after items with a blank line. Use for calls to action, thank-you notes, or support links. Translate per language. Omit for Play Store only if near 500 chars.
 
-Example: `"Thank you for updating — we hope you enjoy the new features!"`
-
-For tone guidelines, language examples, and localization tips, see **`references/platform-guide.md`**.
+For tone guidelines, language examples, localization tips, and a worked outro example, see **`references/platform-guide.md`** and **`examples/playstore-bilingual.md`**.
 
 ## Error Handling
 
 **Character limit exceeded** (Play Store / App Store):
 
-Delegate to the **`release-notes-validator`** agent — pass it the full command you attempted. It will:
+Delegate to the **`release-notes-validator`** agent via the Agent tool (`subagent_type: "changelog-manager:release-notes-validator"`) — pass it the full command you attempted. It will:
 1. Calculate per-language character counts
 2. Remove lowest-priority items from the end (items are ordered by priority, so the last ones are lowest)
 3. Append a closing phrase ("and many more improvements") if items were removed
 4. Re-run the adjusted command and report what changed
 
-Only handle manually if the agent is unavailable:
+Only handle manually if the agent is unavailable, mirroring the agent's own order:
 1. Remove the outro if present
-2. Shorten intro to 1 sentence (~110–120 chars)
-3. Remove lowest-priority items (Reverted → Changed → Fixed)
+2. Remove lowest-priority items (Reverted → Fixed → Changed)
+3. Shorten the intro to 1 sentence (~110–120 chars) — last resort
 4. Shorten remaining item text
 5. Re-run the script
 
 **Intro too short** (under 100 chars) — expand to be more descriptive; add release context.
 
-## Summary
-
-After generating, display a summary block:
-
-| Field             | Value                                               | Reason          |
-|-------------------|-----------------------------------------------------|-----------------|
-| **Version**       | `v1.2.0`                                            | N/A             |
-| **Platform(s)**   | `appstore, playstore`                               | N/A             |
-| **Languages**     | `en_US, id_ID`                                      | N/A             |
-| **Files written** | `RELEASE_NOTES_APPSTORE`, `RELEASE_NOTES_PLAYSTORE` | N/A             |
-| **Char count**    | `en_US: 1,234 / id_ID: 1,102`                       | N/A             |
-| **Items omitted** | None / `Changed, Reverted` *(if truncated)*         | Character limit |
+After generating, report the version, platforms, languages, files written, and any items omitted due to character limits.
 
 ## Additional Resources
 
 - **`references/platform-guide.md`** — Tone guidelines, writing examples per platform, and localization tips
 - **`examples/playstore-bilingual.md`** — Complete worked example: Play Store with English + Indonesian output
-- **`agents/release-notes-validator`** — Auto-trims items and appends closing phrases when char limits are exceeded
+
+The **`release-notes-validator`** agent (invoked automatically — see Error Handling) auto-trims items and appends closing phrases when char limits are exceeded.

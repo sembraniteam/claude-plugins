@@ -44,11 +44,7 @@ platforms:
 
 ### Valid Platform Values
 
-| Value       | Output File               | Char Limit   |
-|-------------|---------------------------|--------------|
-| `playstore` | `RELEASE_NOTES_PLAYSTORE` | 500 / lang   |
-| `appstore`  | `RELEASE_NOTES_APPSTORE`  | 4,000 / lang |
-| `web`       | `RELEASE_NOTES`           | No limit     |
+`playstore`, `appstore`, `web` — for output files and char limits per platform, see the Platform Reference table in `changelog-manager:generate-release-notes`'s `SKILL.md`.
 
 ## Workflow
 
@@ -80,38 +76,10 @@ platforms:
 - If any English locale (`en_*`) is included, list it first — this ensures the English section appears before translated sections in the output file
 - File is valid YAML
 
-## Summary
-
-After writing, display a summary block:
-
-| Field         | Value                                  | Reason |
-|---------------|----------------------------------------|--------|
-| **Languages** | `en_US, id_ID`                         | N/A    |
-| **Platforms** | `playstore, appstore`                  | N/A    |
-| **File**      | `.claude/changelog-manager.local.md`   | N/A    |
-| **Action**    | Created / Updated                      | N/A    |
-
 Remind the user:
 - The file is **gitignored** and should not be committed
 - Run `generate-changelog` before `generate-release-notes` to ensure CHANGELOG.md is current
 
-## Common Locale Codes
+## Additional Resources
 
-| Locale    | Language                     |
-|-----------|------------------------------|
-| `en_US`   | English (United States)      |
-| `en_GB`   | English (United Kingdom)     |
-| `id_ID`   | Indonesian (Indonesia)       |
-| `fr_FR`   | French (France)              |
-| `de_DE`   | German (Germany)             |
-| `ja_JP`   | Japanese (Japan)             |
-| `ko_KR`   | Korean (South Korea)         |
-| `zh_CN`   | Chinese Simplified (China)   |
-| `zh_TW`   | Chinese Traditional (Taiwan) |
-| `es_ES`   | Spanish (Spain)              |
-| `es_MX`   | Spanish (Mexico)             |
-| `pt_BR`   | Portuguese (Brazil)          |
-| `pt_PT`   | Portuguese (Portugal)        |
-| `ar_SA`   | Arabic (Saudi Arabia)        |
-| `hi_IN`   | Hindi (India)                |
-| `tr_TR`   | Turkish (Turkey)             |
+- **`references/locale-codes.md`** — Common locale codes and language names to suggest when asking about languages
