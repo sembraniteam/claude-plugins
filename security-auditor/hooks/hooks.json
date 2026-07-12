@@ -2,11 +2,11 @@
   "hooks": {
     "PostToolUse": [
       {
-        "matcher": "Write|Edit",
+        "matcher": "Write|Edit|NotebookEdit",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 $CLAUDE_PLUGIN_ROOT/scripts/security-lint.py"
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/security-lint.py"
           }
         ]
       }

@@ -263,6 +263,8 @@ security-auditor/
 │   └── security-lint.py       # PostToolUse hook script
 ├── hooks/
 │   └── hooks.json             # PostToolUse hook definition
+├── test-fixtures/             # Intentionally vulnerable demo files, for
+│                              # trying the plugin against known-bad code
 └── .mcp.json                  # MCP server registration
 ```
 
@@ -285,14 +287,11 @@ security-auditor/
 
 The hook warns about high-risk patterns (SQL injection, eval, hardcoded secrets) whenever you edit a source file. To disable it:
 
-**Option 1 — Per project**: add to your project's `.claude/settings.json`:
-```json
-{
-  "disabledHooks": ["security-auditor:PostToolUse"]
-}
-```
+**Option 1 — Per environment**: set the environment variable `SECURITY_AUDITOR_DISABLE_LINT=1` (e.g. in your shell profile) before starting Claude Code. The hook script checks this and exits immediately without scanning.
 
 **Option 2 — Global disable**: remove the `PostToolUse` entry from the plugin's `hooks/hooks.json` after installation.
+
+There is no Claude Code settings key for disabling a single plugin's hook by name — the two options above are the only mechanisms.
 
 ---
 

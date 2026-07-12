@@ -11,13 +11,20 @@ import sys
 
 
 def main():
+    # Opt-out gate: set SECURITY_AUDITOR_DISABLE_LINT=1 (e.g. in your shell
+    # profile or a project .env loaded before Claude Code starts) to skip this
+    # hook entirely. This is a real, functional mechanism — unlike a settings
+    # key, which does not exist for disabling a single plugin hook.
+    if os.environ.get("SECURITY_AUDITOR_DISABLE_LINT") == "1":
+        sys.exit(0)
+
     try:
         data = json.load(sys.stdin)
     except Exception:
         sys.exit(0)
 
     tool_input = data.get("tool_input") or {}
-    file_path = tool_input.get("file_path") or tool_input.get("path") or ""
+    file_path = tool_input.get("file_path") or tool_input.get("path") or tool_input.get("notebook_path") or ""
 
     if not file_path or not os.path.isfile(file_path):
         sys.exit(0)
@@ -27,7 +34,9 @@ def main():
         r"\.(md|txt|json|yaml|yml|toml|lock|env\.example|gitignore|dockerignore|css|svg|png|jpg|gif|ico)$",
         re.IGNORECASE,
     )
-    skip_path = re.compile(r"[/\\](test|tests|spec|specs|__tests__|__pycache__|node_modules)[/\\]", re.IGNORECASE)
+    skip_path = re.compile(
+        r"[/\\](test|tests|test-fixtures|spec|specs|__tests__|__pycache__|node_modules)[/\\]", re.IGNORECASE
+    )
 
     if skip_ext.search(file_path) or skip_path.search(file_path):
         sys.exit(0)
@@ -68,11 +77,16 @@ def main():
         warnings.append("unsafe deserialization (CWE-502): pickle.load or yaml.load without SafeLoader")
 
     if warnings:
+        # Exit 0 + stdout is transcript-only and is not fed back to Claude or
+        # surfaced to the user. Exit 2 + stderr is fed back to Claude, so the
+        # warning is actually seen and can be relayed or acted on.
         basename = os.path.basename(file_path)
-        print(f"\n⚠️  security-auditor: {basename}")
+        lines = [f"⚠️  security-auditor: {basename}"]
         for w in warnings:
-            print(f"   • {w}")
-        print(f"   Run: /audit-file {file_path}\n")
+            lines.append(f"   • {w}")
+        lines.append(f"   Run: /audit-file {file_path}")
+        print("\n".join(lines), file=sys.stderr)
+        sys.exit(2)
 
 
 if __name__ == "__main__":

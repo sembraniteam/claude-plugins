@@ -144,13 +144,16 @@ def _parse_osv_vuln(v: Dict) -> Dict:
     aliases = v.get("aliases", [])
     cve_ids = [a for a in aliases if a.startswith("CVE-")]
     severity = v.get("severity", [])
-    cvss_score = None
+    # OSV's severity[].score is a CVSS *vector string* (e.g. "CVSS:3.1/AV:N/..."),
+    # not a numeric score — name it accordingly so callers don't mistake it for
+    # a number to print in a CVSS column. get_cve (NVD) is the only numeric source.
+    cvss_vector = None
     for preferred_type in ("CVSS_V4", "CVSS_V3", "CVSS_V2"):
         for s in severity:
             if s.get("type") == preferred_type:
-                cvss_score = s.get("score")
+                cvss_vector = s.get("score")
                 break
-        if cvss_score is not None:
+        if cvss_vector is not None:
             break
     affected = v.get("affected", [])
     ranges = []
@@ -163,7 +166,7 @@ def _parse_osv_vuln(v: Dict) -> Dict:
         "osv_id": v.get("id", ""),
         "cve_ids": cve_ids,
         "summary": v.get("summary", ""),
-        "cvss_score": cvss_score,
+        "cvss_vector": cvss_vector,
         "fixed_versions": list(set(ranges)),
         "published": v.get("published", ""),
     }
@@ -381,28 +384,30 @@ def get_epss(cve_id: str) -> Dict:
         return cached
     try:
         data = _http_get(EPSS_BASE, params={"cve": cve_id})
-        entries = data.get("data", [])
-        if entries:
-            e = entries[0]
-            score = float(e.get("epss", 0))
-            result = {
-                "cve_id": cve_id,
-                "found": True,
-                "epss_score": score,
-                "percentile": float(e.get("percentile", 0)),
-                "date": e.get("date", ""),
-                "interpretation": f"{score * 100:.1f}% probability of exploitation in the next 30 days",
-                "source": "FIRST.org EPSS",
-            }
-        else:
-            result = {
-                "cve_id": cve_id,
-                "found": False,
-                "epss_score": None,
-                "source": "FIRST.org EPSS",
-            }
     except Exception as exc:
-        result = {"cve_id": cve_id, "error": str(exc), "epss_score": None}
+        # Do not cache a transient failure — EPSS is read with a 24h TTL, so a
+        # cached error would silence the exploitation-probability signal for a full day.
+        return {"cve_id": cve_id, "error": str(exc), "epss_score": None}
+    entries = data.get("data", [])
+    if entries:
+        e = entries[0]
+        score = float(e.get("epss", 0))
+        result = {
+            "cve_id": cve_id,
+            "found": True,
+            "epss_score": score,
+            "percentile": float(e.get("percentile", 0)),
+            "date": e.get("date", ""),
+            "interpretation": f"{score * 100:.1f}% probability of exploitation in the next 30 days",
+            "source": "FIRST.org EPSS",
+        }
+    else:
+        result = {
+            "cve_id": cve_id,
+            "found": False,
+            "epss_score": None,
+            "source": "FIRST.org EPSS",
+        }
     _cache_set(key, result)
     return result
 
@@ -420,29 +425,32 @@ def get_kev(cve_id: str) -> Dict:
         return cached
     try:
         catalog = _load_kev_catalog()
-        entry = catalog.get(cve_id)
-        if entry:
-            result = {
-                "cve_id": cve_id,
-                "in_kev": True,
-                "vendor": entry.get("vendorProject", ""),
-                "product": entry.get("product", ""),
-                "vulnerability_name": entry.get("vulnerabilityName", ""),
-                "date_added": entry.get("dateAdded", ""),
-                "due_date": entry.get("dueDate", ""),
-                "required_action": entry.get("requiredAction", ""),
-                "known_ransomware": entry.get("knownRansomwareCampaignUse", "") == "Known",
-                "source": "CISA KEV",
-            }
-        else:
-            result = {
-                "cve_id": cve_id,
-                "in_kev": False,
-                "catalog_size": len(catalog),
-                "source": "CISA KEV",
-            }
     except Exception as exc:
-        result = {"cve_id": cve_id, "error": str(exc), "in_kev": None}
+        # Do not cache a transient failure — KEV presence "must be treated as
+        # Critical" per this tool's own guidance; a cached error would silence
+        # that escalation for the rest of the cache lifetime.
+        return {"cve_id": cve_id, "error": str(exc), "in_kev": None}
+    entry = catalog.get(cve_id)
+    if entry:
+        result = {
+            "cve_id": cve_id,
+            "in_kev": True,
+            "vendor": entry.get("vendorProject", ""),
+            "product": entry.get("product", ""),
+            "vulnerability_name": entry.get("vulnerabilityName", ""),
+            "date_added": entry.get("dateAdded", ""),
+            "due_date": entry.get("dueDate", ""),
+            "required_action": entry.get("requiredAction", ""),
+            "known_ransomware": entry.get("knownRansomwareCampaignUse", "") == "Known",
+            "source": "CISA KEV",
+        }
+    else:
+        result = {
+            "cve_id": cve_id,
+            "in_kev": False,
+            "catalog_size": len(catalog),
+            "source": "CISA KEV",
+        }
     _cache_set(key, result)
     return result
 

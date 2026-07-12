@@ -1,6 +1,7 @@
 ---
 name: security-fixer
 description: "Use this agent when the /audit-fix command delegates remediation work. Spawned only on explicit user request — never automatically. Given a list of finding-IDs from an existing audit report, fixes vulnerabilities one at a time: shows a fix plan first, waits for confirmation, then applies the minimal code change that closes the root cause per the CWE. Never runs shell commands, installs packages, or executes tests. Outputs a fix manifest for the fix-reviewer agent."
+tools: [Edit, Read, Grep, Glob, Write]
 model: inherit
 color: orange
 ---

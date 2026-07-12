@@ -224,6 +224,8 @@ This section defines the contract between the three agents in the remediation pi
 
 Every finding produced by `security-auditor` must have a stable ID in the format `SA-NNN` (zero-padded to 3 digits: `SA-001`, `SA-002`, …). These IDs are the primary key used by the fixer and reviewer to trace changes back to specific audit findings. Never use `VULN-N` or any other format in reports that will feed into `/audit-fix`.
 
+The `SA-NNN` numbering is a single sequence per session, not per command invocation. Before assigning IDs, check whether the current conversation already contains findings from an earlier `/audit`, `/audit-file`, or `/audit-deps` run and continue numbering from the highest existing `SA-NNN` — do not restart at `SA-001`. Restarting the sequence makes `/audit-fix SA-001` ambiguous when multiple files have been audited in the same session.
+
 ### Fix Manifest format
 
 After completing all fixes, `security-fixer` outputs a fix manifest. The reviewer reads this manifest to know exactly what changed.

@@ -1,6 +1,7 @@
 ---
 name: fix-reviewer
 description: Use this agent when the /audit-fix command delegates post-fix verification, or when /audit-verify runs standalone review. Given the original audit report, a fix manifest from security-fixer, and the current file contents, independently verifies whether each fix actually closes the vulnerability at its root cause. Read-only — never writes or edits files.
+tools: [Read, Grep, Glob]
 model: inherit
 color: blue
 ---

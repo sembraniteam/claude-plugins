@@ -32,10 +32,13 @@ Summarize the map to the user before proceeding: "Scanning a [framework] project
 
 ## Step 3 — Code analysis via subagent
 
+Check this session for findings from an earlier `/audit`, `/audit-file`, or `/audit-deps` run. The `security-auditor` agent has a fresh context and cannot see them itself, so determine the next unused `SA-NNN` (or `SA-001` if none exist yet) before spawning it.
+
 Spawn the `security-auditor` agent to perform a read-only structural analysis of the codebase. Pass it:
 - The project root path
 - The project map from Step 2 (entry points, auth files, DB query files)
 - The audit mode (dev/prod)
+- The starting `SA-NNN` number determined above
 
 Wait for the agent to return its findings before proceeding.
 

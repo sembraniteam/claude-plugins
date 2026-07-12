@@ -40,6 +40,8 @@ Also check the Extended Categories from the skill (Hardcoded Secrets, Path Trave
 
 ## Step 4 — Format findings
 
+Continue `SA-NNN` numbering from any findings already in this session (from an earlier `/audit`, `/audit-file`, or `/audit-deps` run) instead of restarting at `SA-001` — see "Finding-ID format" in the skill.
+
 For EACH finding, output:
 
 ```
