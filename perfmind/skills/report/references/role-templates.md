@@ -21,7 +21,7 @@ If no clear signal, default to **Developer**.
 
 Every number that appears in a report (percentages, durations, counts, dollar amounts) must trace back to a finding actually stated in the conversation. If a number isn't there, write "needs measurement" instead of estimating one — this applies with extra force to the Leadership template below, whose numeric examples are illustrative placeholders only and must never be copied into a real report as-is.
 
-**"Unverified" findings:** Some of the role sections below say a finding "may be Unverified." This refers to a hypothesis that received the `Unverified` verdict in a `performance-analyst` agent's "Hypotheses Investigated" list (see `agents/performance-analyst.md`'s Output Format) — evidence existed but wasn't sufficient to confirm or reject it, or couldn't be quoted verbatim. If findings arrive from `/perfmind:investigate` instead, there is no equivalent verdict field; treat any finding whose evidence is thin, image-sourced, or otherwise unconfirmed the same way an Unverified finding is treated below.
+**"Unverified" findings:** Some of the role sections below say a finding "may be Unverified." This refers to a hypothesis that received the `Unverified` verdict in a `performance-analyst` agent's "Hypotheses Investigated" list (see `../../../agents/performance-analyst.md`'s Output Format) — evidence existed but wasn't sufficient to confirm or reject it, or couldn't be quoted verbatim. If findings arrive from `/perfmind:investigate` instead, there is no equivalent verdict field; treat any finding whose evidence is thin, image-sourced, or otherwise unconfirmed the same way an Unverified finding is treated below.
 
 ---
 
