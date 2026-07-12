@@ -75,7 +75,7 @@ Common culprits: retained closures holding large objects, event listener leaks (
 - CPU: Instruments Time Profiler — look for wide stacks in the main thread track
 - Memory: Instruments Allocations instrument for growth over time; Xcode Memory Graph Debugger for retain-cycle detection (purple exclamation icons)
 - Retain cycles: check `weak`/`unowned` capture in closures, especially delegate and completion-handler patterns
-- Main thread stalls: Instruments Time Profiler + "Main Thread Only" filter; flag any I/O or heavy computation off the main run loop
+- Main thread stalls: Instruments Time Profiler + "Main Thread Only" filter; flag any I/O or heavy computation on the main run loop (it should be moved off)
 - `leaks` command-line tool or Instruments Leaks template for a quick standalone leak scan
 
 ### Browser DevTools (Web)
