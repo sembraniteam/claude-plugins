@@ -21,6 +21,8 @@ If no clear signal, default to **Developer**.
 
 Every number that appears in a report (percentages, durations, counts, dollar amounts) must trace back to a finding actually stated in the conversation. If a number isn't there, write "needs measurement" instead of estimating one — this applies with extra force to the Leadership template below, whose numeric examples are illustrative placeholders only and must never be copied into a real report as-is.
 
+**"Unverified" findings:** Some of the role sections below say a finding "may be Unverified." This refers to a hypothesis that received the `Unverified` verdict in a `performance-analyst` agent's "Hypotheses Investigated" list (see `agents/performance-analyst.md`'s Output Format) — evidence existed but wasn't sufficient to confirm or reject it, or couldn't be quoted verbatim. If findings arrive from `/perfmind:investigate` instead, there is no equivalent verdict field; treat any finding whose evidence is thin, image-sourced, or otherwise unconfirmed the same way an Unverified finding is treated below.
+
 ---
 
 ## Developer Report
@@ -54,6 +56,7 @@ Every number that appears in a report (percentages, durations, counts, dollar am
 - Include file path and function name per finding when available
 - Estimate PR size (small/medium/large) to help with sprint planning
 - Group "Critical" items by the sprint they should land in
+- An Unverified finding may not appear under "Critical (fix this sprint)" unless the Implementation Checklist lists a verification step (e.g. attach a profiler, run `EXPLAIN ANALYZE`) *before* the fix step — never present an unconfirmed hypothesis as a scheduled fix
 
 ---
 
@@ -88,7 +91,7 @@ Database → N+1 queries on order_items (8–35 per request) → p99 variance pr
 
 **Audience notes:**
 - Always cite the measurement method alongside the metric
-- Flag any finding that lacks a before/after benchmark as "unverified"
+- Flag any finding that lacks a before/after benchmark as "needs measurement" (a missing-benchmark gap — distinct from the `Unverified` hypothesis-verdict status used elsewhere in this file)
 - Include a "confidence" note (High/Medium/Low) per root cause
 
 ---
@@ -126,6 +129,8 @@ Database → N+1 queries on order_items (8–35 per request) → p99 variance pr
 - Flag items that require a deploy vs. config-only changes
 - Note deployment risk (needs migration, requires downtime, zero-downtime capable)
 - Prefer concrete kubectl/terraform/config snippets over abstract descriptions
+- Never invent an SLO target — if the user never stated one, write "no SLO defined — recommend setting one" in the Target column instead of guessing a number
+- If a Runbook Entry is built from an Unverified finding, say so explicitly in the Diagnosis field
 
 ---
 
@@ -165,3 +170,4 @@ zero downtime, expected to resolve p99 latency breach immediately."]
 - Keep the entire report under 400 words
 - Lead with user impact, not technical root cause
 - One recommended next step only — leadership should leave with a single clear action
+- Omit Unverified findings entirely, or include them only with an explicit "needs confirmation" label — this is the audience least likely to verify a claim, so an unconfirmed hypothesis must never read as settled fact

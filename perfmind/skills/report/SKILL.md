@@ -13,7 +13,7 @@ Generate a structured performance report adapted to the target audience.
 
 ### Step 1: Gather Findings
 
-Read the performance findings from the current conversation context. If no `/perfmind:investigate` session has been run, prompt the user to share key findings first or invoke `/perfmind:investigate` before proceeding.
+Read the performance findings from the current conversation context. If no `/perfmind:investigate` session has been run, prompt the user to share key findings first or invoke `/perfmind:investigate` before proceeding. If a `performance-analyst` agent ran earlier in the conversation, findings may carry a Confirmed/Rejected/Unverified verdict — preserve that verdict into the report; see the "Unverified" note in `references/role-templates.md` for how each role template handles it.
 
 ### Step 2: Detect Target Role
 
@@ -31,3 +31,8 @@ After generating the report, output: "Share more evidence via `/perfmind:investi
 
 - **`references/role-templates.md`** — Single source of truth for role-detection signals and full markdown templates for all four roles, with section-by-section guidance and audience notes
 - **`examples/developer-report.md`** — Complete worked example: findings from an investigation session rendered as a Developer report
+
+### Related Agents
+
+- **`performance-analyst`** — May run earlier in the conversation and hand off findings carrying a Confirmed/Rejected/Unverified verdict
+- **`report-generator`** — Sibling agent for explicit delegation or autonomous background report generation (see this skill's description for the boundary)

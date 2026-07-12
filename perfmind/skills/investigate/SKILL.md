@@ -28,6 +28,8 @@ If arguments are provided, interpret them to narrow scope:
 
 Use `Read` to read log or profiler files from the filesystem when the user provides a file path. Reserve `Bash` for commands that actually require a shell — e.g. `grep -c "Full GC" app.log` to count occurrences before reading, or `tail -n 500 huge.log` to trim a multi-GB log to a readable slice.
 
+**Reading screenshots/images:** Quote only values that are explicitly readable — printed numbers, axis labels, legend values. Do not estimate a value that falls between gridlines, and do not infer an axis unit that isn't labeled; ask the user to confirm instead of guessing. Tag every number sourced from an image (e.g. "2.8s (from screenshot)") so it isn't later presented in findings or reports as a precisely measured metric.
+
 ### Step 2: Triage by App Type
 
 Classify the app type from context or the user's argument:
@@ -46,11 +48,11 @@ For each piece of evidence, apply the relevant knowledge:
 - For response time or resource metrics: apply the pattern recognition in the `bottleneck-patterns` skill
 - For prioritization of findings: apply the `impact-matrix` skill
 
-Analyze across all applicable domains:
+Analyze across all applicable domains. The thresholds below (GC pause, CPU %, frame time, response time, etc.) are common industry rule-of-thumb starting points, not the user's actual SLOs or targets — the user's specific app context wins; confirm their real target before calling anything a breach or violation.
 
 **Response Time**
 - Break down latency: frontend render time, network RTT, server processing, DB query time
-- Flag SLO violations (>200ms API response, >3s page load, etc.)
+- Flag threshold breaches (>200ms API response, >3s page load, etc.)
 - Identify tail latency (p99 >> p50 signals an intermittent issue)
 
 **CPU**
@@ -89,7 +91,7 @@ Produce the following after analysis:
 
 1. **App type & scope** — one line confirming what was analyzed
 2. **Summary** — one paragraph describing the primary bottleneck and its likely root cause
-3. **Findings list** — each finding with: description, evidence cited, domain tag
+3. **Findings list** — each finding with: description, evidence cited, domain tag. Preserve any "(from screenshot)" provenance tags from Step 1 in the evidence field — don't let an image-sourced number lose its tag on the way into this list.
 4. **Next-step prompt** — output: "Run `/perfmind:report` to get role-specific recommendations, or ask the `performance-analyst` agent for a deep dive into one domain."
 
 ## Additional Resources
