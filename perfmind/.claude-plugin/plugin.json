@@ -1,11 +1,12 @@
 {
   "name": "perfmind",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Performance investigation assistant for web, mobile, desktop, and API applications",
   "author": {
     "name": "Ahmad Rifa'i",
     "email": "develop.rifai@gmail.com"
   },
+  "license": "MIT",
   "keywords": [
     "performance",
     "profiling",

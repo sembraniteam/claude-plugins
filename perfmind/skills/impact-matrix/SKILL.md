@@ -1,7 +1,6 @@
 ---
 name: impact-matrix
-description: This skill should be used when the user asks to prioritize performance issues, says "which fix should I do first", "rank these findings", "what's the highest impact change", "create a priority matrix", "complexity vs impact", "what should we focus on", "help us decide what to fix next sprint", "triage these issues", or provides a list of performance findings that need to be ranked. Applies a structured Complexity × Impact matrix and produces a prioritized action plan.
-argument-hint: "[list of findings to prioritize]"
+description: This skill should be used when the user asks to prioritize performance issues, says "which fix should I do first", "rank these findings", "what's the highest impact change", "create a priority matrix", "complexity vs impact", "what should we focus on", "help us decide what to fix next sprint", "triage these issues", or provides a list of performance findings that need to be ranked. Applies a structured Complexity × Impact matrix and produces a prioritized action plan. Do NOT use when the user asks only for a role-tailored write-up of already-prioritized findings — invoke the `report` skill for that instead.
 allowed-tools: Read
 ---
 
@@ -94,3 +93,11 @@ When two findings have the same score:
 3. Prefer the one with **existing test coverage** (safer to change)
 
 After presenting the matrix, output: "Run `/perfmind:report [role]` to generate a role-specific report using these findings."
+
+## Additional Resources
+
+### Related Skills
+
+- **`bottleneck-patterns`** — Typical upstream source of findings that need scoring
+- **`investigate`** — Investigation session that typically produces findings needing prioritization
+- **`report`** — Typical downstream consumer of a completed matrix; generates a role-tailored write-up from the prioritized findings

@@ -51,15 +51,15 @@ Generates a role-tailored performance report from findings in the current conver
 
 ### `performance-analyst`
 
-Autonomous deep-dive for a single performance domain. Investigates hypotheses, cites evidence, and returns a structured findings report.
+Autonomous deep-dive for a single, already-identified performance domain. Investigates hypotheses, cites evidence, and returns a structured findings report.
 
-Triggers: "deep dive into memory", "analyze this profiler output", "investigate the database bottleneck"
+Triggers: "deep dive into memory", "analyze this profiler output for me", "investigate the database bottleneck". Use `/perfmind:investigate` instead for a broad, multi-domain triage session when the domain isn't yet known.
 
 ### `report-generator`
 
-Generates polished, role-tailored performance reports from investigation findings. Auto-detects target audience from conversation context.
+Generates polished, role-tailored performance reports from investigation findings. Auto-detects target audience from conversation context. Scoped to explicit agent delegation or autonomous/background report generation outside the interactive conversation flow.
 
-Triggers: "write a performance report", "create an executive summary", "generate a DevOps runbook entry"
+Triggers: explicitly naming the agent, or requesting report generation as a standalone/delegated task. Use `/perfmind:report` instead for a direct, interactive request to generate a report in the current conversation.
 
 ## Recommended Workflow
 
@@ -72,8 +72,25 @@ For complex issues, substitute step 1 with the `performance-analyst` agent for h
 
 ## Installation
 
+### Option 1: Install from this repo (marketplace)
+
 ```bash
-cc --plugin-dir /path/to/perfmind
+# Add this repo as a marketplace source
+/plugin marketplace add sembraniteam/claude-plugins
+
+# Install the plugin
+/plugin install perfmind@sembraniteam-claude-plugins
 ```
 
-Or copy the directory into `.claude-plugin/` in your project root.
+### Option 2: Local install (development)
+
+```bash
+# Clone the repo
+git clone https://github.com/sembraniteam/claude-plugins.git
+
+# Add the local repo as a marketplace
+/plugin marketplace add /path/to/claude-plugins
+
+# Install
+/plugin install perfmind@sembraniteam-claude-plugins
+```

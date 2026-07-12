@@ -1,6 +1,6 @@
 ---
 name: investigate
-description: This skill should be used when the user invokes /perfmind:investigate, says "investigate this performance issue", "help me debug slow response times", "analyze this profiler output", "why is my app slow", "investigate memory leak", "investigate CPU usage", "my latency jumped", "what's causing high memory usage", "profile my app", "where should I start investigating", "I don't know what's causing this slowness", or pastes profiler data, GC logs, or metric screenshots for analysis. Accepts evidence from multiple sources and produces structured findings with domain-specific analysis.
+description: This skill should be used when the user invokes /perfmind:investigate, says "investigate this performance issue", "help me debug slow response times", "why is my app slow", "investigate memory leak", "investigate CPU usage", "my latency jumped", "what's causing high memory usage", "profile my app", "where should I start investigating", "I don't know what's causing this slowness", or pastes profiler data, GC logs, or metric screenshots for broad, multi-domain triage when the root cause isn't yet known. Accepts evidence from multiple sources and produces structured findings with domain-specific analysis. Do NOT use for a hypothesis-driven deep dive into one already-identified domain (CPU, memory, GC, database, network) — invoke the `performance-analyst` agent for that instead.
 argument-hint: "[app-type] [--focus <domain>]  e.g. mobile --focus memory | web | api | desktop"
 allowed-tools: Read, Bash
 ---
@@ -26,7 +26,7 @@ If arguments are provided, interpret them to narrow scope:
 - App type (`web`, `mobile`, `api`, `desktop`) — adjusts which domains to prioritize
 - Focus domain (`--focus memory|cpu|network|database|gc`) — restricts analysis to one area
 
-Use `Bash` to read log or profiler files from the filesystem when the user provides a file path.
+Use `Read` to read log or profiler files from the filesystem when the user provides a file path. Reserve `Bash` for commands that actually require a shell — e.g. `grep -c "Full GC" app.log` to count occurrences before reading, or `tail -n 500 huge.log` to trim a multi-GB log to a readable slice.
 
 ### Step 2: Triage by App Type
 

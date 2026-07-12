@@ -1,6 +1,25 @@
 # Role-Specific Report Templates
 
-Full markdown templates for each target audience. Use the template matching the detected role from Step 2.
+Full markdown templates for each target audience. This file is the single source of truth for both role detection and report formatting — both `skills/report/SKILL.md` and `agents/report-generator.md` read it rather than keeping their own copies.
+
+---
+
+## Role Detection
+
+Detect the target audience from conversation context. Use the first strong signal found; if the user passes a role argument or explicitly names one, use it directly without matching signal words.
+
+| Signal words in conversation                                                                    | Role              |
+|---------------------------------------------------------------------------------------------------|-------------------|
+| "deploy", "infra", "Kubernetes", "k8s", "scaling", "SRE", "runbook", "alert", "dashboard"          | **DevOps**        |
+| "code fix", "PR", "refactor", "function", "file", "commit", "line", "patch"                       | **Developer**     |
+| "flame graph", "profiler", "benchmark", "regression", "p99", "percentile", "baseline"              | **Perf Engineer** |
+| "SLA", "user experience", "cost", "roadmap", "business impact", "budget", "stakeholder"            | **Leadership**    |
+
+If no clear signal, default to **Developer**.
+
+## Anti-Fabrication Rule (All Roles)
+
+Every number that appears in a report (percentages, durations, counts, dollar amounts) must trace back to a finding actually stated in the conversation. If a number isn't there, write "needs measurement" instead of estimating one — this applies with extra force to the Leadership template below, whose numeric examples are illustrative placeholders only and must never be copied into a real report as-is.
 
 ---
 
@@ -129,9 +148,11 @@ Examples: "Users abandoning checkout due to 2.8s load times on order confirmatio
 | [e.g. Database index] | [e.g. Cuts checkout time by ~60%]     | [e.g. 1 day]  | [e.g. This sprint] |
 | [e.g. Query batching] | [e.g. Eliminates tail-latency spikes] | [e.g. 3 days] | [e.g. Next sprint] |
 
+> The percentages and effort/timeline values above are placeholder illustrations of the *format* only — never copy them into a real report. Fill each cell only from a number or estimate actually present in the conversation's findings; if none exists, write "needs measurement" instead.
+
 ### Risk If Not Addressed
-[What happens if no action is taken — user churn estimate, SLA penalty, cost increase,
-or engineering debt that blocks future features]
+[What happens if no action is taken — cite only user churn, SLA penalty, cost, or debt
+figures that were actually discussed; write "needs measurement" if none were given]
 
 ### Recommended Next Step
 [Single concrete action with a named owner and a target date.

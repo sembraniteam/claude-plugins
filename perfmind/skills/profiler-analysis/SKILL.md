@@ -1,7 +1,6 @@
 ---
 name: profiler-analysis
 description: This skill should be used when the user shares profiler output, flame graphs, CPU traces, allocation traces, heap dumps, GC logs, call trees, asks "what does this GC log mean", "help me read this flame graph", "what's causing heap growth", "how do I interpret this allocation trace", "help me read this perf trace", "interpret this pprof output", "what does this OOM error mean", "analyze this heap dump", or pastes runtime diagnostic data for interpretation. Provides expert analysis of profiler artifacts across JVM/Android, Node.js/V8, Python, Go, Dart/Flutter, Swift/iOS, and browser DevTools.
-argument-hint: "[runtime]  e.g. jvm | node | python | go | flutter | ios | browser"
 allowed-tools: Read
 ---
 
@@ -37,7 +36,7 @@ Diagnostic JVM flags to request if not present:
 - JDK 11+: `-Xlog:gc*:file=gc.log:time,uptime:filecount=5,filesize=20m`
 - JDK 8: `-XX:+PrintGCDetails -XX:+PrintGCDateStamps -XX:+PrintGCApplicationStoppedTime`
 
-Android-specific: look for `GC_FOR_ALLOC` and `GC_CONCURRENT` in logcat — the former means allocation failure, indicating memory pressure.
+Android-specific: `GC_FOR_ALLOC` and `GC_CONCURRENT` are Dalvik-era logcat GC messages (pre-Android 5.0); the former indicates an allocation failure signaling memory pressure. ART (Android 5.0+, the runtime on all modern devices) doesn't emit GC events to logcat this way — use `adb shell dumpsys meminfo <package>`, Android Studio's Memory Profiler, or `am dumpheap` for heap/GC diagnostics instead.
 
 ### Node.js / V8
 
@@ -70,6 +69,14 @@ Common culprits: retained closures holding large objects, event listener leaks (
 - Memory: DevTools > Memory tab; watch for ratcheting heap (leak signal)
 - Shader compilation jank: first-time frame stutter — use `--bundle-sksl-path` and warm-up shaders at startup
 - Isolate overhead: large objects crossing isolate boundaries via `SendPort` copy — minimize message size
+
+### Swift / iOS
+
+- CPU: Instruments Time Profiler — look for wide stacks in the main thread track
+- Memory: Instruments Allocations instrument for growth over time; Xcode Memory Graph Debugger for retain-cycle detection (purple exclamation icons)
+- Retain cycles: check `weak`/`unowned` capture in closures, especially delegate and completion-handler patterns
+- Main thread stalls: Instruments Time Profiler + "Main Thread Only" filter; flag any I/O or heavy computation off the main run loop
+- `leaks` command-line tool or Instruments Leaks template for a quick standalone leak scan
 
 ### Browser DevTools (Web)
 

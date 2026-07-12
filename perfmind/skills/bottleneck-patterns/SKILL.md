@@ -1,7 +1,6 @@
 ---
 name: bottleneck-patterns
-description: This skill should be used when the user describes slow response times, high CPU usage, memory pressure or leaks, database slowness, network issues, frame drops, ANR errors, battery drain, app jank, a performance regression after deploy, or app lagging under load; or asks "my database queries are taking forever", "why does my Flutter app stutter", "what's causing my API to slow down under load", or describes any observable performance symptom. Provides domain-specific bottleneck pattern recognition and diagnostic guidance for web, mobile (Android/iOS/Flutter), desktop, and API/backend applications.
-argument-hint: "[domain]  e.g. web | mobile | api | database | memory | cpu | network"
+description: This skill should be used when the user describes slow response times, high CPU usage, memory pressure or leaks, database slowness, network issues, frame drops, ANR errors, battery drain, app jank, a performance regression after deploy, or app lagging under load; or asks "my database queries are taking forever", "why does my Flutter app stutter", "what's causing my API to slow down under load". Provides domain-specific bottleneck pattern recognition and diagnostic guidance for web, mobile (Android/iOS/Flutter), desktop, and API/backend applications.
 allowed-tools: Read
 ---
 
@@ -53,3 +52,4 @@ Some symptoms span multiple domains — check these cross-cutting patterns first
 ## Additional Resources
 
 - **`references/bottleneck-lookup.md`** — Full symptom → pattern → fix lookup tables by domain (response time, web, API/backend, memory, CPU, mobile, networking, database)
+- **`impact-matrix`** — Apply after gathering multiple findings to prioritize which to fix first

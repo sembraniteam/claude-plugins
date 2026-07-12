@@ -49,7 +49,7 @@
     {
       "name": "perfmind",
       "description": "Performance investigation assistant for web, mobile, desktop, and API applications",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "source": "./perfmind",
       "author": {
         "name": "Ahmad Rifa'i",
