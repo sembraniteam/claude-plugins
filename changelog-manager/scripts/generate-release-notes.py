@@ -53,7 +53,7 @@ def extract_by_category(block: str) -> dict:
 
 
 def auto_extract(categories: dict) -> list:
-    order = ["breaking", "added", "changed", "fixed", "reverted"]
+    order = ["breaking changes", "added", "changed", "fixed", "reverted"]
     items = []
     for cat in order:
         items.extend(categories.get(cat, []))
@@ -79,6 +79,11 @@ def build_section(intro: str, items: list, max_chars, outro: str = "") -> str:
         )
     if not items:
         raise RuntimeError("At least one item is required.")
+
+    if len(items) > MAX_ITEMS:
+        dropped = items[MAX_ITEMS:]
+        print(f"Warning: dropped {len(dropped)} item(s) beyond the {MAX_ITEMS}-item cap: "
+              f"{'; '.join(dropped)}", file=sys.stderr)
 
     text = intro + "\n\n" + "\n".join(f"- {i}" for i in items[:MAX_ITEMS])
     if outro:
@@ -119,7 +124,7 @@ def parse_args(argv: list):
             current["items"].append(argv[i + 1])
             i += 2
         else:
-            i += 1
+            raise RuntimeError(f"Unknown argument '{arg}'.")
     if not langs:
         raise RuntimeError("At least one --lang block is required.")
     return platform, langs
@@ -148,7 +153,7 @@ def main():
         section = build_section(lang["intro"], items, max_chars, lang.get("outro", ""))
         content += f"## {lang['code'].upper()}\n{section}\n\n"
 
-    output.write_text(content.strip())
+    output.write_text(content.strip(), encoding="utf-8")
     limit_info = f"{max_chars} chars/lang" if max_chars else "no char limit"
     print(f"Written: {output} [{PLATFORM_LABELS[platform]}, {limit_info}]")
 

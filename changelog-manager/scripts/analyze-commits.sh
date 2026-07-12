@@ -5,17 +5,25 @@ LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
 
 if [ -z "$LAST_TAG" ]; then
     LAST_TAG="v0.0.0"
-    COMMITS=$(git log --pretty=format:"%s")
+    RANGE=""
 else
-    COMMITS=$(git log "$LAST_TAG"..HEAD --pretty=format:"%s")
+    RANGE="$LAST_TAG..HEAD"
 fi
 
-if [ -z "$COMMITS" ]; then
+# %x1f separates subject/body within a commit, %x1e terminates each commit
+# record — both are non-printable and won't collide with real commit text.
+RAW=$(git log $RANGE --pretty=format:"%s%x1f%b%x1e")
+
+if [ -z "$RAW" ]; then
     echo "No changes since last release."
     exit 0
 fi
 
 VERSION=${LAST_TAG#v}
+if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "Error: last tag '$LAST_TAG' is not a valid semver tag (expected vX.Y.Z or X.Y.Z). Cannot compute next version." >&2
+    exit 1
+fi
 IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
 
 BUMP_MAJOR=0
@@ -24,54 +32,70 @@ BUMP_PATCH=0
 
 COMMITS_JSON="[]"
 
-while IFS= read -r COMMIT; do
-    TYPE=$(echo "$COMMIT" | cut -d':' -f1)
+while IFS=$'\x1f' read -r -d $'\x1e' SUBJECT BODY; do
+    # git inserts a newline before every record after the first (its own
+    # separator between --pretty=format: entries) — strip it so it doesn't
+    # leak into the next commit's subject.
+    SUBJECT="${SUBJECT#$'\n'}"
 
-    CATEGORY="other"
-    BREAKING=false
+    [ -z "$SUBJECT" ] && continue
 
-    case "$TYPE" in
-        feat* )
-            CATEGORY="added"
-            BUMP_MINOR=1
-            ;;
-        fix* )
-            CATEGORY="fixed"
-            BUMP_PATCH=1
-            ;;
-        perf* )
-            CATEGORY="changed"
-            BUMP_PATCH=1
-            ;;
-        refactor* )
-            CATEGORY="changed"
-            BUMP_PATCH=1
-            ;;
-        revert* )
-            CATEGORY="reverted"
-            BUMP_PATCH=1
-            ;;
-        bump*|test*|ci*|chore*|docs* )
-            CATEGORY="ignore"
-            ;;
-    esac
-
-    if [ "$CATEGORY" = "ignore" ] || [ "$CATEGORY" = "other" ]; then
+    # Autosquash markers (from `git commit --fixup`/`--squash`) are meant to
+    # be rebased away before merging and never represent a real changelog
+    # entry on their own — skip before any type/breaking parsing.
+    if [[ "$SUBJECT" =~ ^(fixup|squash|amend)\! ]]; then
         continue
     fi
 
-    if [[ "$COMMIT" =~ ^[a-zA-Z]+(\([^\)]+\))?! ]] || [[ "$COMMIT" == *"BREAKING CHANGE"* ]]; then
-        BREAKING=true
-        BUMP_MAJOR=1
-        CATEGORY="breaking"
+    TYPE_FIELD=$(echo "$SUBJECT" | cut -d':' -f1)
+    TYPE=$(echo "$TYPE_FIELD" | sed -E 's/\(.*\)//; s/!$//')
+
+    CATEGORY="other"
+
+    case "$TYPE" in
+        feat )     CATEGORY="added" ;;
+        fix )      CATEGORY="fixed" ;;
+        perf )     CATEGORY="changed" ;;
+        refactor ) CATEGORY="changed" ;;
+        revert )   CATEGORY="reverted" ;;
+        bump|test|ci|chore|docs ) CATEGORY="ignore" ;;
+    esac
+
+    # Native `git revert` produces `Revert "feat: x"` — capitalized, no
+    # conventional type prefix — which the case match above won't catch.
+    if [ "$CATEGORY" = "other" ] && [[ "$SUBJECT" =~ ^[Rr]evert[[:space:]] ]]; then
+        CATEGORY="reverted"
     fi
 
-    PR=$(echo "$COMMIT" | grep -oE '#[0-9]+' | head -n1 | tr -d '#' || true)
+    # Per Conventional Commits, a `!` after the type/scope OR a
+    # `BREAKING CHANGE:` footer marks a breaking change regardless of type —
+    # this must be checked before the ignore/other skip below, since even an
+    # ignored type (e.g. `chore!:`) is still a mandatory MAJOR bump.
+    BREAKING=false
+    if [[ "$TYPE_FIELD" == *"!" ]] || [[ "$BODY" == *"BREAKING CHANGE"* ]] || [[ "$SUBJECT" == *"BREAKING CHANGE"* ]]; then
+        BREAKING=true
+    fi
 
-    MESSAGE=$(echo "$COMMIT" \
+    if [ "$BREAKING" = true ]; then
+        CATEGORY="breaking"
+        BUMP_MAJOR=1
+    elif [ "$CATEGORY" = "ignore" ] || [ "$CATEGORY" = "other" ]; then
+        continue
+    elif [ "$CATEGORY" = "added" ]; then
+        BUMP_MINOR=1
+    else
+        BUMP_PATCH=1
+    fi
+
+    PR=$(echo "$SUBJECT" | grep -oE '#[0-9]+' | head -n1 | tr -d '#' || true)
+
+    # xargs is avoided here for trimming: native `git revert` subjects
+    # (Revert "feat: x") carry an unbalanced quote that makes xargs abort
+    # with "unterminated quote" and kill the script under `set -e`.
+    MESSAGE=$(echo "$SUBJECT" \
         | sed -E 's/^[^:]+: //' \
         | sed -E 's/\(#?[0-9]+\)//g' \
-        | xargs)
+        | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')
 
     COMMITS_JSON=$(echo "$COMMITS_JSON" | jq \
         --arg category "$CATEGORY" \
@@ -85,7 +109,7 @@ while IFS= read -r COMMIT; do
             breaking: $breaking
         }]')
 
-done <<< "$COMMITS"
+done <<< "$RAW"
 
 if [ "$BUMP_MAJOR" -eq 0 ] && [ "$BUMP_MINOR" -eq 0 ] && [ "$BUMP_PATCH" -eq 0 ]; then
     echo "No changes since last release."

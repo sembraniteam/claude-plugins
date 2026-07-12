@@ -26,14 +26,23 @@ Items are passed in priority order by the generate-release-notes skill (Breaking
 
 ## Step 2: Calculate Character Counts
 
-For each language block, simulate what the script produces:
+Never estimate or mentally count characters — string length is a well-known LLM arithmetic weakness, and a hand-counted number reported as an exact figure (e.g. "487 / 500") is fabrication even when it looks precise. Always get the real count by running it.
 
-```python
-text = intro + "\n\n" + "\n".join(f"- {item}" for item in items[:6])
+For each language block, invoke Bash to run the exact formula the script uses (mirrors `build_section` in `generate-release-notes.py`):
+
+```bash
+python3 -c '
+import sys
+intro, outro = sys.argv[1].strip(), sys.argv[2].strip()
+items = sys.argv[3:]
+text = intro + "\n\n" + "\n".join(f"- {i}" for i in items[:6])
 if outro:
     text += "\n\n" + outro
-char_count = len(text)
+print(len(text))
+' "<intro>" "<outro>" "<item1>" "<item2>" "<item3>"
 ```
+
+Pass `""` for `<outro>` if none is set yet. The printed number is the real `char_count` — use it as-is, never round or approximate it.
 
 Compare `char_count` against the platform limit. If `web` platform or no limit, report "no limit — skipping".
 

@@ -38,6 +38,8 @@ bash $CLAUDE_PLUGIN_ROOT/scripts/analyze-commits.sh
 
 Use the JSON output to compare computed commits against what appears in CHANGELOG.md.
 
+**If the script prints `No changes since last release.`:** this means HEAD has no new commits past the last git tag — most commonly because the release was already tagged. Semver-bump verification (Step 3) only makes sense *before* tagging, when there are new commits to compare against `last_tag`; once tagged, there is nothing left to recompute. In this case, skip Step 3 and the missing-entries part of Step 4, and say so explicitly in the report (e.g. "Semver check: N/A — release already tagged, no commits to compare"). To retroactively audit whether the already-tagged version's bump was correct, run `git log <previous-tag>..<last_tag> --pretty=format:"%s"` and manually compare those commit types against the version bump recorded in CHANGELOG.md.
+
 ### Step 2: Validate Structure
 
 Check the latest version block against Keep a Changelog rules:

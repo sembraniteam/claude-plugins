@@ -122,16 +122,35 @@ Auto-trims release notes to fit platform character limits. Invoked automatically
 | `perf:`                                    | Changed           | PATCH        |
 | `refactor:`                                | Changed           | PATCH        |
 | `revert:`                                  | Reverted          | PATCH        |
-| `feat!:` / `BREAKING CHANGE`               | Breaking Changes  | MAJOR        |
+| `<any type>!:` / `BREAKING CHANGE:` footer | Breaking Changes  | MAJOR        |
 | `bump:`, `test:`, `ci:`, `chore:`, `docs:` | *(ignored)*       | —            |
+
+Native `git revert` commits (`Revert "..."`, no conventional prefix) are also detected and mapped to Reverted / PATCH. Any type marked with `!` is treated as breaking (MAJOR) even if its own type would otherwise be ignored (e.g. `chore!:`).
 
 ## Installation
 
+### Option 1: Install from this repo (marketplace)
+
 ```bash
-cc --plugin-dir /path/to/changelog-manager
+# Add this repo as a marketplace source
+/plugin marketplace add sembraniteam/claude-plugins
+
+# Install the plugin
+/plugin install changelog-manager@sembraniteam-claude-plugins
 ```
 
-Or copy to your project's plugin directory.
+### Option 2: Local install (development)
+
+```bash
+# Clone the repo
+git clone https://github.com/sembraniteam/claude-plugins.git
+
+# Add the local repo as a marketplace
+/plugin marketplace add /path/to/claude-plugins
+
+# Install
+/plugin install changelog-manager@sembraniteam-claude-plugins
+```
 
 ## License
 

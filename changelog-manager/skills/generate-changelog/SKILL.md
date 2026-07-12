@@ -2,7 +2,7 @@
 name: generate-changelog
 description: This skill should be used when the user asks to "generate changelog", "update changelog", "create changelog", "add changelog entry", "summarize commits for changelog", "prepare a new version", "bump version", "what changed since last release", or "write a release entry". Also trigger when the user mentions updating CHANGELOG.md or documenting recent commits.
 argument-hint: "[version override]  e.g. v2.0.0"
-allowed-tools: ["Read", "Write", "Bash", "Skill", "AskUserQuestion"]
+allowed-tools: ["Read", "Write", "Edit", "Bash", "Skill", "AskUserQuestion"]
 ---
 
 # Generate Changelog
@@ -81,9 +81,9 @@ The JSON output contains:
 | `removed`       | `### Removed` *(future script version)*    |
 | `security`      | `### Security` *(future script version)*   |
 
-Omit empty sections. Format entries as:
-- `- <message> (#<pr>)` when PR number is present
-- `- <message>` when absent
+Omit empty sections. `analyze-commits.sh` preserves each commit's original message case, so capitalize the first letter of `message` before writing it. Format entries as:
+- `- <Message> (#<pr>)` when PR number is present
+- `- <Message>` when absent
 
 **Build the version block:**
 
@@ -100,9 +100,9 @@ Omit empty sections. Format entries as:
 - Login crash on empty password field (#38)
 ```
 
-**If CHANGELOG.md does not exist** — create from scratch with header + `## [Unreleased]` section + new version block.
+**If CHANGELOG.md does not exist** — create from scratch with Write: header + `## [Unreleased]` section + new version block.
 
-**If CHANGELOG.md exists** — prepend the new version block after `## [Unreleased]` (or after the header if no Unreleased section). Never overwrite or remove existing entries.
+**If CHANGELOG.md exists** — use Edit, not Write, to insert the new version block after `## [Unreleased]` (or after the header if no Unreleased section). Write rewrites the entire file from scratch, which risks losing content on a large CHANGELOG.md if the new content is malformed; Edit only touches the insertion point. Never overwrite or remove existing entries.
 
 ## Rules
 

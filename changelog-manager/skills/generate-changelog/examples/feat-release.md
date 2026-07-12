@@ -27,15 +27,15 @@ bash $CLAUDE_PLUGIN_ROOT/scripts/analyze-commits.sh
   "next_version": "v1.2.0",
   "date": "2025-06-15",
   "commits": [
-    { "category": "added", "message": "Add OAuth2 login support", "pr": "47", "breaking": false },
-    { "category": "added", "message": "Add avatar upload with crop", "pr": "44", "breaking": false },
-    { "category": "fixed", "message": "Prevent crash on empty password field", "pr": "45", "breaking": false },
-    { "category": "fixed", "message": "Retry on 503 with exponential backoff", "pr": "46", "breaking": false }
+    { "category": "added", "message": "add OAuth2 login support", "pr": "47", "breaking": false },
+    { "category": "added", "message": "add avatar upload with crop", "pr": "44", "breaking": false },
+    { "category": "fixed", "message": "prevent crash on empty password field", "pr": "45", "breaking": false },
+    { "category": "fixed", "message": "retry on 503 with exponential backoff", "pr": "46", "breaking": false }
   ]
 }
 ```
 
-`chore` and `ci` commits are excluded automatically.
+`chore` and `ci` commits are excluded automatically. The script preserves the original commit message case — capitalize the first letter of each message when writing it into `CHANGELOG.md` (see "Write CHANGELOG.md" in `../SKILL.md`).
 
 ## Output: CHANGELOG.md Entry
 
@@ -76,7 +76,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [v1.1.0] - 2025-05-01
 
 ### Added
-- dark mode support (#40)
+- Dark mode support (#40)
 ```
 
 The new version block is prepended after `## [Unreleased]`. Existing entries are unchanged.
