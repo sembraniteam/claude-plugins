@@ -51,6 +51,7 @@ while IFS=$'\x1f' read -r -d $'\x1e' SUBJECT BODY; do
     TYPE=$(echo "$TYPE_FIELD" | sed -E 's/\(.*\)//; s/!$//')
 
     CATEGORY="other"
+    IS_NATIVE_REVERT=false
 
     case "$TYPE" in
         feat )     CATEGORY="added" ;;
@@ -65,14 +66,22 @@ while IFS=$'\x1f' read -r -d $'\x1e' SUBJECT BODY; do
     # conventional type prefix — which the case match above won't catch.
     if [ "$CATEGORY" = "other" ] && [[ "$SUBJECT" =~ ^[Rr]evert[[:space:]] ]]; then
         CATEGORY="reverted"
+        IS_NATIVE_REVERT=true
     fi
 
-    # Per Conventional Commits, a `!` after the type/scope OR a
-    # `BREAKING CHANGE:` footer marks a breaking change regardless of type —
-    # this must be checked before the ignore/other skip below, since even an
-    # ignored type (e.g. `chore!:`) is still a mandatory MAJOR bump.
+    # Per Conventional Commits, a `!` marks breaking only when it is the
+    # actual type/scope marker (`type(scope)!: ...`) — testing TYPE_FIELD's
+    # suffix alone would misfire on any non-conventional subject that merely
+    # ends in "!" (e.g. "Fix typo!"), since a subject with no colon makes
+    # TYPE_FIELD the entire subject. Test the conventional form directly.
+    # A `BREAKING CHANGE:`/`BREAKING-CHANGE:` footer must start a line in the
+    # body — a bare substring match also fires on prose that merely mentions
+    # "BREAKING CHANGE" (including in the subject, which the `!` marker
+    # already covers, so the subject is not scanned here at all).
     BREAKING=false
-    if [[ "$TYPE_FIELD" == *"!" ]] || [[ "$BODY" == *"BREAKING CHANGE"* ]] || [[ "$SUBJECT" == *"BREAKING CHANGE"* ]]; then
+    if [[ "$SUBJECT" =~ ^[A-Za-z]+(\([^\)]*\))?\!: ]]; then
+        BREAKING=true
+    elif echo "$BODY" | grep -qE '^BREAKING[ -]CHANGE:'; then
         BREAKING=true
     fi
 
@@ -87,15 +96,27 @@ while IFS=$'\x1f' read -r -d $'\x1e' SUBJECT BODY; do
         BUMP_PATCH=1
     fi
 
-    PR=$(echo "$SUBJECT" | grep -oE '#[0-9]+' | head -n1 | tr -d '#' || true)
-
     # xargs is avoided here for trimming: native `git revert` subjects
     # (Revert "feat: x") carry an unbalanced quote that makes xargs abort
     # with "unterminated quote" and kill the script under `set -e`.
-    MESSAGE=$(echo "$SUBJECT" \
-        | sed -E 's/^[^:]+: //' \
-        | sed -E 's/\(#?[0-9]+\)//g' \
-        | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')
+    if [ "$IS_NATIVE_REVERT" = true ]; then
+        # The quoted subject belongs to the *reverted* commit — any PR
+        # number inside it is that commit's PR, not this revert's, so it
+        # must not be surfaced as this entry's PR. Also skip the
+        # type-stripping sed below: it cuts at the first colon, which falls
+        # inside the quoted original subject and mangles "Revert "..." into
+        # a dangling, context-free fragment.
+        PR=""
+        MESSAGE=$(echo "$SUBJECT" \
+            | sed -E 's/\(#?[0-9]+\)//g' \
+            | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')
+    else
+        PR=$(echo "$SUBJECT" | grep -oE '#[0-9]+' | head -n1 | tr -d '#' || true)
+        MESSAGE=$(echo "$SUBJECT" \
+            | sed -E 's/^[^:]+: //' \
+            | sed -E 's/\(#?[0-9]+\)//g' \
+            | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')
+    fi
 
     COMMITS_JSON=$(echo "$COMMITS_JSON" | jq \
         --arg category "$CATEGORY" \
