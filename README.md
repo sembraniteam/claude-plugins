@@ -102,7 +102,7 @@ Structured security audit for development and production codebases. Maps every f
 | `security-auditor` agent   | Read-only subagent (`Read`, `Grep`, `Glob` only) for structural SAST analysis and CWE-mapped findings    |
 | `security-fixer` agent     | Applies minimal fixes per CWE root cause; outputs a fix manifest; never runs shell commands              |
 | `fix-reviewer` agent       | Read-only post-fix verifier; assigns `fixed` / `partially-fixed` / `not-fixed` / `introduced-new-issue`  |
-| `secure-code-review` skill | OWASP Top 10 checklist, 35+ CWE mappings, severity scale, and report template                            |
+| `secure-code-review` skill | OWASP Top 10 (2025) checklist, 38+ CWE mappings, severity scale, and report template                     |
 | PostToolUse hook           | Warns when edited files contain high-risk patterns (SQL injection, eval, hardcoded secrets)              |
 
 **Prerequisites:** Python 3
@@ -208,7 +208,7 @@ Generates a role-tailored report from the current investigation. Available roles
 /audit
 ```
 
-Claude asks whether you're auditing a development or production codebase, maps your project (languages, frameworks, entry points, dependency manifests), spawns a read-only `security-auditor` agent for structural SAST analysis, then queries OSV.dev and NVD for every dependency version found. In production mode, each CVE is enriched with its EPSS exploitation probability (FIRST.org) and CISA KEV status — KEV-listed CVEs are automatically escalated to Critical. Output is a full report using the OWASP Top 10 checklist.
+Claude asks whether you're auditing a development or production codebase, maps your project (languages, frameworks, entry points, dependency manifests), spawns a read-only `security-auditor` agent for structural SAST analysis, then queries OSV.dev and NVD for every dependency version found. In production mode, each CVE is enriched with its EPSS exploitation probability (FIRST.org) and CISA KEV status — KEV-listed CVEs are automatically escalated to Critical. Output is a full report using the OWASP Top 10 (2025) checklist.
 
 ```
 /audit-file src/api/users.py
@@ -340,7 +340,7 @@ Regenerates and saves `SECURITY-AUDIT.md` from the current session's findings.
     │   └── vuln_server.py            # MCP server: NVD + OSV.dev + MITRE CWE + GitHub Advisory + EPSS + CISA KEV
     ├── skills/
     │   └── secure-code-review/
-    │       └── SKILL.md              # OWASP Top 10, 35+ CWE mappings, report template
+    │       └── SKILL.md              # OWASP Top 10 (2025), 38+ CWE mappings, report template
     └── test-fixtures/                # Intentionally vulnerable demo files
         ├── vulnerable_app.py
         ├── insecure_api.js

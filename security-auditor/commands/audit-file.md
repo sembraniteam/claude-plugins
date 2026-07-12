@@ -23,18 +23,20 @@ For each external input source, trace the data path through the file to all pote
 
 ## Step 3 — Check each vulnerability category
 
-Work through the OWASP Top 10 + extended checklist from the `secure-code-review` skill, applied specifically to this file:
+Work through the OWASP Top 10 (A01–A10) + Extended Categories checklist from the `secure-code-review` skill, applied specifically to this file:
 
-1. Injection (SQL, NoSQL, OS, LDAP, template) — trace every DB call and exec
-2. Broken access control — does the file enforce authorization before sensitive operations?
-3. Cryptographic failures — hash algorithms, encryption schemes, IV/salt handling
-4. Security misconfiguration — debug flags, verbose error messages, permissive CORS
-5. Vulnerable components — any `import`/`require`/`use` of third-party libraries? Flag for CVE check
-6. Authentication failures — session handling, token validation, password checks
-7. Injection via deserialization — `pickle`, `yaml.load`, `JSON.parse` with `__proto__`
-8. SSRF — any outbound HTTP calls with user-controlled URLs
-9. Hardcoded secrets — API keys, passwords, tokens inline in source
-10. Path traversal — file path construction with user input
+1. Broken access control — does the file enforce authorization before sensitive operations? IDOR, CORS misconfiguration, SSRF (outbound HTTP calls with user-controlled URLs)
+2. Security misconfiguration — debug flags, verbose error messages, permissive CORS, missing security headers
+3. Software supply chain failures — any `import`/`require`/`use` of third-party libraries? Flag for CVE check; unsigned/unverified build artifacts
+4. Cryptographic failures — hash algorithms, encryption schemes, IV/salt handling
+5. Injection (SQL, NoSQL, OS, LDAP, template) — trace every DB call and exec
+6. Insecure design — missing rate limiting, trust boundary violations
+7. Authentication failures — session handling, token validation, password checks
+8. Software or data integrity failures — insecure deserialization (`pickle`, `yaml.load`, `JSON.parse` with `__proto__`), unsigned updates/plugins
+9. Security logging & alerting failures — missing audit trail for sensitive ops, PII in logs, log injection
+10. Mishandling of exceptional conditions — verbose error messages leaking internals, fail-open logic, unhandled exceptions
+
+Also check the Extended Categories from the skill (Hardcoded Secrets, Path Traversal, XXE, Race Condition/TOCTOU, Mass Assignment, Open Redirect, Clickjacking) — these fall outside the Top 10 numbering but are still in scope.
 
 ## Step 4 — Format findings
 
@@ -44,7 +46,7 @@ For EACH finding, output:
 ### [SA-NNN] <Title>
 
 - **CWE**: CWE-XXX — <CWE Name>
-- **Severity**: Critical / High / Medium / Low (estimated, see CVSS note in skill)
+- **Severity**: Critical | High | Medium | Low (est) — see Severity Scale in the skill
 - **Line**: <file_path>:<line_number>
 - **Status**: confirmed | needs-review
 

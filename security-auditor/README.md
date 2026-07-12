@@ -13,7 +13,7 @@ A Claude Code plugin for structured, professional security audits — usable in 
 - **`/audit-fix [SA-NNN|all]`** — Verified remediation: plan → confirm → fix → auto-verify
 - **`/audit-verify`** — Run independent fix verification on manual or existing changes
 - **Bundled MCP server** (`scripts/vuln_server.py`) — Queries NVD, OSV.dev, MITRE CWE API, and GitHub Advisory Database
-- **OWASP Top 10 (2021)** checklist + 35+ CWE mappings
+- **OWASP Top 10 (2025)** checklist + 38+ CWE mappings
 - **PostToolUse hook** — Warns when edited files contain high-risk patterns (opt-out available)
 - **Anti-hallucination guarantee** — CVE numbers only appear if returned by an MCP tool call; never from model memory
 

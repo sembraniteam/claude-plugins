@@ -7,24 +7,26 @@ description: Apply this skill whenever the user runs /audit, /audit-file, /audit
 
 This skill provides the checklist, CWE mapping, and report template used by all `security-auditor` commands.
 
-## OWASP Top 10 (2021) Checklist + Extended Categories
+## OWASP Top 10 (2025) Checklist + Extended Categories
 
 Work through each category. Mark each as: ✓ checked, ⚠ findings, or N/A (not applicable to this codebase).
 
 ### OWASP Top 10
 
-| #   | Category                                 | Key checks                                                                                     |
-|-----|------------------------------------------|------------------------------------------------------------------------------------------------|
-| A01 | Broken Access Control                    | Missing authz checks, IDOR, path traversal, CORS misconfiguration, privilege escalation        |
-| A02 | Cryptographic Failures                   | Sensitive data in plaintext, weak algorithms, static keys/IVs, missing TLS                     |
-| A03 | Injection                                | SQL, NoSQL, OS command, LDAP, XPath, template, expression language                             |
-| A04 | Insecure Design                          | Missing rate limiting, insecure direct object references in design, trust boundary violations  |
-| A05 | Security Misconfiguration                | Default credentials, unnecessary features enabled, verbose errors, missing security headers    |
-| A06 | Vulnerable & Outdated Components         | Dependencies with known CVEs (verified via MCP, never from memory)                             |
-| A07 | Identification & Authentication Failures | Weak passwords, missing MFA support, insecure session management, credential stuffing exposure |
-| A08 | Software & Data Integrity Failures       | Unsigned updates/plugins, insecure deserialization, CI/CD pipeline compromise                  |
-| A09 | Logging & Monitoring Failures            | No audit trail for sensitive ops, PII logged, log injection                                    |
-| A10 | SSRF                                     | Outbound HTTP with user-controlled URL, missing allowlist, cloud metadata endpoint exposure    |
+| #   | Category                              | Key checks                                                                                                                                                                                       |
+|-----|---------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| A01 | Broken Access Control                 | Missing authz checks, IDOR, path traversal, CORS misconfiguration, privilege escalation, SSRF (outbound HTTP with user-controlled URL, missing allowlist, cloud metadata endpoint exposure)      |
+| A02 | Security Misconfiguration             | Default credentials, unnecessary features enabled, verbose errors, missing security headers, overly-permissive cloud storage policies                                                            |
+| A03 | Software Supply Chain Failures        | Dependencies with known CVEs (verified via MCP, never from memory), untrusted/typosquatted packages, unsigned or unverified build artifacts/container images, missing dependency pinning or SBOM |
+| A04 | Cryptographic Failures                | Sensitive data in plaintext, weak algorithms, static keys/IVs, missing TLS                                                                                                                       |
+| A05 | Injection                             | SQL, NoSQL, OS command, LDAP, XPath, template, expression language                                                                                                                               |
+| A06 | Insecure Design                       | Missing rate limiting, insecure direct object references in design, trust boundary violations                                                                                                    |
+| A07 | Authentication Failures               | Weak passwords, missing MFA support, insecure session management, credential stuffing exposure                                                                                                   |
+| A08 | Software or Data Integrity Failures   | Unsigned updates/plugins, insecure deserialization, missing checksums/digital signatures, absent tamper-detection on critical data                                                               |
+| A09 | Security Logging & Alerting Failures  | No audit trail for sensitive ops, PII logged, log injection, missing alerting on suspicious activity                                                                                             |
+| A10 | Mishandling of Exceptional Conditions | Verbose error messages leaking internals, fail-open logic on exception/error paths, unhandled timeouts, generic catch-alls masking security failures                                             |
+
+`A03:2025` (Software Supply Chain Failures) supersedes and broadens `A06:2021` (Vulnerable & Outdated Components) to also cover CI/CD pipeline integrity and build/distribution infrastructure. `A10:2025` (Mishandling of Exceptional Conditions) is new for 2025 — it did not exist as a Top 10 category in 2021. SSRF is no longer its own category; it is checked under A01.
 
 ### Extended Categories
 
@@ -58,6 +60,8 @@ Map each vulnerability pattern to its CWE. These are used when writing findings.
 | Hardcoded Cryptographic Key          | CWE-321  | Use of Hard-coded Cryptographic Key                                            |
 | Insecure Deserialization             | CWE-502  | Deserialization of Untrusted Data                                              |
 | SSRF                                 | CWE-918  | Server-Side Request Forgery                                                    |
+| Vulnerable/Outdated Dependency       | CWE-1395 | Dependency on Vulnerable Third-Party Component                                 |
+| Not Failing Securely (fail-open)     | CWE-636  | Not Failing Securely ('Failing Open')                                          |
 | Missing Authorization                | CWE-862  | Missing Authorization                                                          |
 | Incorrect Authorization              | CWE-863  | Incorrect Authorization                                                        |
 | IDOR                                 | CWE-639  | Authorization Bypass Through User-Controlled Key                               |
@@ -110,7 +114,7 @@ Use this exact structure for all reports:
 
 **Project**: <name>
 **Date**: <YYYY-MM-DD>
-**Auditor**: security-auditor plugin v0.5.0
+**Auditor**: security-auditor plugin v<version — read from `.claude-plugin/plugin.json`, never hardcode>
 **Mode**: development | production
 **Stack**: <languages and frameworks>
 
