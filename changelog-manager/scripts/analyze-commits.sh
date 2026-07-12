@@ -109,6 +109,7 @@ while IFS=$'\x1f' read -r -d $'\x1e' SUBJECT BODY; do
         PR=""
         MESSAGE=$(echo "$SUBJECT" \
             | sed -E 's/\(#?[0-9]+\)//g' \
+            | sed -E 's/[[:space:]]+"$/"/' \
             | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')
     else
         PR=$(echo "$SUBJECT" | grep -oE '#[0-9]+' | head -n1 | tr -d '#' || true)
