@@ -4,14 +4,28 @@ A Claude Code plugin for structured, professional security audits — usable in 
 
 ---
 
+## Positioning: a complement to Semgrep/Trivy/Dependabot, not a replacement
+
+This plugin is an **LLM-based reviewer**, not a rule-based static analyzer. That distinction matters for how it should be deployed:
+
+- **Semgrep/CodeQL** miss what has no rule — and you can read the ruleset to know exactly what's covered and what isn't. Their false negatives are *auditable*.
+- **This plugin** misses things an LLM happens not to notice on a given pass — its false negatives are *not predictable or enumerable* the way a rule gap is, even though its reasoning can catch business-logic and cross-file issues pattern-matchers structurally cannot.
+- **Trivy/Dependabot/OSV-Scanner** are the authoritative source for dependency CVEs; this plugin's `vuln-lookup` MCP server queries the same databases (NVD/OSV.dev), it does not compete with them.
+
+Run this plugin **alongside** a rule-based SAST tool and a dependency scanner in CI, not instead of them. Treat it as a second reviewer with different blind spots than a linter — good at catching things rules don't express (auth logic, data flow across files, business-logic bypasses), but not a substitute for deterministic, rule-auditable coverage. See [Limitations & Disclaimer](#limitations--disclaimer) for the full caveat.
+
+---
+
 ## Features
 
 - **`/audit`** — Full codebase scan: code analysis + dependency CVE verification
+- **`/audit-diff [base-ref] [dev|prod]`** — Audit only files changed vs a base branch (or uncommitted/staged changes) — the recommended default for PR review and for codebases too large to fit a full `/audit` in context
 - **`/audit-file <path>`** — Deep single-file audit with line-level evidence and CWE mapping
 - **`/audit-deps`** — Dependency-only scan against OSV.dev + NVD, outputs a CVE table
-- **`/audit-report`** — Regenerates a complete `SECURITY-AUDIT.md` from session findings
+- **`/audit-report [--sarif]`** — Regenerates a complete `SECURITY-AUDIT.md` from session findings; `--sarif` also writes `SECURITY-AUDIT.sarif.json` for GitHub code scanning
 - **`/audit-fix [SA-NNN|all]`** — Verified remediation: plan → confirm → fix → auto-verify
 - **`/audit-verify`** — Run independent fix verification on manual or existing changes
+- **Baseline/suppression file** (`.security-audit-baseline.json`) — accepted-risk findings stop reappearing in every report
 - **Bundled MCP server** (`scripts/vuln_server.py`) — Queries NVD, OSV.dev, MITRE CWE API, and GitHub Advisory Database
 - **OWASP Top 10 (2025)** checklist + 38+ CWE mappings
 - **PostToolUse hook** — Warns when edited files contain high-risk patterns (opt-out available)
@@ -84,6 +98,34 @@ Full security audit of the current project.
 
 ---
 
+### `/audit-diff [base-ref] [dev|prod]`
+
+Audit only the files that changed — the most common real-world audit trigger (reviewing a PR) and the way to keep a large codebase from blowing the agent's context window, since only the diff is read instead of the whole tree.
+
+```
+/audit-diff
+# → diffs against the repo's default branch (origin/HEAD, falling back to main/master)
+#   plus any uncommitted/staged changes; asks dev or prod
+
+/audit-diff main
+# → diffs against `main` explicitly
+
+/audit-diff origin/main prod
+# → diffs against origin/main, skips the mode question
+```
+
+**What it does:**
+1. Resolves the base ref (explicit argument, or the repo default branch) and lists changed files via `git diff`, including uncommitted and staged changes so in-progress work is covered
+2. Filters out generated/vendored paths (`node_modules/`, `dist/`, `build/`, `vendor/`, etc.) and files with no source-code relevance
+3. If the changed set is unusually large (~40+ files), warns and offers to chunk the analysis into batches rather than risk truncating the review
+4. Spawns `security-auditor` scoped to only the changed files (not the full project map)
+5. Verifies CVEs only for dependency manifests that actually changed in the diff
+6. Filters findings against `.security-audit-baseline.json` before reporting
+
+If there is no git repository, no commits, or no diff, it says so and suggests `/audit` instead.
+
+---
+
 ### `/audit-file <path>`
 
 Deep single-file audit with data flow tracing and line-level evidence.
@@ -112,14 +154,20 @@ Scan only dependency manifests. Fast — no code analysis.
 
 ---
 
-### `/audit-report`
+### `/audit-report [--sarif]`
 
 Regenerate and save the full report from this session.
 
 ```
 /audit-report
 # → saves SECURITY-AUDIT.md in current directory
+
+/audit-report --sarif
+# → also saves SECURITY-AUDIT.sarif.json, for GitHub code scanning /
+#   any tool that ingests SARIF 2.1.0
 ```
+
+Baseline-suppressed findings (see below) are excluded from both outputs' active-findings lists.
 
 ---
 
@@ -187,6 +235,43 @@ flowchart TD
 
 ---
 
+## Baseline / Suppression File
+
+Every finding a team has already reviewed and accepted — a known false positive, a compensating control the
+code can't show, a formally accepted risk with a deadline — would otherwise reappear on every subsequent
+`/audit` or `/audit-diff` run. Without a way to suppress it, teams stop reading the report after the first
+couple of runs. `.security-audit-baseline.json` in the project root makes "already reviewed" durable:
+
+```json
+{
+  "version": 1,
+  "suppressions": [
+    {
+      "cwe": "CWE-798",
+      "file": "config/legacy_loader.py",
+      "title": "Hardcoded Credentials",
+      "reason": "Legacy system scheduled for decommission Q3 2026; credential rotated and scoped to a read-only replica",
+      "approved_by": "jane@company.com",
+      "date": "2026-05-01",
+      "expires": "2026-10-01"
+    }
+  ]
+}
+```
+
+Matching is by `(file, cwe, title)` — never by line number, since code shifts and a line-based match would
+break the suppression the moment an unrelated edit landed above it. Suppressed findings are excluded from the
+active findings list in every report but still shown in a **Baseline Suppressions** table, so acceptance stays
+visible instead of silent. An `expires` date in the past flags the entry for re-review rather than silently
+re-suppressing it.
+
+There is no dedicated command to add entries — ask in conversation (e.g. "accept SA-003 as risk, reason:
+rotated key, expires in 90 days") after a report, and the finding's CWE/file/title are appended for you. This
+keeps risk acceptance an explicit, reviewed action rather than a side effect of running an audit. Full format
+and matching rules: `skills/secure-code-review/references/baseline-suppression.md`.
+
+---
+
 ## Tool Permissions per Agent
 
 | Agent              | Read | Grep | Glob | Write | Edit | Bash |
@@ -245,9 +330,10 @@ data extraction from the users table.
 security-auditor/
 ├── commands/
 │   ├── audit.md               # /audit — full codebase scan
+│   ├── audit-diff.md          # /audit-diff — scoped to changed files only
 │   ├── audit-file.md          # /audit-file — single file deep dive
 │   ├── audit-deps.md          # /audit-deps — dependency CVE scan only
-│   ├── audit-report.md        # /audit-report — save SECURITY-AUDIT.md
+│   ├── audit-report.md        # /audit-report — save SECURITY-AUDIT.md (+ optional SARIF)
 │   ├── audit-fix.md           # /audit-fix — remediation with verification
 │   └── audit-verify.md        # /audit-verify — standalone fix verification
 ├── agents/
@@ -256,8 +342,12 @@ security-auditor/
 │   └── fix-reviewer.md        # Verification agent (Read+Grep+Glob only)
 ├── skills/
 │   └── secure-code-review/
-│       └── SKILL.md           # OWASP checklist, CWE mapping, report template,
-│                              # remediation & verification protocol
+│       ├── SKILL.md           # OWASP checklist, CWE mapping, report template,
+│       │                      # finding-ID format
+│       └── references/
+│           ├── baseline-suppression.md  # .security-audit-baseline.json format & matching
+│           ├── sarif-output.md          # SARIF 2.1.0 structure for /audit-report --sarif
+│           └── remediation-protocol.md  # fix manifest, verdicts, per-CWE fix examples
 ├── scripts/
 │   ├── vuln_server.py         # MCP server: NVD + OSV.dev + MITRE CWE + GitHub Advisory
 │   └── security-lint.py       # PostToolUse hook script
@@ -269,11 +359,12 @@ security-auditor/
 ```
 
 **Audit data flow:**
-1. User runs `/audit` → command orchestrates the workflow
-2. Command spawns `security-auditor` agent (read-only: `Read`, `Grep`, `Glob` only)
+1. User runs `/audit` (full scan) or `/audit-diff` (changed files only) → command orchestrates the workflow
+2. Command spawns `security-auditor` agent (read-only: `Read`, `Grep`, `Glob` only), chunking into batches for large scans/diffs
 3. Agent returns structured findings with stable `SA-NNN` IDs and CWE mappings
 4. Command calls MCP tools (`query_osv`, `get_cve`) for dependency CVEs
-5. `secure-code-review` skill formats the final report
+5. Findings are filtered against `.security-audit-baseline.json`, if present
+6. `secure-code-review` skill formats the final report (and SARIF, if `/audit-report --sarif` was used)
 
 **Remediation data flow (user-triggered only):**
 1. User runs `/audit-fix` → command validates audit report exists
@@ -299,6 +390,7 @@ There is no Claude Code settings key for disabling a single plugin's hook by nam
 
 - This tool performs **static analysis only** — it cannot detect vulnerabilities that only manifest at runtime (timing attacks, race conditions, business logic flaws).
 - It **may produce false positives** (flagging safe patterns that look risky) and **false negatives** (missing vulnerabilities outside its detection patterns).
+- Unlike a rule-based scanner, its false negatives are **not enumerable** — there is no ruleset to read that tells you what it will and won't catch on a given pass. Don't rely on it as the sole gate for a category of vulnerability; pair it with Semgrep/CodeQL for that. See [Positioning](#positioning-a-complement-to-semgreptrivydependabot-not-a-replacement) above.
 - CVE data is queried live from OSV.dev and NVD — results depend on database coverage and your internet connection.
 - **This tool is not a substitute for professional penetration testing** or a comprehensive security review by a human expert.
 - All findings should be verified by a qualified developer or security engineer before remediation.

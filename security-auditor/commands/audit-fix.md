@@ -9,12 +9,12 @@ You are running `/audit-fix` to remediate security findings with verified, minim
 ## Step 0 — Validate audit report exists
 
 Before anything else, check whether an audit report is available:
-- Does this session contain `/audit` or `/audit-file` output with a findings list?
+- Does this session contain `/audit`, `/audit-diff`, or `/audit-file` output with a findings list?
 - Does a `SECURITY-AUDIT.md` file exist in the current directory?
 
 If neither is found, stop and say:
 
-> "No audit report found. Please run `/audit` first to generate a security findings list, then run `/audit-fix` again."
+> "No audit report found. Please run `/audit` (or `/audit-diff` for a PR-scoped scan) first to generate a security findings list, then run `/audit-fix` again."
 
 ## Step 1 — Parse scope from `$ARGUMENTS`
 

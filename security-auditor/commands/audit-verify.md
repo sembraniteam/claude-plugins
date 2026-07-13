@@ -9,11 +9,11 @@ You are running `/audit-verify` to independently verify security fixes without r
 ### Audit report
 
 Check for an audit report in this order:
-1. `/audit` or `/audit-file` output in this session
+1. `/audit`, `/audit-diff`, or `/audit-file` output in this session
 2. A `SECURITY-AUDIT.md` file in the current directory
 
 If no audit report is found, say:
-> "No audit report found. Please point me to the original audit report file, or run `/audit` first to generate one."
+> "No audit report found. Please point me to the original audit report file, or run `/audit` (or `/audit-diff` for a PR-scoped scan) first to generate one."
 
 ### Fix manifest
 

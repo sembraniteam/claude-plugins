@@ -1,12 +1,12 @@
 ---
-description: Regenerate a full security audit report from the current session's findings and save it as SECURITY-AUDIT.md.
+description: Regenerate a full security audit report from the current session's findings and save it as SECURITY-AUDIT.md. Pass --sarif to also emit SECURITY-AUDIT.sarif.json for GitHub code scanning.
 ---
 
 You are regenerating the security audit report from this session using the `security-auditor` plugin.
 
 ## What this command does
 
-It collects all findings discussed in this conversation (from `/audit`, `/audit-file`, or `/audit-deps` runs) and formats them into a complete, standalone `SECURITY-AUDIT.md` using the report template from the `secure-code-review` skill.
+It collects all findings discussed in this conversation (from `/audit`, `/audit-diff`, `/audit-file`, or `/audit-deps` runs) and formats them into a complete, standalone `SECURITY-AUDIT.md` using the report template from the `secure-code-review` skill. If `$ARGUMENTS` contains `--sarif`, it also writes `SECURITY-AUDIT.sarif.json`.
 
 ## Step 1 — Collect session findings
 
@@ -42,3 +42,11 @@ Disclaimer: This report is a defensive audit aid. Findings may include false pos
 Write the complete report to `SECURITY-AUDIT.md` in the current working directory.
 
 Confirm: "Report saved to `SECURITY-AUDIT.md`. It contains [N] findings ([C] critical, [H] high, [M] medium, [L] low)."
+
+## Step 4 — SARIF output (only if `--sarif` was passed)
+
+If `$ARGUMENTS` did not include `--sarif`, skip this step entirely.
+
+Otherwise, build `SECURITY-AUDIT.sarif.json` from the same set of active (non-baseline-suppressed) findings used in Step 2, following the structure, field rules, and severity mapping in `references/sarif-output.md` of the `secure-code-review` skill. Write it to the current working directory.
+
+Confirm: "SARIF output saved to `SECURITY-AUDIT.sarif.json` ([N] results). Upload it via a GitHub Actions step using `github/codeql-action/upload-sarif` to surface these findings in the repo's Security tab."
