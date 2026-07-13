@@ -1,6 +1,6 @@
 ---
 name: parallel-debug
-description: This skill should be used when the user invokes /debugging-workflow:parallel-debug, asks to "debug in parallel", "try all hypotheses at once", "spawn multiple agents for this bug", "investigate multiple root causes", "parallel hypothesis testing", "parallel investigation", "I can't figure out what's causing this and have a few theories", "investigate from multiple angles", "I have multiple theories about this bug", or reports a complex or intermittent bug where the root cause is unclear and multiple theories need testing simultaneously.
+description: This skill should be used when the user invokes /debugging-workflow:parallel-debug, asks to "debug in parallel", "try all hypotheses at once", "spawn multiple agents for this bug", "investigate multiple root causes", "parallel hypothesis testing", "parallel investigation", "I can't figure out what's causing this and have a few theories", "investigate from multiple angles", "I have multiple theories about this bug", or reports a complex or intermittent bug where the root cause is unclear and multiple theories need testing simultaneously. Also applies when the user asks whether their machine or project can handle this workflow, or asks to "run this without using too much disk/RAM", "debug sequentially instead of in parallel", or "check if my test suite is too slow for this first" — see the preflight check and `degraded_mode` setting.
 argument-hint: "[error message, stack trace, or bug description]"
 allowed-tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "Agent"]
 license: MIT
@@ -18,7 +18,7 @@ Use `parallel-debug` when:
 - A previous sequential debug pass was inconclusive
 - Time pressure demands concurrent investigation over sequential elimination
 
-For bugs with an obvious root cause, a direct sequential investigation is faster and uses fewer resources.
+For bugs with an obvious root cause, a direct sequential investigation is faster and uses fewer resources. This is a development-phase tool only — it never runs against a production environment. See the plugin README's "When NOT to Use" section for the full list of cases where a manual investigation beats this workflow (simple bugs, heavy test environments, tight deadlines).
 
 ---
 
@@ -31,8 +31,12 @@ For bugs with an obvious root cause, a direct sequential investigation is faster
    - `max_parallel_agents` — integer 2–5, default `4`; caps how many `hypothesis-investigator` agents run concurrently (see the batching rule in Step 3), independent of `hypothesis_count`
    - `time_budget_minutes` — integer 1–15, default `5`, approximate time budget per agent (agents run in parallel, so this is not a total)
    - `hypothesis_count` — integer 2–4, default `3`
+   - `preflight_max_minutes` — integer, default `5`; wall-clock cap for item 5 below
+   - `degraded_mode` — boolean, default `false`; forces the single-worktree, sequential-hypothesis execution path in Steps 2/3/7 — see `references/resource-constraints.md`
 
    Compute the **iteration budget** from `time_budget_minutes` using the table in `references/report-format.md` (default with `time_budget_minutes: 5` → 3 iterations).
+
+5. **Preflight check** — before creating any worktree, run the project's install step and its full test suite once on the current branch, capped at `preflight_max_minutes`. This exists to catch a broken or too-slow test environment before that cost gets multiplied by `hypothesis_count` worktrees — not to reject bugs that already have a failing test: a suite that finishes within the time budget is a **pass** regardless of how many individual tests failed. Only an install failure, a timeout, or the test runner failing to execute at all counts as a failure; on failure, stop before creating any session artifacts and recommend direct/manual debugging instead. Full algorithm, command detection, and exact stop/proceed criteria: `references/resource-constraints.md`.
 
 ---
 
@@ -46,15 +50,23 @@ If fewer than 2 genuinely distinct hypotheses can be articulated, stop and tell 
 
 ---
 
-## Step 2 — Create isolated worktrees
+## Step 2 — Create isolated worktree(s)
 
-For each hypothesis `hN`:
+**Standard mode** (default, `degraded_mode: false`): for each hypothesis `hN`:
 
 ```bash
 git worktree add .claude/debug-sessions/{session_id}/hN -b debug/{session_id}/hN {base_sha}
 ```
 
 Each `hypothesis-investigator` instance is given exactly one hypothesis and one worktree path. It must never touch files outside its assigned worktree. See Step 3 for how instances are batched and spawned.
+
+**Degraded mode** (`degraded_mode: true`): create exactly one worktree, shared across every hypothesis, instead of looping over hypothesis ids:
+
+```bash
+git worktree add .claude/debug-sessions/{session_id}/shared -b debug/{session_id}/shared {base_sha}
+```
+
+This is the point of the mode: one worktree's disk footprint at a time instead of `hypothesis_count` of them simultaneously. See `references/resource-constraints.md` for the full mechanics — including how the shared worktree is reset between hypotheses in Step 3, and why install-time savings (unlike the disk-footprint reduction) depend on the project's package manager.
 
 If worktree creation fails (dirty tree, disk space, etc.), stop before spawning any investigator and report the error — do not partially spawn agents into a broken session state.
 
@@ -64,7 +76,7 @@ If worktree creation fails (dirty tree, disk space, etc.), stop before spawning 
 
 Each `hypothesis-investigator` writes its YAML report to `.claude/debug-sessions/{session_id}/hN.report.yaml` — a sibling of the `hN/` worktree directory, not inside it. This matters: Step 7 deletes the `hN/` worktree entirely, so a report written inside it would be destroyed before it could be read for audit.
 
-Spawn agents in batches of at most `max_parallel_agents` (from Step 0) — this is that setting's actual effect: capping how many investigators run concurrently, independent of `hypothesis_count`. If `hypothesis_count` ≤ `max_parallel_agents` (the common case), there is only one batch: spawn all agents in a single message via `subagent_type: "debugging-workflow:hypothesis-investigator"`. If `hypothesis_count` > `max_parallel_agents`, spawn the first `max_parallel_agents` hypotheses in one message, wait for that batch to finish, then spawn the remaining hypotheses as the next batch the same way. Pass each agent a prompt with this structure:
+Every investigator, in either mode, gets a prompt with this structure — `Report output path` is always per-hypothesis; `Worktree path` differs by mode as noted below:
 
 ```
 Bug description: [full error message and symptom]
@@ -76,6 +88,10 @@ Iteration budget: [iteration_budget from Step 0] attempts
 Worktree path: .claude/debug-sessions/{session_id}/hN
 Report output path: .claude/debug-sessions/{session_id}/hN.report.yaml
 ```
+
+**Standard mode**: spawn agents in batches of at most `max_parallel_agents` (from Step 0) — this is that setting's actual effect: capping how many investigators run concurrently, independent of `hypothesis_count`. If `hypothesis_count` ≤ `max_parallel_agents` (the common case), there is only one batch: spawn all agents in a single message via `subagent_type: "debugging-workflow:hypothesis-investigator"`. If `hypothesis_count` > `max_parallel_agents`, spawn the first `max_parallel_agents` hypotheses in one message, wait for that batch to finish, then spawn the remaining hypotheses as the next batch the same way. `Worktree path` is `hN` per the prompt template above.
+
+**Degraded mode** (`degraded_mode: true`): ignore `max_parallel_agents` and the batching logic above entirely — spawn investigators one at a time, strictly sequentially; there is never more than one running at once. `Worktree path` is always `.claude/debug-sessions/{session_id}/shared` (not `hN`) for every hypothesis. Before each investigator after the first, reset the shared worktree to a clean `base_sha` state so every hypothesis starts from the same baseline instead of inheriting the previous one's changes — exact reset commands and rationale in `references/resource-constraints.md`.
 
 Wait for all instances across all batches to finish. If an agent times out or crashes, no `hN.report.yaml` was ever written for it — synthesize a minimal in-memory record with `test_result: not_run`, `status: unconfirmed`, and the remaining qualitative fields set to "N/A", and proceed with the remaining hypotheses — still clean up its worktree in Step 7. Read all `hN.report.yaml` files into memory before proceeding.
 
@@ -135,6 +151,8 @@ Report using the same **Final Ranked Report** format as Step 5 (all hypotheses w
 
 ## Step 7 — Cleanup (always runs, regardless of outcome)
 
+**Standard mode**:
+
 ```bash
 for hN in <all hypothesis ids>; do
   git worktree remove .claude/debug-sessions/{session_id}/hN --force
@@ -142,7 +160,14 @@ for hN in <all hypothesis ids>; do
 done
 ```
 
-Run this even on the escalation path, once the user's final choice has been applied. This only removes the `hN/` worktree directories and their branches — the `.claude/debug-sessions/{session_id}/hN.report.yaml` reports live one level up, outside the worktrees, so they survive cleanup on disk for audit purposes. The commits themselves also remain reachable in the repo's object store (via the `commit_sha` recorded in each report) even after the branch ref is deleted, until garbage collected.
+**Degraded mode**: there is only one worktree and one branch to remove, regardless of `hypothesis_count`:
+
+```bash
+git worktree remove .claude/debug-sessions/{session_id}/shared --force
+git branch -D debug/{session_id}/shared
+```
+
+Run this even on the escalation path, once the user's final choice has been applied. This only removes the worktree directory/directories and their branch(es) — the `.claude/debug-sessions/{session_id}/hN.report.yaml` reports live one level up, outside the worktrees, so they survive cleanup on disk for audit purposes. The commits themselves also remain reachable in the repo's object store (via the `commit_sha` recorded in each report) even after the branch ref is deleted, until garbage collected.
 
 ---
 
@@ -151,6 +176,7 @@ Run this even on the escalation path, once the user's final choice has been appl
 - **Investigator times out or crashes** — treat as `test_result: not_run`, proceed with remaining ones, still clean up its worktree in Step 7.
 - **Near-duplicate hypotheses** — if the arbitrator's `reasoning` indicates two hypotheses were the same claim reworded, note this to the user as a process observation, not just a decision.
 - **Worktree creation fails** — stop before spawning any investigator and report the error; do not partially spawn agents into a broken session state.
+- **Preflight check fails** (Step 0 item 5) — stop before creating any session artifacts; recommend direct/manual debugging instead of a parallel session. Do not treat ordinary test failures as a preflight failure — only install errors, timeouts, and environment errors count.
 
 ---
 
@@ -159,6 +185,7 @@ Run this even on the escalation path, once the user's final choice has been appl
 - **`references/hypothesis-catalog.md`** — Full hypothesis library organized by symptom; used in Step 1
 - **`references/report-format.md`** — Evidence report spec and ranking algorithm
 - **`references/apply-verification.md`** — Rationale behind the Step 5 artifact-verification checks
+- **`references/resource-constraints.md`** — Full mechanics for the Step 0 preflight check and `degraded_mode`'s single-worktree, sequential-hypothesis path
 - **`examples/debugging-workflow.local.md`** — Complete settings template
 - **`../../agents/hypothesis-investigator.md`** — Per-hypothesis investigation agent
 - **`../../agents/hypothesis-arbitrator.md`** — Conflict-resolution agent invoked in Step 4 when multiple hypotheses pass
