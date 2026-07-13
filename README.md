@@ -44,13 +44,15 @@ Generates and maintains `CHANGELOG.md` and platform-specific release notes from 
 
 ### [debugging-workflow](./debugging-workflow)
 
-Parallel hypothesis debugging — generates multiple root-cause hypotheses, investigates them concurrently in isolated git worktrees, arbitrates when fixes conflict, and applies the winning diff to the original branch.
+Parallel hypothesis debugging — generates multiple root-cause hypotheses, investigates them concurrently in isolated git worktrees, arbitrates when fixes conflict, and applies the winning diff to the original branch. Development-phase tool only; never touches production.
 
-| Component                            | Description                                                                                                                             |
-|--------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|
-| `/debugging-workflow:parallel-debug` | Orchestrate a full parallel debug session: session setup, worktree isolation, agent spawning, arbitration, fix application, and cleanup |
-| `hypothesis-investigator` agent      | Works in an isolated git worktree, writes a failing test, applies a targeted fix, and emits a structured YAML report                    |
-| `hypothesis-arbitrator` agent        | Invoked only when multiple investigators pass — re-verifies evidence and returns `ONE_WINNER`, `MERGE_FIXES`, or `ESCALATE_TO_USER`     |
+| Component                            | Description                                                                                                                                                   |
+|--------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `/debugging-workflow:parallel-debug` | Orchestrate a full parallel debug session: preflight check, session setup, worktree isolation, agent spawning, arbitration, fix application, and cleanup      |
+| Preflight check                      | Runs the project's install step + full test suite once before creating any worktree — stops before burning worktrees on a broken or too-slow test environment |
+| `degraded_mode` setting              | Single shared worktree investigated sequentially instead of one worktree per hypothesis — for low-RAM/low-disk machines                                       |
+| `hypothesis-investigator` agent      | Works in an isolated git worktree, writes a failing test, applies a targeted fix, and emits a structured YAML report                                          |
+| `hypothesis-arbitrator` agent        | Invoked only when multiple investigators pass — re-verifies evidence and returns `ONE_WINNER`, `MERGE_FIXES`, or `ESCALATE_TO_USER`                           |
 
 **Prerequisites:** Git
 
@@ -60,15 +62,16 @@ Parallel hypothesis debugging — generates multiple root-cause hypotheses, inve
 
 Performance investigation assistant for web, mobile, desktop, and API applications. Guides structured investigations from raw evidence (profiler output, GC logs, screenshots, metrics) to prioritized, role-tailored recommendations.
 
-| Component                          | Description                                                                         |
-|------------------------------------|-------------------------------------------------------------------------------------|
-| `/perfmind:investigate [app-type]` | Start a structured investigation — accepts flame graphs, GC logs, metrics, traces   |
-| `/perfmind:report [role]`          | Generate a role-tailored report (developer / DevOps / perf-engineer / leadership)   |
-| `profiler-analysis` skill          | Auto-activates when flame graphs, allocation traces, or heap dumps are shared       |
-| `bottleneck-patterns` skill        | Auto-activates on slow response times, high CPU, memory leaks, jank, or ANR reports |
-| `impact-matrix` skill              | Auto-activates when asked to prioritize or rank performance findings                |
-| `performance-analyst` agent        | Hypothesis-driven deep-dive into a single performance domain                        |
-| `report-generator` agent           | Generates polished, role-tailored reports from investigation findings               |
+| Component                          | Description                                                                                                                                           |
+|------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `/perfmind:investigate [app-type]` | Start a structured investigation — accepts flame graphs, GC logs, metrics, traces                                                                     |
+| `/perfmind:report [role]`          | Generate a role-tailored report (developer / DevOps / perf-engineer / leadership)                                                                     |
+| `profiler-analysis` skill          | Auto-activates on flame graphs, GC logs, allocation traces, heap dumps, `.cpuprofile`, `pprof -top`, or `EXPLAIN ANALYZE` JSON                        |
+| `scripts/parse-profiler.py`        | Deterministic top-N parser for `.cpuprofile`, `go tool pprof -top`, and PostgreSQL `EXPLAIN ANALYZE` JSON — the script computes, the skills interpret |
+| `bottleneck-patterns` skill        | Auto-activates on slow response times, high CPU, memory leaks, jank, or ANR reports                                                                   |
+| `impact-matrix` skill              | Auto-activates when asked to prioritize or rank performance findings                                                                                  |
+| `performance-analyst` agent        | Hypothesis-driven deep-dive into a single performance domain                                                                                          |
+| `report-generator` agent           | Generates polished, role-tailored reports from investigation findings                                                                                 |
 
 **Supported platforms:** Web (Core Web Vitals), Android, iOS, Flutter, desktop, API/backend
 
@@ -91,19 +94,21 @@ Generates conventional commit messages and branch names from git context and use
 
 Structured security audit for development and production codebases. Maps every finding to a CWE ID and verifies dependency vulnerabilities against live CVE databases (NVD/OSV.dev/CISA KEV) via a bundled MCP server. CVE numbers only appear if returned by a tool call — never from model memory. Production mode enriches every CVE with EPSS exploitation probability and CISA KEV status.
 
-| Component                  | Description                                                                                              |
-|----------------------------|----------------------------------------------------------------------------------------------------------|
-| `/audit [dev\|prod]`       | Full codebase scan: structural SAST + dependency CVE verification + EPSS/KEV enrichment in prod mode     |
-| `/audit-file <path>`       | Deep single-file audit with data flow tracing, line-level evidence, and CWE mapping                      |
-| `/audit-deps`              | Dependency-only scan — queries all manifest files and outputs a CVE table with severity and fix versions |
-| `/audit-report`            | Regenerates a complete `SECURITY-AUDIT.md` from current session findings                                 |
-| `/audit-fix [SA-NNN]`      | Delegate one or more findings to `security-fixer`, then verify with `fix-reviewer`; one retry on failure |
-| `/audit-verify`            | Re-run `fix-reviewer` against an existing fix manifest without applying new changes                      |
-| `security-auditor` agent   | Read-only subagent (`Read`, `Grep`, `Glob` only) for structural SAST analysis and CWE-mapped findings    |
-| `security-fixer` agent     | Applies minimal fixes per CWE root cause; outputs a fix manifest; never runs shell commands              |
-| `fix-reviewer` agent       | Read-only post-fix verifier; assigns `fixed` / `partially-fixed` / `not-fixed` / `introduced-new-issue`  |
-| `secure-code-review` skill | OWASP Top 10 (2025) checklist, 38+ CWE mappings, severity scale, and report template                     |
-| PostToolUse hook           | Warns when edited files contain high-risk patterns (SQL injection, eval, hardcoded secrets)              |
+| Component                            | Description                                                                                                                                           |
+|--------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `/audit [dev\|prod]`                 | Full codebase scan: structural SAST + dependency CVE verification + EPSS/KEV enrichment in prod mode                                                  |
+| `/audit-diff [base-ref] [dev\|prod]` | Audit only files changed vs a base branch (or uncommitted/staged changes) — scoped analysis for PR review and codebases too large for a full `/audit` |
+| `/audit-file <path>`                 | Deep single-file audit with data flow tracing, line-level evidence, and CWE mapping                                                                   |
+| `/audit-deps`                        | Dependency-only scan — queries all manifest files and outputs a CVE table with severity and fix versions                                              |
+| `/audit-report [--sarif]`            | Regenerates a complete `SECURITY-AUDIT.md` from current session findings; `--sarif` also emits `SECURITY-AUDIT.sarif.json` for GitHub code scanning   |
+| `/audit-fix [SA-NNN]`                | Delegate one or more findings to `security-fixer`, then verify with `fix-reviewer`; one retry on failure                                              |
+| `/audit-verify`                      | Re-run `fix-reviewer` against an existing fix manifest without applying new changes                                                                   |
+| `security-auditor` agent             | Read-only subagent (`Read`, `Grep`, `Glob` only) for structural SAST analysis and CWE-mapped findings                                                 |
+| `security-fixer` agent               | Applies minimal fixes per CWE root cause; outputs a fix manifest; never runs shell commands                                                           |
+| `fix-reviewer` agent                 | Read-only post-fix verifier; assigns `fixed` / `partially-fixed` / `not-fixed` / `introduced-new-issue`                                               |
+| `secure-code-review` skill           | OWASP Top 10 (2025) checklist, 38+ CWE mappings, severity scale, remediation protocol, and report template                                            |
+| Baseline/suppression file            | `.security-audit-baseline.json` — accepted-risk findings stop reappearing in every report                                                             |
+| PostToolUse hook                     | Warns when edited files contain high-risk patterns (SQL injection, eval, hardcoded secrets)                                                           |
 
 **Prerequisites:** Python 3
 
@@ -184,9 +189,9 @@ Creates `.claude/changelog-manager.local.md` with your preferred languages and p
 /debugging-workflow:parallel-debug <error message or stack trace>
 ```
 
-Creates a session directory, confirms the working tree is clean, generates 2–4 root-cause hypotheses, spins up isolated git worktrees for each, and spawns `hypothesis-investigator` agents in parallel. When multiple investigators produce passing fixes, `hypothesis-arbitrator` re-verifies evidence and decides whether to merge, pick one winner, or escalate to you. The winning diff is applied to your original branch and re-verified before the session worktrees are cleaned up.
+Runs a preflight check (install + full test suite once, capped at a few minutes) before touching anything — if the environment is broken or too slow to multiply across worktrees, it stops and recommends manual debugging instead. Otherwise it creates a session directory, confirms the working tree is clean, generates 2–4 root-cause hypotheses, spins up isolated git worktrees for each, and spawns `hypothesis-investigator` agents in parallel. When multiple investigators produce passing fixes, `hypothesis-arbitrator` re-verifies evidence and decides whether to merge, pick one winner, or escalate to you. The winning diff is applied to your original branch and re-verified before the session worktrees are cleaned up.
 
-To tune the number of hypotheses, time budget, or agent parallelism, create `.claude/debugging-workflow.local.md` — a template is at `debugging-workflow/skills/parallel-debug/examples/debugging-workflow.local.md`.
+To tune the number of hypotheses, time budget, agent parallelism, or the preflight timeout, create `.claude/debugging-workflow.local.md` — a template is at `debugging-workflow/skills/parallel-debug/examples/debugging-workflow.local.md`. Set `degraded_mode: true` there on low-RAM/low-disk machines to use a single shared worktree investigated sequentially instead of one worktree per hypothesis.
 
 ### Performance investigation workflow
 
@@ -194,7 +199,7 @@ To tune the number of hypotheses, time budget, or agent parallelism, create `.cl
 /perfmind:investigate
 ```
 
-Paste in profiler output, GC logs, screenshots, or metrics. Claude gathers evidence across multiple performance domains (response time, CPU, memory, GC, database, networking, battery) and produces a prioritized findings list.
+Paste in profiler output, GC logs, screenshots, or metrics. Claude gathers evidence across multiple performance domains (response time, CPU, memory, GC, database, networking, battery) and produces a prioritized findings list. For Chrome/Node `.cpuprofile` files, `go tool pprof -top` output, or PostgreSQL `EXPLAIN (ANALYZE, FORMAT JSON)`, the `profiler-analysis` skill runs `scripts/parse-profiler.py` first — a deterministic script computes the ranked top-N hotspots, Claude interprets the result, instead of eyeballing raw output.
 
 ```
 /perfmind:report developer
@@ -208,7 +213,13 @@ Generates a role-tailored report from the current investigation. Available roles
 /audit
 ```
 
-Claude asks whether you're auditing a development or production codebase, maps your project (languages, frameworks, entry points, dependency manifests), spawns a read-only `security-auditor` agent for structural SAST analysis, then queries OSV.dev and NVD for every dependency version found. In production mode, each CVE is enriched with its EPSS exploitation probability (FIRST.org) and CISA KEV status — KEV-listed CVEs are automatically escalated to Critical. Output is a full report using the OWASP Top 10 (2025) checklist.
+Claude asks whether you're auditing a development or production codebase, maps your project (languages, frameworks, entry points, dependency manifests), spawns a read-only `security-auditor` agent for structural SAST analysis, then queries OSV.dev and NVD for every dependency version found. In production mode, each CVE is enriched with its EPSS exploitation probability (FIRST.org) and CISA KEV status — KEV-listed CVEs are automatically escalated to Critical. Output is a full report using the OWASP Top 10 (2025) checklist. Findings matching `.security-audit-baseline.json` (accepted risk) are excluded from the active list but still shown as suppressed.
+
+```
+/audit-diff main
+```
+
+Audit only the files changed vs `main` (or vs the repo's default branch, plus any uncommitted/staged changes, if no ref is given) — the recommended way to review a PR or to stay within context on a codebase too large for a full `/audit`.
 
 ```
 /audit-file src/api/users.py
@@ -223,10 +234,10 @@ Deep single-file audit with data flow tracing from input sources to dangerous si
 Dependency-only scan — no code analysis. Queries all manifest files (npm, PyPI, Go, Maven, Rust, Ruby, PHP, NuGet) and outputs a CVE table with CVSS scores and fix versions.
 
 ```
-/audit-report
+/audit-report --sarif
 ```
 
-Regenerates and saves `SECURITY-AUDIT.md` from the current session's findings.
+Regenerates and saves `SECURITY-AUDIT.md` from the current session's findings; `--sarif` also writes `SECURITY-AUDIT.sarif.json` for GitHub code scanning or any tool that ingests SARIF 2.1.0.
 
 ---
 
@@ -304,6 +315,8 @@ Regenerates and saves `SECURITY-AUDIT.md` from the current session's findings.
 │   ├── agents/
 │   │   ├── performance-analyst.md
 │   │   └── report-generator.md
+│   ├── scripts/
+│   │   └── parse-profiler.py     # Deterministic top-N parser: cpuprofile, pprof -top, EXPLAIN ANALYZE JSON
 │   └── skills/
 │       ├── bottleneck-patterns/
 │       │   ├── SKILL.md
@@ -328,11 +341,12 @@ Regenerates and saves `SECURITY-AUDIT.md` from the current session's findings.
     │   └── fix-reviewer.md           # Verifies fixes closed the root cause; never writes files
     ├── commands/
     │   ├── audit.md                  # Full codebase audit orchestrator
+    │   ├── audit-diff.md             # Audit only files changed vs a base branch
     │   ├── audit-file.md             # Single-file deep audit
     │   ├── audit-deps.md             # Dependency CVE scan
     │   ├── audit-fix.md              # Remediation pipeline: fixer → reviewer, one retry on failure
     │   ├── audit-verify.md           # Re-run fix-reviewer against an existing fix manifest
-    │   └── audit-report.md           # Save findings as SECURITY-AUDIT.md
+    │   └── audit-report.md           # Save findings as SECURITY-AUDIT.md (+ optional SARIF)
     ├── hooks/
     │   └── hooks.json                # PostToolUse hook — warns on high-risk patterns
     ├── scripts/
@@ -340,7 +354,11 @@ Regenerates and saves `SECURITY-AUDIT.md` from the current session's findings.
     │   └── vuln_server.py            # MCP server: NVD + OSV.dev + MITRE CWE + GitHub Advisory + EPSS + CISA KEV
     ├── skills/
     │   └── secure-code-review/
-    │       └── SKILL.md              # OWASP Top 10 (2025), 38+ CWE mappings, report template
+    │       ├── SKILL.md              # OWASP Top 10 (2025), 38+ CWE mappings, report template
+    │       └── references/
+    │           ├── baseline-suppression.md  # .security-audit-baseline.json format & matching
+    │           ├── sarif-output.md          # SARIF 2.1.0 structure for /audit-report --sarif
+    │           └── remediation-protocol.md  # Fix manifest, verdicts, per-CWE fix examples
     └── test-fixtures/                # Intentionally vulnerable demo files
         ├── vulnerable_app.py
         ├── insecure_api.js
