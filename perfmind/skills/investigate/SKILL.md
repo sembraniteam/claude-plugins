@@ -44,7 +44,7 @@ Classify the app type from context or the user's argument:
 ### Step 3: Multi-Domain Analysis
 
 For each piece of evidence, apply the relevant knowledge:
-- For profiler output or GC logs: apply the interpretation rules in the `profiler-analysis` skill
+- For profiler output or GC logs: apply the interpretation rules in the `profiler-analysis` skill. For `.cpuprofile`, `go tool pprof -top` output, or PostgreSQL `EXPLAIN (ANALYZE, FORMAT JSON)` specifically, run that skill's `scripts/parse-profiler.py` first (see its "Deterministic Extraction" section) rather than reading the raw file for manual interpretation.
 - For response time or resource metrics: apply the pattern recognition in the `bottleneck-patterns` skill
 - For prioritization of findings: apply the `impact-matrix` skill
 

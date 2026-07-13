@@ -10,6 +10,7 @@ perfmind guides structured performance investigations — from raw evidence (scr
 
 - Multi-domain analysis: response time, CPU, memory, GC, database, networking, battery/mobile
 - Cross-platform: web (Core Web Vitals), Android, iOS, Flutter, desktop, API/backend
+- Deterministic top-N extraction for `.cpuprofile`, `go tool pprof -top`, and PostgreSQL `EXPLAIN ANALYZE` JSON (`scripts/parse-profiler.py`) — the script computes, the skills interpret
 - Complexity × Impact prioritization matrix
 - Role-tailored reports (developer / perf engineer / DevOps / leadership)
 - Hypothesis-driven deep-dive agent for complex root-cause analysis
@@ -41,11 +42,11 @@ Generates a role-tailored performance report from findings in the current conver
 
 ## Knowledge Skills (auto-activated)
 
-| Skill                 | Activates when...                                                        |
-|-----------------------|--------------------------------------------------------------------------|
-| `profiler-analysis`   | User shares flame graphs, GC logs, allocation traces, or heap dumps      |
-| `bottleneck-patterns` | User describes slow response times, high CPU, memory leaks, jank, or ANR |
-| `impact-matrix`       | User asks to prioritize or rank findings                                 |
+| Skill                 | Activates when...                                                                                                                     |
+|-----------------------|---------------------------------------------------------------------------------------------------------------------------------------|
+| `profiler-analysis`   | User shares flame graphs, GC logs, allocation traces, heap dumps, `.cpuprofile` files, `pprof -top` output, or `EXPLAIN ANALYZE` JSON |
+| `bottleneck-patterns` | User describes slow response times, high CPU, memory leaks, jank, or ANR                                                              |
+| `impact-matrix`       | User asks to prioritize or rank findings                                                                                              |
 
 ## Agents
 

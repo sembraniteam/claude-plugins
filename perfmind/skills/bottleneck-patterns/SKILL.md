@@ -30,13 +30,13 @@ Identify which domain matches the symptom, then apply the corresponding pattern.
 
 **Networking**: Chatty API, missing compression, no connection reuse, oversized images, sequential loading
 
-**Database**: Missing indexes (`EXPLAIN ANALYZE` first), SELECT *, missing composite index, ORM over-fetching
+**Database**: Missing indexes (`EXPLAIN ANALYZE` first — parse PostgreSQL JSON output deterministically with the `profiler-analysis` skill's `scripts/parse-profiler.py --format pg-explain`), SELECT *, missing composite index, ORM over-fetching
 
 ### Diagnostic Approach
 
 1. Match the symptom to a domain from the quick reference above
 2. Look up the specific pattern and fix in `references/bottleneck-lookup.md`
-3. Confirm with data before implementing: run `EXPLAIN ANALYZE`, attach a profiler, or measure with a benchmark
+3. Confirm with data before implementing: run `EXPLAIN ANALYZE`, attach a profiler, or measure with a benchmark — for `.cpuprofile`/`pprof -top`/`EXPLAIN ANALYZE JSON` specifically, use `profiler-analysis`'s parser script rather than reading raw output by eye
 4. Apply the `impact-matrix` skill to prioritize multiple findings
 
 ### Cross-Domain Signals
