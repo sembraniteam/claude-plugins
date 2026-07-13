@@ -224,7 +224,7 @@ Works with any fix — not just ones applied by `/audit-fix`. If no fix manifest
 flowchart TD
     A([User runs /audit]) --> B["security-auditor agent<br/>Read · Grep · Glob only"]
     B -->|Returns findings with stable SA-NNN IDs| C[(Audit report in session)]
-    C -->|User explicitly runs /audit-fix| D[/audit-fix command]
+    C -->|User explicitly runs /audit-fix| D["/audit-fix command"]
     D --> E["security-fixer agent<br/>Read · Grep · Glob · Write · Edit · no Bash<br/>① Shows fix plan per finding<br/>② Waits for user confirmation<br/>③ Applies minimal change per CWE root cause<br/>④ Outputs fix manifest"]
     E -->|auto-continues| F["fix-reviewer agent<br/>Read · Grep · Glob only<br/>• Reads report + fix manifest + current files<br/>• Verdicts each SA-NNN: fixed / partially-fixed /<br/>  not-fixed / introduced-new-issue"]
     F -->|fixed / partially-fixed| G([Final summary to user])
