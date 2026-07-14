@@ -8,13 +8,24 @@ allowed-tools: ["Read", "Edit", "Glob", "Bash", "Agent"]
 
 This skill turns an approved architecture document into a working project skeleton: data models, API stubs, configuration files, and infrastructure files. It always proposes a folder structure first and waits for your confirmation before writing any files.
 
+**Scripts directory:** `../../scripts/` relative to this SKILL.md.
+
+---
+
+## Before starting — session completeness gate
+
+Check for `docs/architecture-designer/session.json`:
+
+- **If the file exists**: run `node <scripts_dir>/validate-session.mjs` and show its output — this is a hard gate; do not proceed to Step 1 until it reports `SESSION CHECK PASSED`. See `design/references/session-schema.md` § "Session completeness gate" for what the script checks, how to resolve a failure, and why this gate applies to `implement` even though neither of its steps reads stage 1–5 data directly.
+- **If the file does not exist**: this gate only applies when `session.json` exists — proceed without it. The architecture document confirmed in Step 1 is the authoritative source of truth for implementation in that case.
+
 ---
 
 ## Step 1 — Find the architecture document
 
 Check for an architecture document path in this order:
 
-1. **`docs/architecture-designer/session.json`** — if the file exists and contains a `documents` array, use its last entry (the most recently saved document). This is the authoritative location when this skill follows a design session in the same working directory. If that path does not resolve to an existing file (moved or deleted since the session was recorded), fall back to option 3 below instead of failing.
+1. **`docs/architecture-designer/session.json`** — if it exists and contains a `documents` array, use its last entry (the most recently saved document) — the authoritative location when this skill follows a design session in the same working directory. If that path doesn't resolve to an existing file (moved or deleted since), fall back to option 3 instead of failing.
 2. **Current conversation context** — if the user just completed a `/architecture-designer:design` or `/architecture-designer:review` session and the document path is visible in the conversation.
 3. **Manual selection** — if neither above yields a path, proceed to list files as described below.
 
@@ -48,9 +59,9 @@ Scan the current working directory for signs of an existing project. Look for:
 
 ## Step 3 — Spawn the implementation-planner agent
 
-Before spawning, check `docs/architecture-designer/session.json` for a `"remediationPlans"` array. Find the entry whose `document` field equals the document confirmed in Step 1; if found and its `path` exists on disk, this is the remediation plan to pass along — unless `design/references/session-schema.md` § "Checking whether a remediation plan is fully resolved" rules it out.
+Before spawning, check `session.json` for a `"remediationPlans"` array: find the entry whose `document` field equals the document confirmed in Step 1 — if found and its `path` exists on disk, this is the remediation plan to pass along, unless `design/references/session-schema.md` § "Checking whether a remediation plan is fully resolved" rules it out.
 
-Then run `design/references/session-schema.md` § "Resumable-plan detection procedure" (this skill is one of the three canonical call sites it describes) using the document confirmed in Step 1 as `{document}`. This produces the **Previous plan path** to pass below, if the user chooses to resume.
+Then run `design/references/session-schema.md` § "Resumable-plan detection procedure" (this skill is one of its three canonical call sites) using the document confirmed in Step 1 as `{document}` to produce the **Previous plan path**, if the user chooses to resume.
 
 Spawn `architecture-designer:implementation-planner`. Pass it:
 
@@ -108,3 +119,9 @@ Once the agent reports completion, remind the user:
 6. Commit the skeleton as a clean baseline before adding business logic
 
 Let the user know they can run `/architecture-designer:review` at any time to revise the architecture and re-run this skill to update the implementation.
+
+---
+
+## Path resolution
+
+`<scripts_dir>` = the `scripts/` directory of the architecture-designer plugin, two levels above this file (`../../scripts/`). Resolve it from the absolute path of this SKILL.md at runtime.

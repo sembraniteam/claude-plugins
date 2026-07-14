@@ -6,15 +6,15 @@ Guided architecture and infrastructure design workflow for Claude Code — from 
 
 ### `/architecture-designer:design`
 
-Runs the full seven-stage design process:
+Runs the full design process — six requirements/design stages followed by review, preview, and low-level design steps — highlights below:
 
-1. **Requirements gathering** — application goals, stakeholders, business processes, success criteria
-2. **Requirements analysis** — functional vs non-functional requirements (performance, security, scalability, availability)
-3. **Feasibility study and constraints** — budget, timeline, regulations, team competencies, legacy integrations
-4. **Capacity planning** — users, TPS, data volume, peak load, growth projections
-5. **Technology selection** — stack, architecture pattern, database, infrastructure, observability strategy, and DR approach; every choice justified against stages 1–4
-6. **Architecture and infrastructure design** — Database schema (ERD, index plan, engine selection), IaC tool selection and module structure, CI/CD pipeline design (platform, stages, branching strategy, environment promotion), and Mermaid diagrams rendered in the browser with zoom/pan/download
-7. **Low-Level Design** — API contracts (per sequence diagram endpoint), business rules (pseudocode for non-trivial logic), DTOs, inter-service contracts (microservices/event-driven only), and error catalog
+- **Stage 1 — Requirements gathering** — application goals, stakeholders, business processes, success criteria
+- **Stage 2 — Requirements analysis** — functional vs non-functional requirements (performance, security, scalability, availability)
+- **Stage 3 — Feasibility study and constraints** — budget, timeline, regulations, team competencies, legacy integrations
+- **Stage 4 — Capacity planning** — users, TPS, data volume, peak load, growth projections
+- **Stage 5 — Technology selection** — stack, architecture pattern, database, infrastructure, observability strategy, and DR approach; every choice justified against stages 1–4
+- **Stage 6 — Architecture and infrastructure design** — Database schema (ERD, index plan, engine selection), IaC tool selection and module structure, CI/CD pipeline design (platform, stages, branching strategy, environment promotion), and Mermaid diagrams rendered in the browser with zoom/pan/download
+- **Step 10 — Low-Level Design** — API contracts (per sequence diagram endpoint), business rules (pseudocode for non-trivial logic), DTOs, inter-service contracts (microservices/event-driven only), and error catalog (Steps 7–9 in between run architecture review, browser preview, and user confirmation)
 
 Produced artifacts:
 - Browser preview at `http://localhost:<port>` with zoomable, downloadable 2× resolution PNG diagrams
@@ -78,17 +78,17 @@ The `/architecture-designer:review` skill follows the same reviewer → fixer lo
 
 Each reviewer has a paired fixer agent. When a reviewer returns findings, the skill spawns the fixer to apply targeted corrections, then re-runs the reviewer. This loop runs until the reviewer passes — no manual editing required. Implementation follows a similar two-step split: `implementation-planner` produces and confirms the plan, then `architecture-implementer` executes it — the implementer never runs without a plan the planner has already saved.
 
-| Agent                                            | Role                                                                                                                                                                                                                                              |
-|--------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `architecture-designer:architecture-reviewer`    | Validates diagrams for technical correctness, cross-diagram consistency, requirements traceability, risks, observability, and DR; returns Critical / Major / Minor findings with REVIEW PASSED / CONDITIONALLY PASSED / FAILED verdict            |
-| `architecture-designer:architecture-fixer`       | Applies targeted fixes to Mermaid diagrams based on reviewer findings; updates `diagrams.json` in place and returns a fix log                                                                                                                     |
-| `architecture-designer:database-designer`        | Designs schema, ERD, index plan, engine selection, and secure connection config for SQL and NoSQL                                                                                                                                                 |
-| `architecture-designer:database-reviewer`        | Audits database design: engine fit, schema/3NF, ERD accuracy, index completeness, security config; returns DATABASE REVIEW PASSED / FAILED                                                                                                        |
-| `architecture-designer:database-fixer`           | Corrects schema, ERD, index plan, and connection config; writes the corrected ERD and `indexPlan` directly into `diagrams.json` (same pattern as `architecture-fixer`), and returns corrected schema and connection config for document embedding |
-| `architecture-designer:document-reviewer`        | Audits saved documents for format compliance (F1–F7) and content completeness (C1–C8, including IaC and CI/CD sections); returns DOCUMENT REVIEW PASSED / FAILED                                                                                  |
-| `architecture-designer:document-fixer`           | Fixes specific format and content failures in the document based on reviewer findings; overwrites the draft in place                                                                                                                              |
-| `architecture-designer:implementation-planner`   | Resolves implementation ambiguities, proposes a folder structure, waits for confirmation, and saves the implementation plan; does not write application code                                                                                     |
-| `architecture-designer:architecture-implementer` | Reads the confirmed implementation plan and the approved document, then implements project skeleton, data models, routes, and infrastructure files; refuses to run without a confirmed plan                                                     |
+| Agent                                            | Role                                                                                                                                                                                                                                                                    |
+|--------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `architecture-designer:architecture-reviewer`    | Validates diagrams for technical correctness, cross-diagram consistency, requirements traceability, risks, observability, and DR; returns Critical / Major / Minor findings with REVIEW PASSED / CONDITIONALLY PASSED / FAILED verdict                                  |
+| `architecture-designer:architecture-fixer`       | Applies targeted fixes to Mermaid diagrams based on reviewer findings; updates `diagrams.json` in place and returns a fix log                                                                                                                                           |
+| `architecture-designer:database-designer`        | Designs schema, ERD, index plan, engine selection, and secure connection config for SQL and NoSQL                                                                                                                                                                       |
+| `architecture-designer:database-reviewer`        | Audits database design: engine fit, schema/3NF, ERD accuracy, index completeness, security config; returns DATABASE REVIEW PASSED / FAILED                                                                                                                              |
+| `architecture-designer:database-fixer`           | Corrects schema, ERD, index plan, and connection config; writes the corrected ERD and `indexPlan` directly into `diagrams.json` (same pattern as `architecture-fixer`), and returns the corrected schema, ERD, index plan, and connection config for document embedding |
+| `architecture-designer:document-reviewer`        | Audits saved documents for format compliance (F1–F7) and content completeness (C1–C8, including IaC and CI/CD sections); returns DOCUMENT REVIEW PASSED / FAILED                                                                                                        |
+| `architecture-designer:document-fixer`           | Fixes specific format and content failures in the document based on reviewer findings; overwrites the draft in place                                                                                                                                                    |
+| `architecture-designer:implementation-planner`   | Resolves implementation ambiguities, proposes a folder structure, waits for confirmation, and saves the implementation plan; does not write application code                                                                                                            |
+| `architecture-designer:architecture-implementer` | Reads the confirmed implementation plan and the approved document, then implements project skeleton, data models, routes, and infrastructure files; refuses to run without a confirmed plan                                                                             |
 
 ## Scripts
 
@@ -116,7 +116,7 @@ node scripts/preview-server.mjs <port>
 
 The preview server reads `docs/architecture-designer/diagrams.json` on every request — reload the page to see diagram updates without restarting the server.
 
-`validate-diagrams.mjs` catches real Mermaid syntax errors using the mermaid package for legacy types and `@mermaid-js/parser` for new types. Diagrams validated only by heuristics (when parsers are unavailable) are marked `✓ (heuristics only)` in the output. The design skill runs it automatically before launching the preview, but you can run it manually at any time. `validate-session.mjs` is run automatically at the start of Stage 6 to confirm all requirement stages are on disk before sub-agents are spawned.
+`validate-diagrams.mjs` catches real Mermaid syntax errors using the mermaid package for legacy types and `@mermaid-js/parser` for new types. Diagrams validated only by heuristics (when parsers are unavailable) are marked `✓ (heuristics only)` in the output. The design skill runs it automatically before launching the preview, but you can run it manually at any time. `validate-session.mjs` is run automatically at the start of Stage 6 to confirm all requirement stages are on disk before sub-agents are spawned. The review and implement skills also run it as a hard gate whenever `session.json` exists — a failed check blocks progression until the missing fields/stages are completed (a missing `session.json` entirely is unaffected, since both skills can still work from the document or codebase alone).
 
 ## `diagrams.json` schema
 
@@ -195,15 +195,15 @@ All diagrams support zoom in/out/reset (mouse wheel, pinch, buttons) and 2× res
 
 Detailed, less-frequently-needed content lives under `skills/design/references/` rather than inline in the skill files, and is loaded only when a step needs it:
 
-| File                            | Covers                                                                                     |
-|----------------------------------|---------------------------------------------------------------------------------------------|
-| `session-schema.md`              | Full `session.json` schema, array-of-objects shape, single-writer rule, resumable-plan and orphaned-plan detection procedures |
-| `diagrams-guide.md`              | `diagrams.json` schema, Mermaid v11.16 compatibility rules, node-overlap prevention rules, per-diagram-type templates |
-| `document-template.md`           | The 10-section architecture document body template (Step 11)                               |
-| `document-review-checklist.md`   | The F1–F7 / C1–C8 document review item catalog and literal formats shared by `document-reviewer` and `document-fixer` |
-| `remediation-plan-guide.md`      | The remediation plan markdown format and checkbox/suffix conventions                        |
-| `discovery-questions.md`         | The full Stage 1–4 requirements-gathering question banks                                    |
-| `tech-stacks.md`                 | Concrete technology stack recommendations by architecture pattern and scale                 |
-| `iac-guide.md`                   | Infrastructure-as-Code tool selection and module breakdown guidance                         |
-| `cicd-guide.md`                  | CI/CD platform selection and pipeline stage guidance                                        |
-| `lld-guide.md`                   | Low-Level Design artifact formats (API contracts, business rules, DTOs, error catalog)       |
+| File                           | Covers                                                                                                                                                                                                                                 |
+|--------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `session-schema.md`            | Full `session.json` schema, array-of-objects shape, single-writer rule, resumable-plan and orphaned-plan detection procedures, plus the session-completeness gate and Proposed-Additions rejection handling shared by all three skills |
+| `diagrams-guide.md`            | `diagrams.json` schema, Mermaid v11.16 compatibility rules, node-overlap prevention rules, per-diagram-type templates                                                                                                                  |
+| `document-template.md`         | The 10-section architecture document body template (Step 11)                                                                                                                                                                           |
+| `document-review-checklist.md` | The F1–F7 / C1–C8 document review item catalog and literal formats shared by `document-reviewer` and `document-fixer`                                                                                                                  |
+| `remediation-plan-guide.md`    | The remediation plan markdown format and checkbox/suffix conventions                                                                                                                                                                   |
+| `discovery-questions.md`       | The full Stage 1–4 requirements-gathering question banks                                                                                                                                                                               |
+| `tech-stacks.md`               | Concrete technology stack recommendations by architecture pattern and scale                                                                                                                                                            |
+| `iac-guide.md`                 | Infrastructure-as-Code tool selection and module breakdown guidance                                                                                                                                                                    |
+| `cicd-guide.md`                | CI/CD platform selection and pipeline stage guidance                                                                                                                                                                                   |
+| `lld-guide.md`                 | Low-Level Design artifact formats (API contracts, business rules, DTOs, error catalog)                                                                                                                                                 |

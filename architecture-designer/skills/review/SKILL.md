@@ -16,9 +16,9 @@ This skill reviews an existing architecture (from a document, the codebase, or b
 
 Check for `docs/architecture-designer/session.json`:
 
-- **If the file exists**: read it in full, then run `node <scripts_dir>/validate-session.mjs` and show its output. This shows which required top-level fields (`schemaVersion`, `project`, `description`) and requirement stages are confirmed, and reveals gaps before the review begins. If the check reports anything missing, proceed anyway — the review is still useful — but note the incomplete context. The session contents serve as the original requirements baseline for the architecture-reviewer and any revision agents.
+- **If the file exists**: read it in full, then run `node <scripts_dir>/validate-session.mjs` and show its output — this is a hard gate; do not proceed to Step 1 until it reports `SESSION CHECK PASSED`. See `design/references/session-schema.md` § "Session completeness gate" for what the script checks and how to resolve a failure (e.g. running `/architecture-designer:design` to fill the gaps). The session contents serve as the original requirements baseline for the architecture-reviewer and any revision agents — reviewing against a known-incomplete baseline risks misjudging drift.
 
-- **If the file does not exist**: proceed without session context. Inform the user: "No session.json found — I won't have the original confirmed requirements on hand. The review will rely on the document and/or codebase alone. Sharing the original requirements now will improve the review quality."
+- **If the file does not exist**: this gate only applies when `session.json` exists — proceed without session context. Inform the user: "No session.json found — I won't have the original confirmed requirements on hand. The review will rely on the document and/or codebase alone. Sharing the original requirements now will improve the review quality."
 
 **Check for an existing remediation plan**: if `session.json` contains a `"remediationPlans"` array, read the file at its last entry's `path` (the most recently saved remediation plan; entries are objects, or legacy bare-string paths in older files — see the schema and tolerant-read rule in `design/references/session-schema.md`). Then:
 
@@ -57,7 +57,7 @@ If the user chose (a) or (c):
 3. Ask: **"What is your current goal for this review? Has anything changed since this document was written? (New requirements, new constraints, team changes, performance issues, etc.)"**
 4. Spawn the `architecture-designer:architecture-reviewer` agent. Pass it:
    - The full contents of the architecture document
-   - The original requirements context — the contents of `docs/architecture-designer/session.json` read above (stages 1–5, plus the top-level `description`). If session.json was absent or incomplete, use the document's own Requirements Summary section as the baseline instead.
+   - The original requirements context — the contents of `docs/architecture-designer/session.json` read above (stages 1–5, plus the top-level `description`). If session.json was absent (the only case reaching this step without it, since an incomplete file is blocked by the gate above), use the document's own Requirements Summary section as the baseline instead.
    - The user's current context/goals
    - Any new requirements or constraints the user described
    Let the agent assess: quality, consistency, completeness, and fit with current needs.
@@ -121,7 +121,7 @@ Ask:
 
 Based on the revision scope:
 - For architecture changes: update the affected Mermaid diagrams (C4, sequence, deployment)
-- For database changes: re-spawn the `architecture-designer:database-designer` agent with the updated requirements, then validate with `architecture-designer:database-reviewer`. If the reviewer returns `DATABASE REVIEW FAILED`, spawn `architecture-designer:database-fixer` with the review report, the database-designer output, the requirements summary, and the path to `docs/architecture-designer/diagrams.json`. The fixer writes the corrected ERD and indexPlan directly into `diagrams.json` **and returns the corrected schema, ERD, index plan, and connection config as text — replace the database-designer output held in context with this corrected text; it is what gets embedded in the revised document (step 4f), not the original.** If the fix log contains a **"Proposed Additions"** section, present each item to the user for confirmation before continuing — a rejected addition does not resolve the reviewer finding it addresses, so ask the user how to proceed on those before re-running the reviewer. Re-run the reviewer after it completes. Repeat until `DATABASE REVIEW PASSED`, **up to a maximum of 3 reviewer–fixer cycles**. If it still returns `DATABASE REVIEW FAILED` after 3 cycles, stop the loop, present the remaining findings to the user verbatim, and ask for their guidance rather than cycling further.
+- For database changes: re-spawn the `architecture-designer:database-designer` agent with the updated requirements, then validate with `architecture-designer:database-reviewer`. If the reviewer returns `DATABASE REVIEW FAILED`, spawn `architecture-designer:database-fixer` with the review report, the database-designer output, the requirements summary, and the path to `docs/architecture-designer/diagrams.json`. The fixer writes the corrected ERD and indexPlan directly into `diagrams.json` **and returns the corrected schema, ERD, index plan, and connection config as text — replace the database-designer output held in context with this corrected text; it is what gets embedded in the revised document (step 4f), not the original.** Apply `design/references/session-schema.md` § "Proposed Additions rejection handling" if the fix log contains that section. Then re-run the reviewer to verify. Repeat until `DATABASE REVIEW PASSED`, **up to a maximum of 3 reviewer–fixer cycles**. If it still returns `DATABASE REVIEW FAILED` after 3 cycles, stop the loop, present the remaining findings to the user verbatim, and ask for their guidance rather than cycling further.
 - For new features: add new diagram elements as needed
 - For removed components: remove the relevant elements
 
@@ -132,19 +132,14 @@ Spawn the `architecture-designer:architecture-reviewer` agent with:
 - The user's current context/goals and any new requirements or constraints gathered in step 4a — kept as its own item, separate from the requirements summary above, so the agent can tell it received current-intent context (its Dimension 6 input) rather than folding it into the original baseline.
 - All updated diagrams
 
-If Critical or Major findings are returned: spawn `architecture-designer:architecture-fixer` with the review report, `docs/architecture-designer/diagrams.json`, and the requirements summary. After the fixer updates `diagrams.json`:
-- If the fix log contains a **"Proposed Additions"** section, present each item to the user for confirmation before continuing. Add confirmed items to `diagrams.json`; discard rejected ones.
-- **A rejected proposed addition does not resolve the finding that generated it.** Note which Critical/Major finding each rejected addition was tied to. Do not silently re-enter the reviewer–fixer loop expecting the same finding to disappear — the fixer cannot close it without the addition. Ask the user directly: accept the residual risk and note it in the document, or describe an alternative fix for the fixer to apply next cycle. Only re-run the reviewer once the user has chosen one of these for every rejected addition.
-- Re-run the reviewer.
-- Repeat until the reviewer's verdict line reads `REVIEW PASSED` or `REVIEW CONDITIONALLY PASSED` with all Major items resolved — read the verdict line itself rather than re-deriving pass/fail from the findings list, **up to a maximum of 3 reviewer–fixer cycles**. If issues persist after 3 cycles, stop the loop, present the remaining unresolved findings to the user verbatim, and ask for guidance rather than cycling further.
+If Critical or Major findings are returned: spawn `architecture-designer:architecture-fixer` with the review report, `docs/architecture-designer/diagrams.json`, and the requirements summary. After the fixer updates `diagrams.json`, apply `design/references/session-schema.md` § "Proposed Additions rejection handling" if the fix log contains that section. Then re-run the reviewer — read the verdict line itself rather than re-deriving pass/fail from the findings list. Repeat until it reads `REVIEW PASSED` or `REVIEW CONDITIONALLY PASSED` with all Major items resolved, **up to a maximum of 3 reviewer–fixer cycles**. If issues persist after 3 cycles, stop the loop, present the remaining unresolved findings to the user verbatim, and ask for guidance rather than cycling further.
 
 ### 4d. Browser preview
 
-1. Update `docs/architecture-designer/diagrams.json` with the revised diagrams (same JSON format as the design workflow, including `details`, `rationale`, and — for ERD diagrams — `indexPlan` rows; update all three to reflect what changed in the revision). Skip this for any diagram the database-fixer or architecture-fixer already wrote directly in 4b/4c — re-writing it here would just overwrite their fix with stale content.
-2. **Validate diagrams**: run `node <scripts_dir>/validate-diagrams.mjs`. If it exits non-zero or prints `VALIDATION FAILED`, fix the flagged issues in `diagrams.json` before opening or refreshing the preview. Revised diagrams are written under longer-context pressure and are at least as likely to contain syntax errors as freshly generated ones — and since this check runs after every `diagrams.json` write in the revision flow (step 1 above, and the fixers in 4b/4c), one gate covers all of them. **If the output contains `DEGRADED MODE`**, tell the user validation ran without the real syntax parser (some errors may not have been caught) and that `npm install` in the plugin's `scripts/` directory enables full coverage — proceed anyway, since the script still passed everything it could check.
-3. If a preview server from a previous run is already running (the user will know the URL): tell them to refresh their browser.
-4. If no server is running: run `node <scripts_dir>/find-port.mjs`, then `node <scripts_dir>/preview-server.mjs <port>` in the background.
-5. Ask: **"Does this revised architecture look correct to you?"**
+1. Update `docs/architecture-designer/diagrams.json` with the revised diagrams (same JSON format as the design workflow, including `details`, `rationale`, and — for ERD diagrams — `indexPlan` rows). Skip any diagram the database-fixer or architecture-fixer already wrote directly in 4b/4c — re-writing it here would overwrite their fix with stale content.
+2. **Validate diagrams**: run `node <scripts_dir>/validate-diagrams.mjs`. If it exits non-zero or prints `VALIDATION FAILED`, fix the flagged issues in `diagrams.json` before opening or refreshing the preview — revised diagrams are at least as likely to contain syntax errors as freshly generated ones. If `DEGRADED MODE` also appears, tell the user validation ran without the real syntax parser (some errors may not have been caught) and that `npm install` in the plugin's `scripts/` directory enables full coverage — proceed anyway, since the script still passed everything it could check.
+3. If a preview server from a previous run is already running, tell the user to refresh their browser. Otherwise run `node <scripts_dir>/find-port.mjs`, then `node <scripts_dir>/preview-server.mjs <port>` in the background. Do NOT create a stop-server script — leave the server running.
+4. Ask: **"Does this revised architecture look correct to you?"**
 
 If further revisions are needed, repeat from step 4b.
 
@@ -165,7 +160,7 @@ Create the `docs/architecture-designer/plan/` directory if it doesn't exist.
 
 **Plan format**: follow `design/references/remediation-plan-guide.md` exactly — the checkbox-per-finding rule, mandatory source path, and the two-phase suffix progression for `[x]` items. The file is a living document across future review sessions per that guide.
 
-After saving, update `docs/architecture-designer/session.json`: append `{ "path": "<absolute path of this file>", "document": "<the architecture document path this remediation plan targets>", "createdAt": "<current ISO timestamp>" }` to the top-level `"remediationPlans"` array (create it with this one entry if it doesn't exist yet). Note the path for use when passing it to the implementer in step 4h.
+After saving, append `{ "path": "<absolute path of this file>", "document": "<the architecture document path this remediation plan targets>", "createdAt": "<current ISO timestamp>" }` to `session.json`'s top-level `"remediationPlans"` array (create it if absent). Note the path for passing to the implementer in step 4h.
 
 ### 4f. Save the revised document
 
@@ -190,18 +185,15 @@ The metadata table:
 
 Generate timestamps using JavaScript `Date`, not shell commands.
 
-After saving, update `docs/architecture-designer/session.json`: append `{ "path": "<absolute path of the saved file>", "createdAt": "<current ISO timestamp>" }` to the top-level `"documents"` array (create it with this one entry if it doesn't exist yet). This lets `/architecture-designer:implement` find the latest approved document — the last entry's `path` — without asking.
+After saving, append `{ "path": "<absolute path of the saved file>", "createdAt": "<current ISO timestamp>" }` to `session.json`'s top-level `"documents"` array (create it if absent). This lets `/architecture-designer:implement` find the latest approved document — the last entry's `path` — without asking.
 
 The document body follows the same structure as the design workflow (all sections, all diagrams). This is a standalone document, not a diff — someone reading it without the previous version should have complete context.
 
 ### 4g. Document review
 
-Spawn the `architecture-designer:document-reviewer` agent. Pass it:
-- Path to the new document
-- Requirements summary
-- Expected filename
+Spawn the `architecture-designer:document-reviewer` agent with the path to the new document, the requirements summary, and the expected filename.
 
-If DOCUMENT REVIEW FAILED: spawn `architecture-designer:document-fixer` with the document path, the review report, the requirements summary, and the path to `docs/architecture-designer/diagrams.json`. Re-run `architecture-designer:document-reviewer` after the fixer applies its corrections. If the fixer's log says the file must be renamed (F6), rename it first. Repeat until DOCUMENT REVIEW PASSED, **up to a maximum of 3 reviewer–fixer cycles**. If failures persist after 3 cycles, present the remaining FAIL items to the user and ask for their input rather than cycling again.
+If DOCUMENT REVIEW FAILED: spawn `architecture-designer:document-fixer` with the document path, the review report, the requirements summary, and the path to `docs/architecture-designer/diagrams.json`. Re-run `document-reviewer` after the fixer applies its corrections — rename the file first if the fixer's log says it must be renamed (F6). Repeat until DOCUMENT REVIEW PASSED, **up to 3 cycles**. If failures persist after 3, present the remaining FAIL items to the user and ask for their input.
 
 Then update `Status` to `Approved`.
 
@@ -211,22 +203,18 @@ After approval:
 
 > **"The revised architecture document is approved. Would you like me to regenerate the project skeleton based on the updated architecture?"**
 
-If yes: scan the working directory for signs of an existing project (look for `package.json`, `go.mod`, `Cargo.toml`, `requirements.txt`, `pyproject.toml`, `pom.xml`, and source directories `src/`, `app/`, `lib/`, `cmd/`, `internal/`).
+If yes: scan the working directory for signs of an existing project (`package.json`, `go.mod`, `Cargo.toml`, `requirements.txt`, `pyproject.toml`, `pom.xml`, source directories `src/`, `app/`, `lib/`, `cmd/`, `internal/`). **If files already exist**: summarize what was found and ask the question in `design/references/session-schema.md` § "Merge-strategy question". **If the scan finds nothing**: no question needed — treat this as a fresh start into an empty project regardless of the remediation plan's existence.
 
-**If files already exist**: summarize what was found and ask the question in `design/references/session-schema.md` § "Merge-strategy question".
+Run `design/references/session-schema.md` § "Resumable-plan detection procedure" using the approved document's path as `{document}` to produce the **Previous plan path**, if the user chooses to resume.
 
-**If the scan finds nothing**: no question needed — there is no existing codebase to merge into, so treat this as a fresh start into an empty project regardless of the remediation plan's existence.
-
-Run `design/references/session-schema.md` § "Resumable-plan detection procedure" using the approved document's path as `{document}`. This produces the **Previous plan path** to pass below, if the user chooses to resume.
-
-Then spawn `architecture-designer:implementation-planner`. Pass it:
+Spawn `architecture-designer:implementation-planner`. Pass it:
 - The path to the approved document
-- **Existing project summary** — what was found in the scan, translated into the agent's expected strategy label: `Fresh start (empty project)` if the scan found nothing; `Merge` if the user chose (a); `Fresh start (existing project)` if the user chose (b); `User-described layout` if the user chose (c)
+- **Existing project summary** — translated into the agent's expected strategy label: `Fresh start (empty project)` if the scan found nothing; `Merge` if the user chose (a); `Fresh start (existing project)` if the user chose (b); `User-described layout` if the user chose (c)
 - **Technology stack** — from the architecture document's Technology Decisions section (section 5)
-- **Remediation plan path** — the full path to the `{yyyymmdd}-{topic}-remediation.md` file saved in step 4e (always present in the review flow). A remediation plan does not by itself imply an existing codebase — the scan result above is what determines the actual strategy; trust the scan, not the plan's mere presence.
-- **Previous plan path** — the resumed plan's `path`, if the user chose to continue above (omit otherwise)
+- **Remediation plan path** — the full path to the `{yyyymmdd}-{topic}-remediation.md` file saved in step 4e (always present in the review flow) — a remediation plan does not by itself imply an existing codebase; trust the scan, not the plan's mere presence
+- **Previous plan path** — the resumed plan's `path`, if the user chose to continue (omit otherwise)
 
-Wait for it to report the plan was saved and confirmed. Then spawn `architecture-designer:architecture-implementer`, passing it the implementation plan path from that report plus the same document path, existing project summary, technology stack, and remediation plan path. Do not spawn architecture-implementer if implementation-planner did not report a confirmed plan.
+Wait for it to report the plan was saved and confirmed. Then spawn `architecture-designer:architecture-implementer` with the implementation plan path from that report, plus the same document path, existing project summary, technology stack, and remediation plan path. Do not spawn it if implementation-planner did not report a confirmed plan.
 
 ---
 

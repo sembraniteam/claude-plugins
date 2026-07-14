@@ -59,6 +59,24 @@ The same link fields resolve the resume-plan flow: an implementation plan whose 
 
 `session.json` has no locking or compare-and-swap mechanism. Every writer must read the current file fresh immediately before writing, merge its change into the full object, and write the whole file back — never write a partial object or assume an in-memory copy from earlier in the conversation is still current. This is safe because these skills and agents run sequentially within one conversation; do not parallelize two writers against the same `session.json` (e.g. do not spawn `implementation-planner` for two documents concurrently).
 
+## Session completeness gate
+
+`design/SKILL.md` (Stage 6), `review/SKILL.md` (before Step 1), and `implement/SKILL.md` (before Step 1) each run `node <scripts_dir>/validate-session.mjs` and show its output before proceeding, whenever `docs/architecture-designer/session.json` exists. The script checks the required top-level fields (`schemaVersion`, `project`, `description`) and confirmation stages 1–5, printing `SESSION CHECK PASSED` or `SESSION CHECK FAILED` with the specific missing fields/stages listed.
+
+**This is a hard gate in all three skills**: if the check fails, do not proceed past the gate. Tell the user which fields and/or stages are missing and ask them to complete them — resuming stages 1–5 in `design`, or supplying the missing information directly so `session.json` can be updated — before continuing. Only proceed once the script reports `SESSION CHECK PASSED`.
+
+Each skill's own trigger condition and rationale differ:
+- **`design/SKILL.md`**: the gate always applies at Stage 6, since `design` is the skill that builds `session.json` through stages 1–5 in the first place — there is no "file doesn't exist" branch here. A missing top-level field on an otherwise-complete resumed session is the legacy-backfill case (Step 11), not a missing stage.
+- **`review/SKILL.md` and `implement/SKILL.md`**: the gate applies only when `session.json` exists; if it does not exist at all, skip the gate entirely and proceed without session context, since both skills can still work from the architecture document (and, for `review`, the codebase) alone. A session that exists but is incomplete is treated more strictly than no session at all — an incomplete file signals the project started structured requirements tracking and abandoned it partway through, which is a stronger signal to pause and reconcile than never having used it. In `implement` specifically, neither skill step reads stage 1–5 data directly (Step 1 only reads the `documents` array for the document path); the gate exists to catch drift between the confirmed document and the requirements it was supposedly built from, not because implement's own logic consumes the stage fields.
+
+## Proposed Additions rejection handling
+
+`architecture-fixer` and `database-fixer` may return a fix log containing a **"Proposed Additions"** section — changes the fixer recommends beyond what the review report strictly required. Present each item to the user for confirmation before continuing: add confirmed items directly to `diagrams.json`; discard rejected ones.
+
+**A rejected proposed addition does not resolve the finding that generated it.** Note which finding each rejected addition was tied to — the fixer cannot close that finding without the addition. Ask the user directly: accept the residual risk and note it in the document, or describe an alternative fix for the fixer to apply next cycle. Only re-spawn the reviewer once the user has chosen one of these for every rejected addition.
+
+This section applies whenever a fixer's log is checked for "Proposed Additions" — regardless of whether one is found. Re-spawning the reviewer to verify the fixer's changes is a separate, unconditional step at every call site (`design/SKILL.md` Step 7 and Stage 6a, `review/SKILL.md` step 4b and step 4c) — it happens whether or not a Proposed Additions section was present, not only when one was.
+
 ## Merge-strategy question
 
 When an existing project is found in the working directory and there is an architecture document to implement from, ask:
