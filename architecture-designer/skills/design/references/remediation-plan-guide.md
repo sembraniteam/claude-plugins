@@ -5,11 +5,11 @@ The format `review/SKILL.md` step 4e saves to `docs/architecture-designer/plan/{
 ```markdown
 # Remediation Plan: {topic}
 
-| Architecture document | `{document path}`                                    |
-|-----------------------|------------------------------------------------------|
-| Review source          | {drift report, architecture review, or both}         |
-| Date                   | {dd-mmm-yyyy}                                        |
-| Status                 | In progress                                          |
+| Architecture document | `{document path}`                            |
+|-----------------------|----------------------------------------------|
+| Review source         | {drift report, architecture review, or both} |
+| Date                  | {dd-mmm-yyyy}                                |
+| Status                | In progress                                  |
 
 ## Findings
 

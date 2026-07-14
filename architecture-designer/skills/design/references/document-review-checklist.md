@@ -4,24 +4,24 @@ The canonical catalog of format (F) and content (C) checks for architecture docu
 
 ## Item catalog
 
-| ID | Name |
-|-----|------|
-| F1 | Metadata table is the first content |
-| F2 | Date format in metadata table |
-| F3 | Version number |
-| F4 | Status value |
-| F5 | Reason and Previous Document |
-| F6 | File naming |
-| F7 | Mermaid code blocks |
-| C1 | Requirements summary present |
-| C2 | Constraints and feasibility present |
-| C3 | Capacity planning present |
-| C4 | Technology decisions with justifications |
-| C5 | All diagrams included |
-| C5a | ERD index plan table present |
-| C6 | Content accuracy |
-| C7 | Infrastructure as Code section present |
-| C8 | CI/CD Pipeline section present |
+| ID  | Name                                     |
+|-----|------------------------------------------|
+| F1  | Metadata table is the first content      |
+| F2  | Date format in metadata table            |
+| F3  | Version number                           |
+| F4  | Status value                             |
+| F5  | Reason and Previous Document             |
+| F6  | File naming                              |
+| F7  | Mermaid code blocks                      |
+| C1  | Requirements summary present             |
+| C2  | Constraints and feasibility present      |
+| C3  | Capacity planning present                |
+| C4  | Technology decisions with justifications |
+| C5  | All diagrams included                    |
+| C5a | ERD index plan table present             |
+| C6  | Content accuracy                         |
+| C7  | Infrastructure as Code section present   |
+| C8  | CI/CD Pipeline section present           |
 
 ## Literal formats (must match exactly in both agents)
 

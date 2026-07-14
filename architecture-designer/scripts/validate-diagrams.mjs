@@ -10,6 +10,9 @@
  *   - When parsers are unavailable (node_modules missing): heuristic checks;
  *     passing diagrams are marked "✓ (heuristics only)" to be honest about coverage
  *
+ * Each diagram's `code` field is normalized before parsing (BOM stripped, CRLF/CR
+ * unified to LF, trailing per-line whitespace removed) — see normalizeCode().
+ *
  * Also checks the `indexPlan` contract on ERD entries: every row must carry all five
  * keys (name, table, columns, type, reason). This catches the field being filled with
  * entity descriptions or other ERD notes instead of actual index rows.
@@ -105,62 +108,75 @@ const DIAGRAMS_PATH = path.resolve(
   process.cwd(), 'docs', 'architecture-designer', 'diagrams.json'
 );
 
-/** Returns { errors: string[], notes: string[], quality: 'parsed' | 'heuristics' } */
-async function validateCode(id, code) {
-  const errors  = [];
-  const notes   = [];
-  const trimmed = code.trim();
+// ── validateCode() helpers ─────────────────────────────────────────────────────
+// Each helper below owns one concern of the old monolithic validateCode(): type
+// detection, dispatch to the real parser, and each independent heuristic check.
+// validateCode() itself just orchestrates them in the same order/short-circuit
+// behavior as before — no behavior changed by this split, only its shape.
 
-  if (!trimmed) {
-    return { errors: ['code field is empty'], notes, quality: 'parsed' };
-  }
+/**
+ * Normalizes a raw `code` field before parsing: strips a leading BOM, unifies
+ * CRLF/CR line endings to LF, and removes trailing whitespace per line — all
+ * artifacts of how the text was authored/copy-pasted, not part of the diagram
+ * itself. Leading indentation is left untouched: Mermaid is whitespace-sensitive
+ * (subgraph/participant nesting depth is inferred from it), so only trailing
+ * whitespace is safe to strip. This never writes back to diagrams.json — it
+ * only normalizes the in-memory copy used for validation.
+ */
+function normalizeCode(code) {
+  return code
+    .replace(/^\uFEFF/, '')
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map(line => line.replace(/[ \t]+$/, ''))
+    .join('\n')
+    .trim();
+}
 
-  const lines = trimmed.split('\n');
-  // Skip all leading %% comment / init-directive lines to find the diagram type keyword.
+/** Skips leading %% comment/init-directive lines to find the diagram type keyword. */
+function findDiagramType(lines) {
   let typeIdx = 0;
   while (typeIdx < lines.length && lines[typeIdx].trim().startsWith('%%')) typeIdx++;
   const typeLine = (lines[typeIdx] ?? '').trim();
-  const keyword   = ALL_KNOWN_TYPES.find(t => typeLine.startsWith(t));
+  const keyword = ALL_KNOWN_TYPES.find(t => typeLine.startsWith(t));
+  return { keyword, typeIdx, typeLine };
+}
 
-  if (!keyword) {
-    errors.push(`Unrecognized diagram type on line ${typeIdx + 1}: "${typeLine.slice(0, 70)}"`);
-    return { errors, notes, quality: 'parsed' };
-  }
-
-  let parserRan = false;
-
-  // ── Real parse ───────────────────────────────────────────────────────────
-
+/**
+ * Dispatches to the real parser for `keyword`, if one is available.
+ * Returns { ran, fatalError }: `fatalError` set means validateCode must stop and
+ * report it immediately (a genuine syntax error) rather than run heuristics;
+ * `ran: false, fatalError: null` means fall through to heuristics (no parser
+ * available, or the new parser doesn't cover this type yet).
+ */
+async function runRealParser(keyword, trimmed) {
   if (LEGACY_TYPES.has(keyword) && legacyAvail) {
     try {
       await legacyParse(trimmed);
-      parserRan = true;
+      return { ran: true, fatalError: null };
     } catch (e) {
       const msg = String(e?.message ?? e).replace(/\n/g, ' ').slice(0, 300);
-      errors.push(`Parse error: ${msg}`);
-      return { errors, notes, quality: 'parsed' };
+      return { ran: false, fatalError: `Parse error: ${msg}` };
     }
-  } else if (keyword in NEW_PARSER_MAP && newAvail) {
+  }
+  if (keyword in NEW_PARSER_MAP && newAvail) {
     try {
       newParse(NEW_PARSER_MAP[keyword], trimmed);
-      parserRan = true;
+      return { ran: true, fatalError: null };
     } catch (e) {
       const msg = String(e?.message ?? e).replace(/\n/g, ' ').slice(0, 300);
       if (/unsupported|not (yet )?supported|unknown diagram|no parser/i.test(msg)) {
-        // This type isn't covered yet — fall through to heuristics
-      } else {
-        errors.push(`Parse error: ${msg}`);
-        return { errors, notes, quality: 'parsed' };
+        return { ran: false, fatalError: null }; // this type isn't covered yet
       }
+      return { ran: false, fatalError: `Parse error: ${msg}` };
     }
   }
+  return { ran: false, fatalError: null };
+}
 
-  // ── Heuristics ────────────────────────────────────────────────────────────
-  // Run as fallback when no parser is available for this type, or for semantic
-  // checks that aren't syntax rules (e.g. UpdateLayoutConfig is a layout
-  // requirement, not enforced by the grammar — check it even when parser passes).
-
-  // architecture-beta: icon names misused as standalone node types
+/** architecture-beta: icon names misused as standalone node types. */
+function checkArchitectureBetaIcons(keyword, trimmed, parserRan) {
+  const errors = [];
   if (!parserRan && keyword === 'architecture-beta') {
     for (const icon of ['database', 'cloud', 'server', 'internet', 'disk']) {
       if (new RegExp(`^[ \\t]+${icon}[ \\t]+\\w`, 'm').test(trimmed)) {
@@ -170,8 +186,15 @@ async function validateCode(id, code) {
       }
     }
   }
+  return errors;
+}
 
-  // C4: UpdateLayoutConfig is a layout requirement, not enforced by syntax
+/**
+ * C4: UpdateLayoutConfig is a layout requirement, not enforced by syntax — so
+ * this runs regardless of whether the real parser ran.
+ */
+function checkC4LayoutConfig(keyword, trimmed) {
+  const errors = [];
   if (keyword === 'C4Context' || keyword === 'C4Container') {
     if (!trimmed.includes('UpdateLayoutConfig')) {
       errors.push(
@@ -179,88 +202,105 @@ async function validateCode(id, code) {
       );
     }
   }
+  return errors;
+}
 
-  // flowchart / graph: node-overlap rules from diagrams-guide.md "Preventing Node
-  // Overlap" — none of these are syntax rules, so they're checked regardless of
-  // whether the real parser ran (same rationale as the C4 check above).
-  if (keyword === 'flowchart' || keyword === 'graph') {
-    const hasElkInit = /%%\{\s*init:\s*\{\s*['"]?layout['"]?\s*:\s*['"]elk['"]/i.test(trimmed);
+/**
+ * flowchart / graph: node-overlap rules from diagrams-guide.md "Preventing Node
+ * Overlap" — none of these are syntax rules, so they're checked regardless of
+ * whether the real parser ran (same rationale as the C4 check above).
+ * Returns { errors, notes } since Rule 2 is advisory (a note), not a failure.
+ */
+function checkFlowchartNodeOverlap(keyword, trimmed, lines) {
+  const errors = [];
+  const notes = [];
+  if (keyword !== 'flowchart' && keyword !== 'graph') return { errors, notes };
 
-    // Rule 1 / Rule 5 — subgraph nesting depth and node count drive the ELK requirement.
-    let depth = 0, maxDepth = 0;
-    for (const line of lines) {
-      const t = line.trim();
-      if (/^subgraph\b/.test(t)) { depth++; maxDepth = Math.max(maxDepth, depth); }
-      else if (/^end$/.test(t)) { depth = Math.max(0, depth - 1); }
-    }
-    const nodeIds = new Set();
-    const nodeDeclRe = /^\s*([A-Za-z0-9_]+)(\[\[|\(\(|\[\(|[[({])/;
-    for (const line of lines) {
-      const m = line.match(nodeDeclRe);
-      if (m) nodeIds.add(m[1]);
-    }
-    if (!hasElkInit) {
-      if (maxDepth >= 3) {
-        errors.push(
-          `Rule 1/5: subgraph nesting depth is ${maxDepth} (3+) with no ELK init directive — add %%{init: {'layout': 'elk'}}%% as the first line, or flatten to at most 2 levels`
-        );
-      }
-      if (nodeIds.size >= 12) {
-        errors.push(
-          `Rule 1: ${nodeIds.size} nodes detected with no ELK init directive — add %%{init: {'layout': 'elk'}}%% as the first line for diagrams with 12+ nodes`
-        );
-      } else if (nodeIds.size >= 8) {
-        notes.push(
-          `Rule 2: ${nodeIds.size} nodes with default Dagre spacing — consider %%{init: {'flowchart': {'nodeSpacing': 80, 'rankSpacing': 100}}}%% if nodes overlap visually`
-        );
-      }
-    }
+  const hasElkInit = /%%\{\s*init:\s*\{\s*['"]?layout['"]?\s*:\s*['"]elk['"]/i.test(trimmed);
 
-    // Rule 3 — node label length (28 chars per line; <br/> splits count as separate lines).
-    const labelRe = /\[["']?([^\]"']{1,400})["']?\]/g;
-    let lm;
-    while ((lm = labelRe.exec(trimmed)) !== null) {
-      for (const ll of lm[1].split(/<br\s*\/?>/i)) {
-        if (ll.length > 28) {
-          errors.push(
-            `Rule 3: node label line exceeds 28 characters (${ll.length}): "${ll.slice(0, 40)}${ll.length > 40 ? '…' : ''}" — use <br/> to break across lines`
-          );
-        }
-      }
+  // Rule 1 / Rule 5 — subgraph nesting depth and node count drive the ELK requirement.
+  let depth = 0, maxDepth = 0;
+  for (const line of lines) {
+    const t = line.trim();
+    if (/^subgraph\b/.test(t)) { depth++; maxDepth = Math.max(maxDepth, depth); }
+    else if (/^end$/.test(t)) { depth = Math.max(0, depth - 1); }
+  }
+  const nodeIds = new Set();
+  const nodeDeclRe = /^\s*([A-Za-z0-9_]+)(\[\[|\(\(|\[\(|[[({])/;
+  for (const line of lines) {
+    const m = line.match(nodeDeclRe);
+    if (m) nodeIds.add(m[1]);
+  }
+  if (!hasElkInit) {
+    if (maxDepth >= 3) {
+      errors.push(
+        `Rule 1/5: subgraph nesting depth is ${maxDepth} (3+) with no ELK init directive — add %%{init: {'layout': 'elk'}}%% as the first line, or flatten to at most 2 levels`
+      );
     }
-    // Rule 3 — subgraph titles (35 char max, Dagre does not resize to fit).
-    const subgraphTitleRe = /^\s*subgraph\s+\S+\s*\[?["']?([^\]"'\n]{1,200})/gm;
-    let sm;
-    while ((sm = subgraphTitleRe.exec(trimmed)) !== null) {
-      const title = sm[1].trim();
-      if (title.length > 35) {
+    if (nodeIds.size >= 12) {
+      errors.push(
+        `Rule 1: ${nodeIds.size} nodes detected with no ELK init directive — add %%{init: {'layout': 'elk'}}%% as the first line for diagrams with 12+ nodes`
+      );
+    } else if (nodeIds.size >= 8) {
+      notes.push(
+        `Rule 2: ${nodeIds.size} nodes with default Dagre spacing — consider %%{init: {'flowchart': {'nodeSpacing': 80, 'rankSpacing': 100}}}%% if nodes overlap visually`
+      );
+    }
+  }
+
+  // Rule 3 — node label length (28 chars per line; <br/> splits count as separate lines).
+  const labelRe = /\[["']?([^\]"']{1,400})["']?\]/g;
+  let lm;
+  while ((lm = labelRe.exec(trimmed)) !== null) {
+    for (const ll of lm[1].split(/<br\s*\/?>/i)) {
+      if (ll.length > 28) {
         errors.push(
-          `Rule 3: subgraph title exceeds 35 characters (${title.length}): "${title.slice(0, 40)}…"`
+          `Rule 3: node label line exceeds 28 characters (${ll.length}): "${ll.slice(0, 40)}${ll.length > 40 ? '…' : ''}" — use <br/> to break across lines`
         );
       }
     }
   }
-
-  // architecture-beta: Rule 4 — align directives must precede edge statements.
-  if (keyword === 'architecture-beta') {
-    const alignIdx = [];
-    const edgeIdx = [];
-    lines.forEach((line, i) => {
-      const t = line.trim();
-      if (/^align\s/.test(t)) alignIdx.push(i);
-      else if (/--/.test(t) && !t.startsWith('%%')) edgeIdx.push(i);
-    });
-    if (alignIdx.length > 0 && edgeIdx.length > 0) {
-      const firstEdge = Math.min(...edgeIdx);
-      if (alignIdx.some(i => i > firstEdge)) {
-        errors.push(
-          `Rule 4: align directive(s) appear after an edge statement (line ${firstEdge + 1} is the first edge) — define all align statements before any edge statements`
-        );
-      }
+  // Rule 3 — subgraph titles (35 char max, Dagre does not resize to fit).
+  const subgraphTitleRe = /^\s*subgraph\s+\S+\s*\[?["']?([^\]"'\n]{1,200})/gm;
+  let sm;
+  while ((sm = subgraphTitleRe.exec(trimmed)) !== null) {
+    const title = sm[1].trim();
+    if (title.length > 35) {
+      errors.push(
+        `Rule 3: subgraph title exceeds 35 characters (${title.length}): "${title.slice(0, 40)}…"`
+      );
     }
   }
 
-  // flowchart / graph: bracket-balance heuristic (only when real parser unavailable)
+  return { errors, notes };
+}
+
+/** architecture-beta: Rule 4 — align directives must precede edge statements. */
+function checkArchitectureBetaAlignOrder(keyword, lines) {
+  const errors = [];
+  if (keyword !== 'architecture-beta') return errors;
+
+  const alignIdx = [];
+  const edgeIdx = [];
+  lines.forEach((line, i) => {
+    const t = line.trim();
+    if (/^align\s/.test(t)) alignIdx.push(i);
+    else if (/--/.test(t) && !t.startsWith('%%')) edgeIdx.push(i);
+  });
+  if (alignIdx.length > 0 && edgeIdx.length > 0) {
+    const firstEdge = Math.min(...edgeIdx);
+    if (alignIdx.some(i => i > firstEdge)) {
+      errors.push(
+        `Rule 4: align directive(s) appear after an edge statement (line ${firstEdge + 1} is the first edge) — define all align statements before any edge statements`
+      );
+    }
+  }
+  return errors;
+}
+
+/** flowchart / graph: bracket-balance heuristic (only when real parser unavailable). */
+function checkBracketBalance(keyword, trimmed, parserRan) {
+  const errors = [];
   if (!parserRan && (keyword === 'flowchart' || keyword === 'graph')) {
     const open  = (trimmed.match(/[\[({]/g) ?? []).length;
     const close = (trimmed.match(/[\])}]/g) ?? []).length;
@@ -270,8 +310,44 @@ async function validateCode(id, code) {
       );
     }
   }
+  return errors;
+}
 
-  return { errors, notes, quality: parserRan ? 'parsed' : 'heuristics' };
+/** Returns { errors: string[], notes: string[], quality: 'parsed' | 'heuristics' } */
+async function validateCode(id, code) {
+  const trimmed = normalizeCode(code);
+  if (!trimmed) {
+    return { errors: ['code field is empty'], notes: [], quality: 'parsed' };
+  }
+
+  const lines = trimmed.split('\n');
+  const { keyword, typeIdx, typeLine } = findDiagramType(lines);
+  if (!keyword) {
+    return {
+      errors: [`Unrecognized diagram type on line ${typeIdx + 1}: "${typeLine.slice(0, 70)}"`],
+      notes: [],
+      quality: 'parsed',
+    };
+  }
+
+  const { ran: parserRan, fatalError } = await runRealParser(keyword, trimmed);
+  if (fatalError) {
+    return { errors: [fatalError], notes: [], quality: 'parsed' };
+  }
+
+  // Heuristics run as fallback when no parser is available for this type, or for
+  // semantic checks that aren't syntax rules (e.g. UpdateLayoutConfig is a layout
+  // requirement, not enforced by the grammar — check it even when parser passes).
+  const flowchartChecks = checkFlowchartNodeOverlap(keyword, trimmed, lines);
+  const errors = [
+    ...checkArchitectureBetaIcons(keyword, trimmed, parserRan),
+    ...checkC4LayoutConfig(keyword, trimmed),
+    ...flowchartChecks.errors,
+    ...checkArchitectureBetaAlignOrder(keyword, lines),
+    ...checkBracketBalance(keyword, trimmed, parserRan),
+  ];
+
+  return { errors, notes: flowchartChecks.notes, quality: parserRan ? 'parsed' : 'heuristics' };
 }
 
 // ── indexPlan contract check ──────────────────────────────────────────────────

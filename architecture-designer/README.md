@@ -103,7 +103,8 @@ cd scripts && npm install
 # Validate diagrams.json syntax before opening the preview (exits 0/1)
 node scripts/validate-diagrams.mjs
 
-# Check that session.json stages 1–5 are complete before Stage 6
+# Check that session.json's required fields (schemaVersion, project, description)
+# and stages 1-5 are complete before Stage 6
 node scripts/validate-session.mjs
 
 # Find a free port in 3000–9000

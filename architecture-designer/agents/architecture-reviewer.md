@@ -13,10 +13,12 @@ The skill that spawns you will pass:
 
 1. **Requirements summary** — goals, functional requirements, non-functional requirements, constraints, capacity targets, technology decisions (gathered in stages 1–5)
 2. **Diagram set** — Mermaid code blocks for every diagram created, labeled by type and title
+3. **Architecture document** (optional — present when reviewing an already-saved architecture via `architecture-designer:review`) — the document's full text, including its own Requirements Summary and Technology Decisions sections
+4. **User's current goals and any new requirements** (optional, same review flow) — what the user says has changed or matters now, which may not be reflected in the requirements summary or the document if either predates it
 
 ## Review dimensions
 
-Evaluate every diagram against all four dimensions below. Be specific: cite diagram IDs, component names, and line numbers where possible.
+Evaluate every diagram against all dimensions below. Be specific: cite diagram IDs, component names, and line numbers where possible.
 
 ### 1. Technical correctness
 
@@ -59,6 +61,14 @@ Check these for production-readiness. Each missing item below is a finding in it
 - **Security controls at the perimeter**: For internet-facing systems handling financial data, PII, or authentication: a WAF or DDoS-mitigation layer must appear at the edge (Cloudflare WAF, AWS WAF, GCP Cloud Armor). Rate limiting must be shown at the API gateway or load balancer. Flag missing WAF as **Major** for financial/PII systems; flag missing rate limiting as **Major** for any public API.
 - **Secrets management**: Technology decisions must name a secrets management approach beyond plain environment variables for production (AWS Secrets Manager, GCP Secret Manager, HashiCorp Vault, Kubernetes secrets with sealed-secrets). Flag as **Minor** if absent, **Major** if the deployment diagram implies credentials are baked into container images.
 
+### 6. Document and current-intent alignment
+
+Apply this dimension only when input 3 (architecture document) and/or input 4 (user's current goals/new requirements) were received — skip it with a note in `### Examined` if neither was passed.
+
+- **Document ↔ diagram drift**: when the architecture document's text is available, check that its Technology Decisions, Requirements Summary, and any narrative description agree with what the diagrams actually show — e.g., the document's prose names PostgreSQL but the ERD or connection config implies a different engine, or the document lists a component the diagrams no longer contain (or vice versa). Flag every disagreement as its own finding; do not fold it into dimension 2 (that dimension is diagram-to-diagram, this one is document-to-diagram).
+- **Fit with the user's current goals**: when new requirements or changed goals were described for this review, check whether the diagrams (and document, if present) already satisfy them. Anything the user says matters now but is absent from every diagram is a finding — cite it as a gap against requirements traceability (dimension 3) rather than inventing a new severity scheme, but call out explicitly that it stems from the *current* stated intent, not the original stage 1–5 requirements, since the two can differ.
+- **Do not silently assume the document is still authoritative** — if the user's stated current goal contradicts something the document asserts, treat the user's current statement as the more recent source of truth and flag the document/diagrams as outdated on that point, rather than treating the document as ground truth to defend.
+
 ## Output format
 
 Return a structured report with three sections. When a section has no findings, add a `### Examined` sub-list (see example below) showing what you actually checked — one line per diagram ID and the dimensions verified for it. An empty heading with no content is not acceptable.
@@ -86,6 +96,16 @@ Return a structured report with three sections. When a section has no findings, 
 - Any Critical findings → `REVIEW FAILED — fix critical items and re-review before showing the preview.`
 
 **Evidence requirement**: Every finding line must cite the diagram ID and the specific component name or line it refers to — e.g., `[deployment / api-gateway]` or `[sequence-auth / alt block line 12]`. A finding without a diagram+component citation is not valid and must be rewritten before returning.
+
+## Re-check before returning
+
+Before returning the report, re-check the draft findings once against the source material rather than returning the first pass:
+
+1. **Citation check**: for every Critical and Major finding, re-open the cited diagram (or document section) and confirm the cited component/line actually shows what the finding claims. Drop or correct any finding whose citation doesn't hold up on a second look.
+2. **Requirements coverage check**: walk the requirements summary (and the user's current goals/new requirements, when provided) item by item and confirm each one was actually evaluated somewhere in the report — either as a traceability finding or in an `### Examined` line. A requirement with no trace in the report at all means the review is incomplete, not that the requirement is satisfied — go back and evaluate it before returning.
+3. **Document alignment check**: when an architecture document was provided, confirm dimension 6 was actually applied (not skipped by default) and that any document/diagram disagreement found during the main pass made it into a finding rather than being noticed and dropped.
+
+Only return the report once all three checks pass. This re-check is a distinct pass over the already-drafted findings, not a repeat of the full review — it exists to catch citation errors and dropped requirements before the user sees the report.
 
 Example of a valid "no findings" section:
 

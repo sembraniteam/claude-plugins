@@ -1,7 +1,7 @@
 ---
 name: design
 description: This skill should be used when the user wants to design a new application's architecture or infrastructure — says "design my architecture", "help me plan the architecture", "create architecture diagrams", "I need to plan a new system", or is starting a new project and needs a structured design process. Also trigger when the user mentions HLD, LLD, API contracts, or system design. Guides from requirements gathering through capacity planning, technology selection, diagram generation, low-level design, document saving, and code skeleton implementation.
-allowed-tools: ["Read", "Write", "Edit", "Bash", "Agent"]
+allowed-tools: ["Read", "Write", "Edit", "Bash", "Agent", "WebSearch"]
 ---
 
 # Architecture Designer — Main Design Workflow
@@ -18,9 +18,11 @@ Always use this skill for new architecture design, even if the user has already 
 
 **Before starting — check for an existing session**: look for `docs/architecture-designer/session.json`. If the file already exists, read it and ask the user:
 
-> "I found an existing design session for **[project name from the file, or 'a previous project' if unnamed]**. Would you like to continue where we left off, or start a new design from scratch?"
+> "I found an existing design session for **[project name from the file, or 'a previous project' if unnamed]** — [description from the file, or omit this clause if unset]. Would you like to continue where we left off, or start a new design from scratch?"
 
 If they choose to continue: read the completed stages from `session.json`, brief the user on where the previous session left off, and resume from the first incomplete stage. If they choose to start fresh: delete `docs/architecture-designer/session.json` (and `docs/architecture-designer/diagrams.json` if present) before proceeding.
+
+**Legacy-session backfill check**: if resuming and `stage1`–`stage5` are already confirmed but `schemaVersion`, `project`, or `description` is missing (a v1 file, or a v2 file predating the `description` field), backfill the missing field(s) immediately here — do not wait for Step 11. Synthesize `description` from the existing `stage1` content per `references/session-schema.md`'s backfill rule and write it silently (no re-confirmation needed, same rationale as the Step 11 backfill). Resuming straight into Stage 6 or later without this backfill will otherwise fail the Session completeness gate with no instructed way to recover, since Stage 1 — the only other place `description` is normally written — has already been completed and won't run again.
 
 Work through the six stages in order (Stages 1–6), then follow Steps 7–13. At the end of each stage, summarize the user's answers and ask:
 > "Does this summary look correct? Shall we move to the next stage?"
@@ -29,7 +31,9 @@ Do not proceed until the user confirms. After each stage is confirmed, persist t
 
 **session.json write discipline**: Write the exact text the user confirmed, not a fresh paraphrase — sub-agents must work from confirmed facts, not a re-interpretation that could silently diverge from intent.
 
-**Canonical session.json schema**: read `references/session-schema.md` before writing to or reading anything beyond the stage keys below. It defines the fixed top-level keys, the array-of-objects shape for `documents`/`remediationPlans`/`implementationPlans` (each entry carries `path`, links like `document`/`remediationPlan`/`supersedes`, and `createdAt` — not a bare path string), the legacy (schema v1) tolerant-read rule for old string-array files, how to resolve links between the arrays instead of assuming array-position pairing, and the single-writer-per-key and no-CAS write discipline every reader/writer must follow. `schemaVersion` and `project` are guaranteed present under this schema (v2) but may be absent in legacy (v1) files — see the reference's tolerant-read rule before assuming either is present.
+**Canonical session.json schema**: read `references/session-schema.md` before writing to or reading anything beyond the stage keys below. It defines the fixed top-level keys, the array-of-objects shape for `documents`/`remediationPlans`/`implementationPlans` (each entry carries `path`, links like `document`/`remediationPlan`/`supersedes`, and `createdAt` — not a bare path string), which top-level keys (`schemaVersion`/`project`/`description`) are guaranteed present under this schema (v2) versus a legacy (v1) file, how to resolve links between the arrays instead of assuming array-position pairing, and the single-writer-per-key and no-CAS write discipline every reader/writer must follow.
+
+**`description` is required**: at the first session.json write (Stage 1 confirmation, below), write `schemaVersion: 2`, `project`, and `description` together with `stage1` — see `references/session-schema.md` for what `description` must contain and its two valid sources (user-written vs. auto-generated), and `references/discovery-questions.md` Stage 1 for how to surface an auto-drafted description for approval. Do not proceed to Stage 2 with `description` empty or missing; if the Stage 1 answers are too thin to synthesize one and the user hasn't supplied their own, ask a brief follow-up first.
 
 ---
 
@@ -37,7 +41,9 @@ Do not proceed until the user confirms. After each stage is confirmed, persist t
 
 Goal: understand what the application must do and why it exists.
 
-Ask the Stage 1 questions in `references/discovery-questions.md` (combine them into a conversational flow rather than a rigid checklist, but cover all of them). Summarize answers, confirm, then proceed.
+Ask the Stage 1 questions in `references/discovery-questions.md` (combine them into a conversational flow rather than a rigid checklist, but cover all of them), including the description question (write-your-own vs. auto-generate — see that reference for how to surface the drafted text). Summarize answers, confirm, then proceed.
+
+Once confirmed, write the first `docs/architecture-designer/session.json`: `stage1`, plus the required top-level `schemaVersion: 2`, `project` (a short slug derived from the application name or purpose), and `description` (see "`description` is required" above). All three are written this once, at this point in the workflow — do not defer them to Step 11.
 
 ---
 
@@ -101,7 +107,7 @@ Present recommendations, discuss with the user, adjust if needed, confirm, then 
 
 ## Stage 6 — Architecture and Infrastructure Design
 
-**Session completeness gate**: before spawning any sub-agent, run `node <scripts_dir>/validate-session.mjs`. If the check fails, the listed stages must be completed first — do not proceed to 6a or any later step until `SESSION CHECK PASSED`.
+**Session completeness gate**: before spawning any sub-agent, run `node <scripts_dir>/validate-session.mjs`. It checks both the required top-level fields (`schemaVersion`, `project`, `description`) and stages 1–5. If the check fails, the listed fields and/or stages must be completed first — do not proceed to 6a or any later step until `SESSION CHECK PASSED`. A missing top-level field on an otherwise-complete resumed session is the legacy-backfill case above, not a missing stage.
 
 ### 6a. Database design (delegate to sub-agent)
 
@@ -221,7 +227,7 @@ Do not open the browser preview until the reviewer reports `REVIEW PASSED` or `R
 
 1. **Confirm `diagrams.json` is current** at `docs/architecture-designer/diagrams.json`. The file was written at the end of Stage 6d and may have been updated by the architecture-fixer in Step 7 — if so it is already correct. It must follow the schema in `references/diagrams-guide.md` § "`diagrams.json` Schema". If validation in step 2 below flags issues, re-write the corrected diagram code into the file per that schema.
 
-2. **Validate diagrams**: run `node <scripts_dir>/validate-diagrams.mjs`. If the script exits non-zero or prints `VALIDATION FAILED`, fix the flagged issues in the diagram code and re-write `docs/architecture-designer/diagrams.json`. Do not proceed to step 3 until validation passes. **If the output contains `DEGRADED MODE`**, the script's real syntax parser is unavailable and some diagrams were only checked heuristically — validation still passed on what it could check, so proceed, but tell the user: "Diagram validation ran in degraded mode (parser dependencies not installed in `scripts/`) — some syntax errors may not have been caught. Run `npm install` in the plugin's `scripts/` directory for full validation coverage."
+2. **Validate diagrams**: run `node <scripts_dir>/validate-diagrams.mjs`. If the script exits non-zero or prints `VALIDATION FAILED`, fix the flagged issues in the diagram code and re-write `docs/architecture-designer/diagrams.json` — do this regardless of whether `DEGRADED MODE` also appears in the same output, since `DEGRADED MODE` is not itself a pass/fail signal and can co-occur with a real `VALIDATION FAILED`. Do not proceed to step 3 until the run prints `VALIDATION PASSED`. **Only once it reads `VALIDATION PASSED`, if the output also contains `DEGRADED MODE`**: the script's real syntax parser was unavailable and some diagrams were only checked heuristically — validation still passed on what it could check, so proceed, but tell the user: "Diagram validation ran in degraded mode (parser dependencies not installed in `scripts/`) — some syntax errors may not have been caught. Run `npm install` in the plugin's `scripts/` directory for full validation coverage."
 
 3. **Find a free port**: run `node <scripts_dir>/find-port.mjs`. Capture stdout (the port number). If it exits non-zero, report the error to the user.
 
@@ -242,6 +248,7 @@ After opening the browser, ask:
 If the user requests revisions:
 - Identify which stage the revision affects
 - Return to that stage, ask the relevant questions again, update the answers
+- **If Stage 1 is the revised stage**: re-confirm `description` along with the rest of the `stage1` answers — a description auto-drafted from the original answers can go stale once application goal, stakeholders, or pain points change. Re-draft it (or accept the user's own rewrite) and write the updated value back to `description`, the same way as the original Stage 1 confirmation.
 - Regenerate the affected diagrams
 - Re-run the architecture reviewer (step 7) — note this may spawn architecture-fixer, which writes `diagrams.json` directly
 - Update `diagrams.json` with the revised diagrams (skip if the fixer already wrote it directly during the reviewer re-run above)
@@ -286,7 +293,7 @@ docs/architecture-designer/architecture/{yyyymmdd}-{topic}.md
 - `{topic}`: the project/application name in kebab-case (lowercase, hyphens, no spaces)
 - If a file with this name already exists, append `-2`, `-3`, etc. until the filename is unique
 
-After saving, update `docs/architecture-designer/session.json`: append `{ "path": "<absolute path of the saved file>", "createdAt": "<current ISO timestamp>" }` to the top-level `"documents"` array (create it with this one entry if it doesn't exist yet; create `schemaVersion: 2` and `project` at the same time if the file predates them). This lets `/architecture-designer:implement` locate the latest document — the last entry's `path` — without asking.
+After saving, update `docs/architecture-designer/session.json`: append `{ "path": "<absolute path of the saved file>", "createdAt": "<current ISO timestamp>" }` to the top-level `"documents"` array (create it with this one entry if it doesn't exist yet; create `schemaVersion: 2`, `project`, and `description` at the same time if the file predates them — synthesize `description` from `stage1` if it is missing, per the tolerant-read backfill rule in `references/session-schema.md`). This lets `/architecture-designer:implement` locate the latest document — the last entry's `path` — without asking.
 
 **The document must begin with this metadata table on line 1:**
 

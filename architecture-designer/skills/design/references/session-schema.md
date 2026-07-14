@@ -10,6 +10,7 @@ The top-level keys are fixed; the field names inside each stage object are the u
 {
   "schemaVersion": 2,
   "project": "inventory-app",
+  "description": "A warehouse inventory management application that lets staff track stock levels, receive shipments, and pick orders across multiple warehouse locations, replacing an error-prone spreadsheet-based process.",
   "updatedAt": "2026-07-13T10:42:00Z",
   "stage1": { "applicationGoal": "...", "stakeholders": "...", "businessProcesses": "...", "painPoints": "...", "successCriteria": "..." },
   "stage2": { "functionalRequirements": ["..."], "nonFunctionalRequirements": { "performance": "...", "security": "...", "compliance": "...", "scalability": "...", "availability": "..." } },
@@ -30,9 +31,11 @@ The top-level keys are fixed; the field names inside each stage object are the u
 }
 ```
 
-Sub-agents receive the full contents of this file as input and must read it tolerantly — inner field names are illustrative, not contractual. The only guaranteed top-level keys are `stage1`–`stage5` and (after Step 11) `documents`. `stage6b` and `stage6c` are written after Stage 6b/6c confirmation and must be included when passing session context to sub-agents. `remediationPlans` may also appear after `/architecture-designer:review` has run — written by that skill, and must be passed to implementation-planner when present. `implementationPlans` may also appear after `architecture-designer:implementation-planner` has run — written by that agent itself after saving its plan file, not by the `design` skill. `architecture-implementer` never writes to `session.json`; it only reads the plan path passed to it.
+Sub-agents receive the full contents of this file as input and must read it tolerantly — inner field names are illustrative, not contractual. The only guaranteed top-level keys are `schemaVersion`, `project`, `description`, `stage1`–`stage5`, and (after Step 11) `documents`. `stage6b` and `stage6c` are written after Stage 6b/6c confirmation and must be included when passing session context to sub-agents. `remediationPlans` may also appear after `/architecture-designer:review` has run — written by that skill, and must be passed to implementation-planner when present. `implementationPlans` may also appear after `architecture-designer:implementation-planner` has run — written by that agent itself after saving its plan file, not by the `design` skill. `architecture-implementer` never writes to `session.json`; it only reads the plan path passed to it.
 
-`schemaVersion` and `project` are guaranteed present in files written under this schema (v2). They may be absent in files written before this schema existed (v1) — see "Legacy (schema v1) tolerant read" below; a reader must not assume their presence without checking `schemaVersion` first.
+`schemaVersion`, `project`, and `description` are guaranteed present in files written under this schema (v2) — none of the three is optional, and a session.json missing any of them is malformed under v2 and must be treated the same as a v1 file for read purposes (see tolerant-read rule below) until repaired. They may be absent in files written before this schema existed (v1) — see "Legacy (schema v1) tolerant read" below; a reader must not assume their presence without checking `schemaVersion` first.
+
+**`description`** is a detailed, multi-sentence description of what the application is and does — its purpose, primary users, and the core problem it solves. It is not a one-line paraphrase or a restatement of the `project` slug; it must give a reader unfamiliar with the project enough context to understand what is being built without reading `stage1` in full. It has two valid sources: the user's own written text (used verbatim, never paraphrased), or a version drafted by `design/SKILL.md` from the Stage 1 answers (application goal, stakeholders, business processes, pain points) and shown to the user for approval/edits before being written. Either way it is required: `design/SKILL.md` must write it at the same time as `schemaVersion` and `project` (Stage 1 confirmation) and must not proceed past Stage 1 without it populated.
 
 ## Arrays are objects, not strings
 
@@ -40,7 +43,7 @@ Sub-agents receive the full contents of this file as input and must read it tole
 
 ## Legacy (schema v1) tolerant read
 
-Files written before this schema may still have plain strings inside these arrays instead of objects, and may lack `schemaVersion`/`project`/`updatedAt` entirely. Any reader must accept both shapes: a string entry `"...path..."` is equivalent to `{ "path": "...path...", "document": null, "remediationPlan": null, "supersedes": null, "createdAt": null }`. Never fail or ask the user to migrate — normalize silently. Do not rewrite old entries in place; the next append naturally writes the new shape going forward.
+Files written before this schema may still have plain strings inside these arrays instead of objects, and may lack `schemaVersion`/`project`/`description`/`updatedAt` entirely. Any reader must accept both shapes: a string entry `"...path..."` is equivalent to `{ "path": "...path...", "document": null, "remediationPlan": null, "supersedes": null, "createdAt": null }`. Never fail or ask the user to migrate — normalize silently. Do not rewrite old entries in place; the next append naturally writes the new shape going forward. If a legacy file is being written to and lacks `description`, backfill it at the same time `schemaVersion: 2` and `project` are backfilled (see `design/SKILL.md` Step 11) — synthesize it from whatever `stage1` content is present rather than leaving it absent going forward. Unlike the Stage 1 flow above, this backfill is written silently without re-confirming it with the user: it only summarizes `stage1` data the user already confirmed when it was first written, so there is nothing new to approve.
 
 ## Resolving links between arrays
 
@@ -50,7 +53,7 @@ The same link fields resolve the resume-plan flow: an implementation plan whose 
 
 ## Single writer per key
 
-`stage1`–`stage6c` are written only by `design/SKILL.md`. `documents` is appended to by `design/SKILL.md` (Step 11) and by `review/SKILL.md` (step 4f). `remediationPlans` is appended to only by `review/SKILL.md` (step 4e). `implementationPlans` is appended to only by `implementation-planner`. `architecture-implementer` never writes to `session.json`. No key is ever written by more than the writers listed here.
+`schemaVersion`, `project`, and `description` are written only by `design/SKILL.md`, at Stage 1 confirmation (and backfilled by the same skill on legacy files per Step 11). `stage1`–`stage6c` are written only by `design/SKILL.md`. `documents` is appended to by `design/SKILL.md` (Step 11) and by `review/SKILL.md` (step 4f). `remediationPlans` is appended to only by `review/SKILL.md` (step 4e). `implementationPlans` is appended to only by `implementation-planner`. `architecture-implementer` never writes to `session.json`. No key is ever written by more than the writers listed here.
 
 ## No CAS — always read-fresh-modify-write-whole
 

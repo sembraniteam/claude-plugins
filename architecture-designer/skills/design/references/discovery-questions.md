@@ -11,8 +11,9 @@ Goal: understand what the application must do and why it exists.
 3. **Business processes**: What are the key workflows users will perform? Walk me through the most important one step by step.
 4. **Pain points**: What problems or limitations exist in the current process (if any) that this application should fix?
 5. **Success criteria**: How will you know the application has succeeded? What metrics or outcomes matter?
+6. **App description**: Would you like to write a detailed description of the app yourself (a few sentences on what it is, who it's for, and the problem it solves), or should one be drafted from your answers above for you to approve?
 
-Summarize answers, confirm, then proceed.
+Summarize answers, confirm, then proceed. If the user chose to have the description drafted, include the drafted `description` text in this summary explicitly (not folded into the application-goal answer) so they can approve or edit it alongside everything else.
 
 ## Stage 2 — Requirements Analysis
 

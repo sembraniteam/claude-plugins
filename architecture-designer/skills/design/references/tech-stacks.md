@@ -99,7 +99,7 @@ Deploy:      Docker → Fly.io / Railway → AWS ECS / GCP Cloud Run
 
 ### Go Stack
 ```
-Backend:     Go 1.22 + net/http (stdlib) or Gin / Echo / Chi
+Backend:     Go 1.26 + net/http (stdlib) or Gin / Echo / Chi
              (Fiber if Express-like routing is preferred)
 ORM:         sqlc (type-safe SQL codegen — preferred) or GORM (ORM-style)
 Auth:        golang-jwt/jwt + bcrypt (stdlib)

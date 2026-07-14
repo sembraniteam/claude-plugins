@@ -105,6 +105,12 @@ Before writing the final summary, run a verification pass, then update the plan 
 - **EXISTS** → include in the files-created list; mark `[x]` in the plan.
 - **MISSING** → this is a **FAIL**, not a skip. It means a file that was supposed to be created is absent. List it under "Files that failed" with the reason. Mark it `[ ] FAIL: {reason}` in the plan. Do not label a failed file as "skipped" — "skipped" (`[~]`) is only for files already present on disk in merge mode that were intentionally left untouched.
 
+**Requirements and document conformance re-check** — file existence alone does not confirm the skeleton matches what was designed; re-check content against the architecture document before writing the summary:
+- For every entity in the document's ERD, confirm the corresponding model/schema file actually declares the same fields, types, and relationships — not just that a file with a plausible name exists.
+- For every endpoint or message shown in the sequence diagrams, confirm a matching route/handler was created with the same method and path (or equivalent RPC/message name).
+- For every functional requirement in the document's Requirements Summary section (or `session.json`'s `stage2`, if it was passed), confirm at least one implemented file addresses it. A requirement with no corresponding file, route, or model is a gap — list it under a new "Requirements not yet reflected in code" summary section (distinct from "Files that failed", since nothing failed to write — the plan simply never covered it). Do not silently drop an uncovered requirement; surfacing it lets the user decide whether to fold it into a follow-up remediation plan.
+- Where the document specifies a particular technology, engine, or library (e.g., "PostgreSQL", "Redis for sessions"), confirm the generated configuration files (`package.json` dependencies, `docker-compose.yml` services, connection strings) name that exact technology — flag any substitution as a deviation in the summary rather than letting it pass silently.
+
 **Modifications** (when a remediation plan was provided) — for each item in "Modifications to existing files":
 - Re-read the relevant section of the file and confirm the change is present.
 - **MODIFIED** → mark `[x]` in the implementation plan; in the remediation plan update the suffix from `*(addressed in revision — code pending)*` to `*(code aligned)*`.
@@ -115,8 +121,9 @@ After the verification pass, provide the summary:
 1. **Files created** — grouped by category (models, routes, config, infrastructure, scripts)
 2. **Files modified** — list of existing files that were changed per the remediation plan (omit if none)
 3. **Files that failed** — paths expected but not found or not modified on disk; each entry must state why
-4. **Next steps** — install deps, configure `.env`, run migrations, start the dev server
-5. Any remaining TODOs or integration points that require actual business logic
+4. **Requirements not yet reflected in code** — from the conformance re-check above: any functional requirement, ERD entity, or sequence-diagram endpoint with no matching file, plus any technology substitution found (omit if none)
+5. **Next steps** — install deps, configure `.env`, run migrations, start the dev server
+6. Any remaining TODOs or integration points that require actual business logic
 
 **Smoke test** — especially important in merge mode or when remediation changes were applied, because those touch existing files and are most likely to break the build. Installing dependencies modifies the project, so ask for permission first:
 

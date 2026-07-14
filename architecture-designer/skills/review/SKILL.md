@@ -16,11 +16,11 @@ This skill reviews an existing architecture (from a document, the codebase, or b
 
 Check for `docs/architecture-designer/session.json`:
 
-- **If the file exists**: read it in full, then run `node <scripts_dir>/validate-session.mjs` and show its output. This shows which requirement stages are confirmed and reveals gaps before the review begins. If the check reports missing stages, proceed anyway — the review is still useful — but note the incomplete context. The session contents serve as the original requirements baseline for the architecture-reviewer and any revision agents.
+- **If the file exists**: read it in full, then run `node <scripts_dir>/validate-session.mjs` and show its output. This shows which required top-level fields (`schemaVersion`, `project`, `description`) and requirement stages are confirmed, and reveals gaps before the review begins. If the check reports anything missing, proceed anyway — the review is still useful — but note the incomplete context. The session contents serve as the original requirements baseline for the architecture-reviewer and any revision agents.
 
 - **If the file does not exist**: proceed without session context. Inform the user: "No session.json found — I won't have the original confirmed requirements on hand. The review will rely on the document and/or codebase alone. Sharing the original requirements now will improve the review quality."
 
-**Check for an existing remediation plan**: if `session.json` contains a `"remediationPlans"` array, read the file at its last entry's `path` (the most recently saved remediation plan; entries are objects — see the schema in `design/references/session-schema.md`). Then:
+**Check for an existing remediation plan**: if `session.json` contains a `"remediationPlans"` array, read the file at its last entry's `path` (the most recently saved remediation plan; entries are objects, or legacy bare-string paths in older files — see the schema and tolerant-read rule in `design/references/session-schema.md`). Then:
 
 - **Cross-check against the implementation plan first**: apply `design/references/session-schema.md` § "Checking whether a remediation plan is fully resolved". If resolved, skip straight to the "fully complete" message below without re-parsing the remediation plan's own checkboxes. Otherwise, fall through to inspecting the remediation plan file directly, as below.
 - **If the file no longer exists at the stored path**: note it and continue without loading it.
@@ -57,11 +57,11 @@ If the user chose (a) or (c):
 3. Ask: **"What is your current goal for this review? Has anything changed since this document was written? (New requirements, new constraints, team changes, performance issues, etc.)"**
 4. Spawn the `architecture-designer:architecture-reviewer` agent. Pass it:
    - The full contents of the architecture document
-   - The original requirements context — the contents of `docs/architecture-designer/session.json` read above (stages 1–5). If session.json was absent or incomplete, use the document's own Requirements Summary section as the baseline instead.
+   - The original requirements context — the contents of `docs/architecture-designer/session.json` read above (stages 1–5, plus the top-level `description`). If session.json was absent or incomplete, use the document's own Requirements Summary section as the baseline instead.
    - The user's current context/goals
    - Any new requirements or constraints the user described
    Let the agent assess: quality, consistency, completeness, and fit with current needs.
-5. Present the reviewer's findings to the user.
+5. Present the reviewer's findings to the user (see Step 3 for how to flag Dimension 6 findings specifically).
 
 ---
 
@@ -98,7 +98,7 @@ If the user also has a document (option c): compare the reconstructed architectu
 
 ## Step 3 — Present findings and ask for revision
 
-Present the review findings (architecture review report, drift report, or both) to the user. Then ask:
+Present the review findings (architecture review report, drift report, or both) to the user. If the architecture review report includes a Dimension 6 ("Document and current-intent alignment") finding — one that treats the document as outdated relative to what the user described as their current goal — call it out distinctly from the ordinary diagram findings: it means the document's own prose, not just the diagrams, needs updating in step 4f, and it should factor into the revision scope discussed in step 4a. Then ask:
 
 > **"Based on these findings, would you like to revise the architecture? I can update the affected diagrams, create a new versioned document, and optionally regenerate the implementation skeleton."**
 
@@ -128,7 +128,8 @@ Based on the revision scope:
 ### 4c. Architecture re-review
 
 Spawn the `architecture-designer:architecture-reviewer` agent with:
-- The requirements summary — read from `docs/architecture-designer/session.json` (the original confirmed stages 1–5) plus any new requirements or constraints gathered in step 4a. If session.json is absent, use the previous document's Requirements Summary section.
+- The requirements summary — read from `docs/architecture-designer/session.json` (the original confirmed stages 1–5, plus the top-level `description`). If session.json is absent, use the previous document's Requirements Summary section.
+- The user's current context/goals and any new requirements or constraints gathered in step 4a — kept as its own item, separate from the requirements summary above, so the agent can tell it received current-intent context (its Dimension 6 input) rather than folding it into the original baseline.
 - All updated diagrams
 
 If Critical or Major findings are returned: spawn `architecture-designer:architecture-fixer` with the review report, `docs/architecture-designer/diagrams.json`, and the requirements summary. After the fixer updates `diagrams.json`:

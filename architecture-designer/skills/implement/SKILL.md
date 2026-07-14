@@ -1,7 +1,7 @@
 ---
 name: implement
 description: This skill should be used when the user wants to turn an approved architecture document into working code, or wants to generate/scaffold a project after a design or review session — says "implement the architecture", "scaffold the project", "generate the code from my architecture", "create project files from the design", "turn my architecture into code", "create the folder structure", "start implementation", "let's start coding", or "generate the project skeleton".
-allowed-tools: ["Read", "Glob", "Bash", "Agent"]
+allowed-tools: ["Read", "Edit", "Glob", "Bash", "Agent"]
 ---
 
 # Architecture Designer — Implementation Workflow
@@ -87,13 +87,16 @@ The agent will:
 2. Read the architecture document for the technical detail needed to write each file
 3. Implement every file — models from the ERD, route stubs from sequence diagrams, configuration files, Docker setup, infrastructure as code
 4. Update the plan file: mark completed files `[x]`, skipped files `[~]`, failed files `[ ] FAIL: {reason}`, and set Status to Complete
-5. Offer an optional smoke test — installs dependencies and verifies the project compiles or starts (requires your confirmation since it modifies the project directory)
+5. Re-check the result against the document: confirm generated models/routes actually match the ERD/sequence diagrams and that named technologies weren't substituted, flagging any functional requirement with no corresponding file under "Requirements not yet reflected in code"
+6. Offer an optional smoke test — installs dependencies and verifies the project compiles or starts (requires your confirmation since it modifies the project directory)
 
 Wait for the agent to complete. You do not need to guide it further — it has complete instructions.
 
 ---
 
 ## Step 5 — Wrap up
+
+**If the agent's summary included a "Requirements not yet reflected in code" section**: surface those gaps to the user explicitly and before the generic wrap-up list below — they represent requirements the plan never covered, not files that failed to write. Suggest running `/architecture-designer:review` to fold them into a remediation plan if the user wants them addressed.
 
 Once the agent reports completion, remind the user:
 
