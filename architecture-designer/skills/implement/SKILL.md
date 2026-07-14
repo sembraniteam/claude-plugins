@@ -14,7 +14,7 @@ This skill turns an approved architecture document into a working project skelet
 
 Check for an architecture document path in this order:
 
-1. **`docs/architecture-designer/session.json`** — if the file exists and contains a `documentPaths` array, use its last entry (the most recently saved document). This is the authoritative location when this skill follows a design session in the same working directory. If that path does not resolve to an existing file (moved or deleted since the session was recorded), fall back to option 3 below instead of failing.
+1. **`docs/architecture-designer/session.json`** — if the file exists and contains a `documents` array, use its last entry (the most recently saved document). This is the authoritative location when this skill follows a design session in the same working directory. If that path does not resolve to an existing file (moved or deleted since the session was recorded), fall back to option 3 below instead of failing.
 2. **Current conversation context** — if the user just completed a `/architecture-designer:design` or `/architecture-designer:review` session and the document path is visible in the conversation.
 3. **Manual selection** — if neither above yields a path, proceed to list files as described below.
 
@@ -42,36 +42,31 @@ Scan the current working directory for signs of an existing project. Look for:
 
 **If the project looks empty** (no manifest, no source dirs): tell the user the implementer will generate the full project from scratch. No question needed — proceed to Step 3.
 
-**If files already exist**: summarise what was found and ask:
-
-> "I found an existing project structure. How would you like to proceed?
-> **(a) Merge** — add missing files from the architecture without overwriting existing code
-> **(b) Fresh start** — generate the complete skeleton; any file that already exists will be flagged before being overwritten — you decide per collision
-> **(c) Let me describe what to keep** — I'll describe my existing layout and we'll work around it"
-
-Wait for the answer before proceeding.
+**If files already exist**: summarise what was found and ask the question in `design/references/session-schema.md` § "Merge-strategy question" (this skill is the canonical source of that text — the `design` and `review` skills point back here). Wait for the answer before proceeding.
 
 ---
 
 ## Step 3 — Spawn the implementation-planner agent
 
-Before spawning, check `docs/architecture-designer/session.json` for a `"remediationPlanPaths"` array. If present and non-empty, and the file at its last entry exists on disk, you will pass that path to the planner so it can list the confirmed code changes as plan checklist items.
+Before spawning, check `docs/architecture-designer/session.json` for a `"remediationPlans"` array. Find the entry whose `document` field equals the document confirmed in Step 1; if found and its `path` exists on disk, this is the remediation plan to pass along — unless `design/references/session-schema.md` § "Checking whether a remediation plan is fully resolved" rules it out.
 
-**Skip if already resolved**: before passing it, also check for an `"implementationPlanPaths"` array in the same `session.json`. If its last entry exists on disk, its `Status` is `Complete`, and its "Modifications to existing files" section contains no `[ ] FAIL` items, the remediation plan has already been fully applied to code — do not pass the remediation plan path to the planner; there is nothing left for it to plan.
+Then run `design/references/session-schema.md` § "Resumable-plan detection procedure" (this skill is one of the three canonical call sites it describes) using the document confirmed in Step 1 as `{document}`. This produces the **Previous plan path** to pass below, if the user chooses to resume.
 
 Spawn `architecture-designer:implementation-planner`. Pass it:
 
 - **Architecture document path** — the file confirmed in Step 1
 - **Existing project summary** — what was found in Step 2, translated into the agent's expected strategy label: `Fresh start (empty project)` if the project looked empty; `Merge` if the user chose (a); `Fresh start (existing project)` if the user chose (b); `User-described layout` if the user chose (c)
 - **Technology stack** — if a prior design session is still in context, pass the technology stack from stage 5 directly so the agent doesn't have to re-infer it from the document
-- **Remediation plan path** — the last entry of `session.json → remediationPlanPaths`, if it exists on disk (omit if the array is absent, empty, the file is missing, or the "Skip if already resolved" check above determined it's fully applied). The strategy label above already reflects what Step 2's scan actually found — do not override it just because a remediation plan is present; a plan does not by itself prove an existing codebase.
+- **Remediation plan path** — the remediation plan resolved above (matched by `document`), if it exists on disk and the "Skip if already resolved" check didn't rule it out. The strategy label above already reflects what Step 2's scan actually found — do not override it just because a remediation plan is present; a plan does not by itself prove an existing codebase.
+- **Previous plan path** — the resumed plan's `path`, if the user chose to continue above (omit otherwise)
 
 The agent will:
 1. Read the document and surface any remaining ambiguities (framework choice, ORM vs raw SQL, etc.) — all at once, not one by one
-2. Propose a full folder structure as an ASCII tree, annotating any files that already exist; if fresh-starting into an existing project, ask how to handle collisions before saving anything
-3. Wait for your confirmation or adjustments before saving the plan
-4. Save an implementation plan to `docs/architecture-designer/plan/{yyyymmdd}-{topic}.md` — a markdown checklist of every file to be created, grouped by category — and create one task per file group
-5. Report back the plan file path once it's saved and confirmed
+2. If a **Previous plan path** was passed, carry forward its checklist items (done, pending, and failed) into the proposed structure before presenting it — see implementation-planner's carry-over rules
+3. Propose a full folder structure as an ASCII tree, annotating any files that already exist; if fresh-starting into an existing project, ask how to handle collisions before saving anything
+4. Wait for your confirmation or adjustments before saving the plan
+5. Save an implementation plan to `docs/architecture-designer/plan/{yyyymmdd}-{topic}.md` — a markdown checklist of every file to be created, grouped by category — and create one task per file group; if resumed, also mark the previous plan `Superseded`
+6. Report back the plan file path once it's saved and confirmed
 
 Wait for the agent to complete and confirm the plan was saved successfully before proceeding to Step 4. If it reports it could not save a confirmed plan (e.g., ambiguities were never resolved), do not proceed to Step 4 — resolve the blocker with the user and re-spawn it instead.
 

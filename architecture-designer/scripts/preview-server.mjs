@@ -26,8 +26,8 @@
  *   ]
  * }
  * indexPlan is optional; only include it for erDiagram entries (rendered as an index plan table below the
- * diagram). Every row is one database index — the legacy key `companionTable` is still read as a fallback
- * but is deprecated in favor of the self-describing name.
+ * diagram). Every row is one database index. See skills/design/references/diagrams-guide.md for the field
+ * guide, including the deprecated `companionTable` legacy key this reader falls back to.
  */
 
 import http from 'http';

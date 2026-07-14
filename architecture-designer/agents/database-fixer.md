@@ -31,8 +31,9 @@ Work through every Critical finding first, then Major findings. For each:
 - **Wrong data type** (`FLOAT` → `DECIMAL`, add `WITH TIME ZONE`, bound a `VARCHAR`, etc.): Change the column definition in the schema and update the ERD attribute if the type is shown there.
 - **Missing FK column**: Add the FK column to the child table. Update the ERD to add the FK annotation (`"FK"`). Add the FK index to the plan.
 - **ERD/schema mismatch**: Bring the ERD in line with the authoritative schema (or the schema in line with the ERD if the ERD is clearly the intended design — state which you chose and why).
-- **Missing index**: Add the index to the index plan table. Add `"idx"` to the relevant column in the ERD.
+- **Missing index flagged by the reviewer**: Add the index to the index plan table. Add `"idx"` to the relevant column in the ERD.
 - **Redundant index**: Remove it from the index plan. Remove the `"idx"` annotation from the ERD column if it was the only reason for the annotation.
+- **Schema element implied by an NFR but not already a reviewer finding** (e.g. an audit-log table implied by a compliance NFR, a covering index implied by a high-read-TPS capacity target that the reviewer's index-completeness check didn't happen to flag): **do not add this directly**. Adding a schema element is a design decision, even when the NFR implies it — the same rule `architecture-fixer` follows for diagram components. Instead, list it in the **Proposed Additions** section of your fix log with: which NFR or capacity target implies it, which table/index it would affect, and a one-line description of the proposed change. The calling skill presents these to the user for confirmation before any insertion happens.
 - **Missing TLS config**: Add the correct TLS option for the engine (e.g., `sslmode=require` for PostgreSQL, `ssl: { rejectUnauthorized: true }` for Node.js `pg`).
 - **Missing least-privilege user**: Add a `CREATE USER` / `GRANT` example with only the permissions the application needs (`SELECT`, `INSERT`, `UPDATE`, `DELETE` on specific tables — no `SUPERUSER`, no `CREATE`).
 - **Hardcoded credential**: Replace with `process.env.DB_PASSWORD` (or equivalent) and add a note that it must come from the environment or a secrets manager.
@@ -66,7 +67,7 @@ For the ERD entry:
     { "name": "...", "table": "...", "columns": "...", "type": "...", "reason": "..." }
   ]
   ```
-  (If the entry still uses the legacy key `companionTable`, rename it to `indexPlan` while you're in there.)
+  (If the entry still uses the legacy key `companionTable`, rename it to `indexPlan` while you're in there — see `diagrams-guide.md`'s "Legacy key" note for why.)
 - If the schema changes affect what `details` describes (e.g., a table was added or a relationship changed), update `details` to match.
 
 Write the modified JSON back to `diagrams.json` in place.
@@ -79,6 +80,9 @@ Write the modified JSON back to `diagrams.json` in place.
 ### Applied fixes
 - [TABLE/item] Finding: <brief description>. Fix: <what was changed>.
 
+### Proposed Additions (require user confirmation before inserting)
+- [TABLE/item] Element: <name>. NFR/capacity basis: <requirement that implies it>. Proposed change: <one-line description of what would be added and where>.
+
 ### diagrams.json updated
 - ERD entry `<diagram-id>`: code and indexPlan replaced with corrected versions.
   — or —
@@ -87,5 +91,7 @@ Write the modified JSON back to `diagrams.json` in place.
 ### Skipped — require human decision
 - [item] Finding: <brief description>. Reason: <explanation>.
 ```
+
+If there are no proposed additions, omit that section entirely.
 
 Close by telling the calling skill: "Database design corrected and diagrams.json updated — re-run database-reviewer to verify before embedding."

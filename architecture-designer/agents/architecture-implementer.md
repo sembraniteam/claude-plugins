@@ -100,7 +100,7 @@ Before writing the final summary, run a verification pass, then update the plan 
 - Leave skipped/already-present files as `- [~]`
 - Leave any file not created (FAIL) as `- [ ] FAIL: {reason}`
 
-**New files** — for every file path from the plan's `- [ ]` items, check whether it exists on disk using `test -f <path> && echo EXISTS || echo MISSING` (or `ls <path>`). The result is binary — there is no middle ground:
+**New files** — for every file path from the plan's `- [ ]` items *except the "Setup and run commands" section* (whose entries are npm script names, not filesystem paths — verify those instead by confirming `package.json` exists and its `scripts` field contains the expected keys, marking `[x]` or `[ ] FAIL` on that basis), check whether it exists on disk using `test -f <path> && echo EXISTS || echo MISSING` (or `ls <path>`). The result is binary — there is no middle ground:
 
 - **EXISTS** → include in the files-created list; mark `[x]` in the plan.
 - **MISSING** → this is a **FAIL**, not a skip. It means a file that was supposed to be created is absent. List it under "Files that failed" with the reason. Mark it `[ ] FAIL: {reason}` in the plan. Do not label a failed file as "skipped" — "skipped" (`[~]`) is only for files already present on disk in merge mode that were intentionally left untouched.

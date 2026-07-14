@@ -85,7 +85,7 @@ Each reviewer has a paired fixer agent. When a reviewer returns findings, the sk
 | `architecture-designer:database-designer`        | Designs schema, ERD, index plan, engine selection, and secure connection config for SQL and NoSQL                                                                                                                                                 |
 | `architecture-designer:database-reviewer`        | Audits database design: engine fit, schema/3NF, ERD accuracy, index completeness, security config; returns DATABASE REVIEW PASSED / FAILED                                                                                                        |
 | `architecture-designer:database-fixer`           | Corrects schema, ERD, index plan, and connection config; writes the corrected ERD and `indexPlan` directly into `diagrams.json` (same pattern as `architecture-fixer`), and returns corrected schema and connection config for document embedding |
-| `architecture-designer:document-reviewer`        | Audits saved documents for format compliance (F1–F7) and content completeness (C1–C6); returns DOCUMENT REVIEW PASSED / FAILED                                                                                                                    |
+| `architecture-designer:document-reviewer`        | Audits saved documents for format compliance (F1–F7) and content completeness (C1–C8, including IaC and CI/CD sections); returns DOCUMENT REVIEW PASSED / FAILED                                                                                  |
 | `architecture-designer:document-fixer`           | Fixes specific format and content failures in the document based on reviewer findings; overwrites the draft in place                                                                                                                              |
 | `architecture-designer:implementation-planner`   | Resolves implementation ambiguities, proposes a folder structure, waits for confirmation, and saves the implementation plan; does not write application code                                                                                     |
 | `architecture-designer:architecture-implementer` | Reads the confirmed implementation plan and the approved document, then implements project skeleton, data models, routes, and infrastructure files; refuses to run without a confirmed plan                                                     |
@@ -140,7 +140,21 @@ The preview server reads `docs/architecture-designer/diagrams.json` on every req
 }
 ```
 
-`indexPlan` is optional and only used for `erDiagram` entries — it renders as an inline index plan table below the ERD. Every row must be an index (five keys: `name`, `table`, `columns`, `type`, `reason`) — `validate-diagrams.mjs` rejects rows that aren't. The field was previously named `companionTable`; that key is still read as a fallback but is deprecated in favor of the self-describing `indexPlan` name.
+`indexPlan` is optional and only used for `erDiagram` entries — it renders as an inline index plan table below the ERD. Every row must be an index (five keys: `name`, `table`, `columns`, `type`, `reason`) — `validate-diagrams.mjs` rejects rows that aren't. See `skills/design/references/diagrams-guide.md` for the field guide, including the deprecated `companionTable` legacy key.
+
+## `session.json` schema
+
+`docs/architecture-designer/session.json` is the requirements-and-history file every skill and agent reads and writes throughout a project's lifetime. It holds the confirmed answers from Stages 1–6c (`stage1`–`stage6c`), plus three history arrays: `documents` (every saved architecture document, oldest first), `remediationPlans` (every saved remediation plan from a review session), and `implementationPlans` (every saved implementation plan). Each array entry is an object — `{ path, createdAt }` for documents, plus `document`/`remediationPlan`/`supersedes` link fields on the plan arrays that tie a plan back to the document it targets, the remediation plan it consumed, and (if it replaced an earlier plan) the plan it superseded. Files written before this schema (v1) may still have plain path strings instead of objects; every reader treats a bare string as `{ path: <string>, ...other fields: null }` rather than failing.
+
+Full schema, the single-writer-per-key rule (each key has exactly one skill/agent that appends to it), and the no-CAS read-fresh-modify-write-whole discipline are documented in `skills/design/references/session-schema.md`.
+
+## Resuming implementation plans
+
+Implementation plans are checklists, not one-shot scripts — a run can be interrupted, or finish with some files marked `[ ] FAIL: {reason}`. Every time `/architecture-designer:design`, `/architecture-designer:review`, or `/architecture-designer:implement` is about to spawn `implementation-planner` for a document, it first checks whether an earlier plan for that same document is still actionable (`Status: In progress`, or `Status: Complete` with at least one `[ ] FAIL` item — `architecture-implementer` always finalizes a run as `Complete` even when some files failed). If one is found, you're offered the choice to resume it or start fresh.
+
+Resuming carries the old plan's state forward: completed files become `[~]` (skip, already built — verified against disk before trusting it), pending files stay `[ ]`, and failed files stay `[ ]` with the failure reason embedded so the retry has context. The new plan supersedes the old one — the old plan file's `Status` is updated to `Superseded by {new plan path}` so it's never offered again. If the underlying architecture document itself gets revised in the meantime, any plan still tied to the prior revision is surfaced separately as an orphaned plan you can mark superseded manually, rather than being silently forgotten.
+
+A remediation plan (`docs/architecture-designer/plan/{yyyymmdd}-{topic}-remediation.md`, produced by `/architecture-designer:review` step 4e — format documented in `skills/design/references/remediation-plan-guide.md`) can be resumed the same way, and can be in play at the same time as a resumed implementation plan; `implementation-planner` reconciles the two if they both touch the same file.
 
 ## Document format
 
@@ -175,3 +189,20 @@ Revisions create new files (never overwrite), with `Version` incremented, `Reaso
 | CI/CD pipeline   | `flowchart TD`                     | 2+ deployment environments       |
 
 All diagrams support zoom in/out/reset (mouse wheel, pinch, buttons) and 2× resolution PNG download.
+
+## Reference files
+
+Detailed, less-frequently-needed content lives under `skills/design/references/` rather than inline in the skill files, and is loaded only when a step needs it:
+
+| File                            | Covers                                                                                     |
+|----------------------------------|---------------------------------------------------------------------------------------------|
+| `session-schema.md`              | Full `session.json` schema, array-of-objects shape, single-writer rule, resumable-plan and orphaned-plan detection procedures |
+| `diagrams-guide.md`              | `diagrams.json` schema, Mermaid v11.16 compatibility rules, node-overlap prevention rules, per-diagram-type templates |
+| `document-template.md`           | The 10-section architecture document body template (Step 11)                               |
+| `document-review-checklist.md`   | The F1–F7 / C1–C8 document review item catalog and literal formats shared by `document-reviewer` and `document-fixer` |
+| `remediation-plan-guide.md`      | The remediation plan markdown format and checkbox/suffix conventions                        |
+| `discovery-questions.md`         | The full Stage 1–4 requirements-gathering question banks                                    |
+| `tech-stacks.md`                 | Concrete technology stack recommendations by architecture pattern and scale                 |
+| `iac-guide.md`                   | Infrastructure-as-Code tool selection and module breakdown guidance                         |
+| `cicd-guide.md`                  | CI/CD platform selection and pipeline stage guidance                                        |
+| `lld-guide.md`                   | Low-Level Design artifact formats (API contracts, business rules, DTOs, error catalog)       |

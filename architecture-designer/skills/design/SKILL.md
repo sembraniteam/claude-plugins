@@ -29,27 +29,7 @@ Do not proceed until the user confirms. After each stage is confirmed, persist t
 
 **session.json write discipline**: Write the exact text the user confirmed, not a fresh paraphrase — sub-agents must work from confirmed facts, not a re-interpretation that could silently diverge from intent.
 
-**Canonical session.json schema** — the top-level keys are fixed; the field names inside each stage object are the user's confirmed answers and may vary:
-
-```json
-{
-  "stage1": { "applicationGoal": "...", "stakeholders": "...", "businessProcesses": "...", "painPoints": "...", "successCriteria": "..." },
-  "stage2": { "functionalRequirements": ["..."], "nonFunctionalRequirements": { "performance": "...", "security": "...", "compliance": "...", "scalability": "...", "availability": "..." } },
-  "stage3": { "budget": "...", "timeline": "...", "regulations": "...", "teamCompetencies": "...", "legacySystems": "...", "cloudPreference": "..." },
-  "stage4": { "registeredUsers": "...", "concurrentUsers": "...", "tps": "...", "dataVolume": "...", "readWriteRatio": "...", "peakPatterns": "...", "geography": "..." },
-  "stage5": { "architecturePattern": "...", "backend": "...", "frontend": "...", "database": "...", "infrastructure": "...", "supportingServices": "...", "authentication": "...", "observability": "...", "disasterRecovery": "..." },
-  "stage6b": { "tool": "...", "stateBackend": "...", "modules": "...", "envStrategy": "...", "driftDetection": "..." },
-  "stage6c": { "platform": "...", "stages": "...", "branchingStrategy": "...", "envPromotion": "...", "secretInjection": "...", "artifactManagement": "..." },
-  "documentPaths": ["/absolute/path/to/docs/architecture-designer/architecture/YYYYMMDD-topic.md"],
-  "implementationPlanPaths": ["/absolute/path/to/docs/architecture-designer/plan/YYYYMMDD-topic.md"]
-}
-```
-
-Sub-agents receive the full contents of this file as input and must read it tolerantly — inner field names are illustrative, not contractual. The only guaranteed top-level keys are `stage1`–`stage5` and (after Step 11) `documentPaths`. `stage6b` and `stage6c` are written after Stage 6b/6c confirmation and must be included when passing session context to sub-agents. `remediationPlanPaths` may also appear after `/architecture-designer:review` has run — written by that skill, and must be passed to implementation-planner when present. `implementationPlanPaths` may also appear after `architecture-designer:implementation-planner` has run — written by that agent itself after saving its plan file (Step 3), not by this skill. architecture-implementer never writes to `session.json`; it only reads the plan path passed to it.
-
-**`documentPaths`, `remediationPlanPaths`, and `implementationPlanPaths` are arrays, not single values.** Each save appends the new file's path rather than overwriting — documents and plans are never overwritten on disk (each revision is a new file), so the array preserves that history. Treat the last element as current unless a step says otherwise.
-
-**Resolving `remediationPlanPaths` against `implementationPlanPaths`**: the last entry of each is assumed to correspond — they're always written in that order, since implementation always consumes the latest remediation plan. A step reading `remediationPlanPaths` to check for outstanding work must first read the matching implementation plan: if its `Status` is `Complete` with no `[ ] FAIL` items under "Modifications to existing files", treat the remediation plan as fully resolved rather than re-surfacing it.
+**Canonical session.json schema**: read `references/session-schema.md` before writing to or reading anything beyond the stage keys below. It defines the fixed top-level keys, the array-of-objects shape for `documents`/`remediationPlans`/`implementationPlans` (each entry carries `path`, links like `document`/`remediationPlan`/`supersedes`, and `createdAt` — not a bare path string), the legacy (schema v1) tolerant-read rule for old string-array files, how to resolve links between the arrays instead of assuming array-position pairing, and the single-writer-per-key and no-CAS write discipline every reader/writer must follow. `schemaVersion` and `project` are guaranteed present under this schema (v2) but may be absent in legacy (v1) files — see the reference's tolerant-read rule before assuming either is present.
 
 ---
 
@@ -57,15 +37,7 @@ Sub-agents receive the full contents of this file as input and must read it tole
 
 Goal: understand what the application must do and why it exists.
 
-Ask these questions (you may combine them into a conversational flow rather than a numbered list, but cover all of them):
-
-1. **Application goal**: What is the primary purpose of this application? What problem does it solve?
-2. **Stakeholders**: Who are the main users? Are there multiple user roles (admin, end-user, partner, etc.)?
-3. **Business processes**: What are the key workflows users will perform? Walk me through the most important one step by step.
-4. **Pain points**: What problems or limitations exist in the current process (if any) that this application should fix?
-5. **Success criteria**: How will you know the application has succeeded? What metrics or outcomes matter?
-
-Summarize answers, confirm, then proceed.
+Ask the Stage 1 questions in `references/discovery-questions.md` (combine them into a conversational flow rather than a rigid checklist, but cover all of them). Summarize answers, confirm, then proceed.
 
 ---
 
@@ -73,21 +45,9 @@ Summarize answers, confirm, then proceed.
 
 Goal: separate functional from non-functional requirements.
 
-Ask:
-
-**Functional requirements** (features):
-- What are the core features the application must have at launch?
-- Are there secondary features that are nice-to-have but not essential for v1?
-- Are there any explicit non-goals (things the application will NOT do)?
-
-**Non-functional requirements** (qualities):
-- **Performance**: Are there response time targets? (e.g., "search results in under 500ms")
-- **Security**: What data is sensitive? Are there compliance requirements (GDPR, HIPAA, PCI-DSS, SOC 2)?
+Ask the Stage 2 questions in `references/discovery-questions.md`.
 
 > **Compliance grounding rule**: When the user names a compliance framework, record it as a stated requirement — do not assert specific technical controls from memory (e.g., "GDPR requires X-day retention"). Regulatory specifics vary by jurisdiction and change over time; model-generated compliance claims are expensive to correct. Mark every compliance-specific control in the document with **"⚠ Needs legal/compliance validation"** and defer exact requirements to the user's legal team.
-- **Scalability**: Must the system scale horizontally? Is auto-scaling important?
-- **Availability**: What is the acceptable downtime? (e.g., 99.9% SLA = ~8.7 hours/year)
-- **Number of users**: How many concurrent users are expected at launch? At peak?
 
 Summarize as two lists (functional and non-functional), confirm, then proceed.
 
@@ -97,16 +57,7 @@ Summarize as two lists (functional and non-functional), confirm, then proceed.
 
 Goal: identify real-world constraints that will shape technical decisions.
 
-Ask:
-
-- **Budget**: Is there a rough infrastructure budget per month? (Helps choose cloud tier, managed vs self-hosted)
-- **Timeline**: What is the target launch date? How long is the development runway?
-- **Regulations**: Any specific regulations to comply with? (data residency, encryption at rest requirements, audit logging)
-- **Team competencies**: What languages, frameworks, and platforms does your team know well?
-- **Legacy systems**: Are there existing systems this application must integrate with? (databases, APIs, authentication providers, message brokers)
-- **Preferred cloud / infrastructure**: Any preference between AWS, GCP, Azure, on-premise, or bare metal?
-
-Summarize constraints, confirm, then proceed.
+Ask the Stage 3 questions in `references/discovery-questions.md`. Summarize constraints, confirm, then proceed.
 
 ---
 
@@ -114,17 +65,7 @@ Summarize constraints, confirm, then proceed.
 
 Goal: produce concrete numbers that will drive infrastructure sizing and technology choices.
 
-Ask:
-
-- **Users**: How many registered users are expected at launch? In 12 months? In 3 years?
-- **Concurrent users**: At peak, how many users will be active simultaneously?
-- **Transactions per second (TPS)**: Estimate the busiest operation (e.g., API requests, orders, messages). How many per second at peak?
-- **Data volume**: How much data will be stored at launch? How fast does it grow per month?
-- **Read/write ratio**: Is the workload read-heavy, write-heavy, or balanced?
-- **Peak load patterns**: Are there predictable spikes? (e.g., end-of-month billing, flash sales, daily at 9 AM)
-- **Geographic distribution**: Are users concentrated in one region or globally distributed?
-
-Summarize with explicit numbers (estimates are fine — label them as estimates), confirm, then proceed.
+Ask the Stage 4 questions in `references/discovery-questions.md`. Summarize with explicit numbers (estimates are fine — label them as estimates), confirm, then proceed.
 
 **Number discipline**: Every figure in the confirmed capacity summary must originate from the user's answers or be explicitly derived from those answers — show the arithmetic (e.g., "10,000 daily active users ÷ 86,400 s × 3× peak factor ≈ 0.35 req/s baseline"). Do not cite database or infrastructure performance benchmarks from memory (e.g., "PostgreSQL handles 10,000 TPS") as justification — those figures are not grounded in this project's specific usage and create false precision. When the user cannot provide a number, derive a reasoned estimate together and label it **"estimate — validate at launch"**.
 
@@ -175,9 +116,9 @@ Then spawn `architecture-designer:database-reviewer`. Pass it:
 - The full database-designer output
 - The requirements summary (stages 1–5)
 
-If the reviewer returns `DATABASE REVIEW FAILED`: spawn `architecture-designer:database-fixer` with the review report, the database-designer output, the requirements summary, and the path to `docs/architecture-designer/diagrams.json`. The fixer writes the corrected ERD and indexPlan directly into `diagrams.json`. After it completes, re-spawn `architecture-designer:database-reviewer` to verify. Repeat until `DATABASE REVIEW PASSED`, **up to a maximum of 3 reviewer–fixer cycles**. If it still returns `DATABASE REVIEW FAILED` after 3 cycles, stop the loop, present the remaining findings to the user verbatim, and ask for their guidance rather than cycling further.
+If the reviewer returns `DATABASE REVIEW FAILED`: spawn `architecture-designer:database-fixer` with the review report, the database-designer output, the requirements summary, and the path to `docs/architecture-designer/diagrams.json`. The fixer writes the corrected ERD and indexPlan directly into `diagrams.json` **and returns the corrected schema, ERD, index plan, and connection config as text** — replace the database-designer output held in context with this corrected text; it is what gets embedded in Step 11, not the original. If the fix log contains a **"Proposed Additions"** section, present each item to the user for confirmation before continuing (same pattern as architecture-fixer's Proposed Additions in Step 7) — a rejected addition does not resolve the reviewer finding it addresses, so ask the user how to proceed on those before re-spawning the reviewer. After it completes, re-spawn `architecture-designer:database-reviewer` to verify. Repeat until `DATABASE REVIEW PASSED`, **up to a maximum of 3 reviewer–fixer cycles**. If it still returns `DATABASE REVIEW FAILED` after 3 cycles, stop the loop, present the remaining findings to the user verbatim, and ask for their guidance rather than cycling further.
 
-Incorporate the final approved database design into the diagram set and document.
+**The database design incorporated into the document (Step 11, §7 per `references/document-template.md`) and the diagram set must be the final approved version — the database-fixer's corrected text if any fixer cycle ran, or the original database-designer output if it passed review with no fixes.** Never fall back to the original output after a fixer cycle has produced a corrected version; the two must never diverge.
 
 ### 6b. Infrastructure as Code (IaC)
 
@@ -266,8 +207,9 @@ Wait for the review report.
 
 After the fixer updates `diagrams.json`:
 - If the fix log contains a **"Proposed Additions"** section, present each item to the user for confirmation before continuing. Add confirmed items to `diagrams.json`; discard rejected ones.
+- **A rejected proposed addition does not resolve the finding that generated it.** Note which Critical/Major finding each rejected addition was tied to. Do not silently re-enter the reviewer–fixer loop expecting the same finding to disappear — the fixer cannot close it without the addition. Ask the user directly: accept the residual risk and note it in the document, or describe an alternative fix for the fixer to apply next cycle. Only re-spawn the reviewer once the user has chosen one of these for every rejected addition.
 - Re-spawn `architecture-designer:architecture-reviewer` to verify.
-- Repeat until no Critical items remain and all Major items are resolved, **up to a maximum of 3 reviewer–fixer cycles**. If issues still persist after 3 cycles, stop the loop, present the remaining unresolved findings to the user verbatim, and ask for their guidance — do not continue cycling automatically.
+- Repeat until the reviewer's verdict line reads `REVIEW PASSED` or `REVIEW CONDITIONALLY PASSED` with all Major items resolved — read the verdict line itself rather than re-deriving pass/fail from the findings list, **up to a maximum of 3 reviewer–fixer cycles**. If issues still persist after 3 cycles, stop the loop, present the remaining unresolved findings to the user verbatim, and ask for their guidance — do not continue cycling automatically.
 
 **If the report contains only MINOR items**: note them for the user and proceed.
 
@@ -279,7 +221,7 @@ Do not open the browser preview until the reviewer reports `REVIEW PASSED` or `R
 
 1. **Confirm `diagrams.json` is current** at `docs/architecture-designer/diagrams.json`. The file was written at the end of Stage 6d and may have been updated by the architecture-fixer in Step 7 — if so it is already correct. It must follow the schema in `references/diagrams-guide.md` § "`diagrams.json` Schema". If validation in step 2 below flags issues, re-write the corrected diagram code into the file per that schema.
 
-2. **Validate diagrams**: run `node <scripts_dir>/validate-diagrams.mjs`. If the script exits non-zero or prints `VALIDATION FAILED`, fix the flagged issues in the diagram code and re-write `docs/architecture-designer/diagrams.json`. Do not proceed to step 3 until validation passes.
+2. **Validate diagrams**: run `node <scripts_dir>/validate-diagrams.mjs`. If the script exits non-zero or prints `VALIDATION FAILED`, fix the flagged issues in the diagram code and re-write `docs/architecture-designer/diagrams.json`. Do not proceed to step 3 until validation passes. **If the output contains `DEGRADED MODE`**, the script's real syntax parser is unavailable and some diagrams were only checked heuristically — validation still passed on what it could check, so proceed, but tell the user: "Diagram validation ran in degraded mode (parser dependencies not installed in `scripts/`) — some syntax errors may not have been caught. Run `npm install` in the plugin's `scripts/` directory for full validation coverage."
 
 3. **Find a free port**: run `node <scripts_dir>/find-port.mjs`. Capture stdout (the port number). If it exits non-zero, report the error to the user.
 
@@ -344,7 +286,7 @@ docs/architecture-designer/architecture/{yyyymmdd}-{topic}.md
 - `{topic}`: the project/application name in kebab-case (lowercase, hyphens, no spaces)
 - If a file with this name already exists, append `-2`, `-3`, etc. until the filename is unique
 
-After saving, update `docs/architecture-designer/session.json`: append the full absolute path of the saved file to the top-level `"documentPaths"` array (create it with this one entry if it doesn't exist yet). This lets `/architecture-designer:implement` locate the latest document — the last entry in the array — without asking.
+After saving, update `docs/architecture-designer/session.json`: append `{ "path": "<absolute path of the saved file>", "createdAt": "<current ISO timestamp>" }` to the top-level `"documents"` array (create it with this one entry if it doesn't exist yet; create `schemaVersion: 2` and `project` at the same time if the file predates them). This lets `/architecture-designer:implement` locate the latest document — the last entry's `path` — without asking.
 
 **The document must begin with this metadata table on line 1:**
 
@@ -356,18 +298,7 @@ After saving, update `docs/architecture-designer/session.json`: append the full 
 
 - `dd-mmm-y` format: day is zero-padded (e.g., `05`), month is 3-letter capitalized abbreviation (`Jan`, `Feb`, `Mar`, `Apr`, `May`, `Jun`, `Jul`, `Aug`, `Sep`, `Oct`, `Nov`, `Dec`), year is 4 digits. Example: `05-Jul-2026`.
 
-**Document body sections (in order):**
-
-1. **Project Overview** — name, purpose, date, version
-2. **Requirements Summary** — functional and non-functional requirements from stages 1–2
-3. **Constraints and Feasibility** — from stage 3
-4. **Capacity Planning** — from stage 4 with numeric estimates
-5. **Technology Decisions** — stack, architecture pattern, database, infrastructure, observability strategy, and DR approach, with justifications from stages 1–4
-6. **Architecture Diagrams** — every created diagram with: a heading, a paragraph description, then the mermaid code block. For the ERD, include the index list table immediately after the mermaid block.
-7. **Database Design** — the full output from the database-designer agent (schema, ERD explanation, index plan, connection config)
-8. **Infrastructure as Code** — IaC tool and justification, state backend config, module breakdown table (module name, what it provisions, environment-specific sizing), environment strategy, drift detection approach. Follow `references/iac-guide.md` § 6 for the exact format.
-9. **CI/CD Pipeline** — platform and justification, pipeline stages table (stage, trigger, tool, gate), branching strategy, environment promotion rules, secret injection approach, artifact management. Follow `references/cicd-guide.md` § 7 for the exact format.
-10. **Low-Level Design** — API contracts, business rules, DTOs (complex/shared only), inter-service contracts (microservices/event-driven only), and error catalog. Follow the section order and formatting from `references/lld-guide.md`.
+**Document body sections (in order)**: follow `references/document-template.md` — ten sections from Project Overview through Low-Level Design, each pulling from the corresponding stage or sub-agent output.
 
 ---
 
@@ -404,24 +335,20 @@ After the document is approved, ask:
 
 If the user says yes: quickly scan the working directory for signs of an existing project — look for `package.json`, `go.mod`, `Cargo.toml`, `requirements.txt`, `pyproject.toml`, `pom.xml`, and source directories (`src/`, `app/`, `lib/`, `cmd/`, `internal/`).
 
-**If files already exist**: summarize what was found and ask the same merge-strategy question `/architecture-designer:implement` uses:
-> "I found an existing project structure. How would you like to proceed?
-> **(a) Merge** — add missing files from the architecture without overwriting existing code
-> **(b) Fresh start** — generate the complete skeleton; any file that already exists will be flagged before being overwritten — you decide per collision
-> **(c) Let me describe what to keep** — I'll describe my existing layout and we'll work around it"
-> Wait for the answer before proceeding.
+**If files already exist**: summarize what was found and ask the question in `references/session-schema.md` § "Merge-strategy question".
 
 **If the scan finds nothing**: no question needed — proceed as a fresh start into an empty project.
 
-Before spawning, check `docs/architecture-designer/session.json` for a `"remediationPlanPaths"` array. If present and non-empty, and the file at its last entry exists on disk, you will pass that path along too, so implementation-planner can list any still-outstanding code changes as plan checklist items.
+Before spawning, check `docs/architecture-designer/session.json` for a `"remediationPlans"` array. Find the entry whose `document` field equals the approved document's path; if found and its `path` exists on disk, this is the remediation plan to pass along — unless `references/session-schema.md` § "Checking whether a remediation plan is fully resolved" rules it out.
 
-**Skip if already resolved**: before passing it, also check for an `"implementationPlanPaths"` array in the same `session.json`. If its last entry exists on disk, its `Status` is `Complete`, and its "Modifications to existing files" section contains no `[ ] FAIL` items, the remediation plan has already been fully applied to code — do not pass the remediation plan path; there is nothing left to plan or implement.
+Then run `references/session-schema.md` § "Resumable-plan detection procedure" using the approved document's path as `{document}`. This produces the **Previous plan path** to pass below, if the user chooses to resume.
 
 Then spawn the `architecture-designer:implementation-planner` agent. Pass it:
 - The path to the approved document
 - **Existing project summary** — what was found in the scan, translated into the agent's expected strategy label: `Fresh start (empty project)` if nothing was found; `Merge` if the user chose (a); `Fresh start (existing project)` if the user chose (b); `User-described layout` if the user chose (c)
 - The technology stack from stage 5
-- **Remediation plan path** — the last entry of `session.json → remediationPlanPaths`, if it exists on disk and the "Skip if already resolved" check above didn't rule it out
+- **Remediation plan path** — the remediation plan resolved above (matched by `document`), if it exists on disk and the "Skip if already resolved" check didn't rule it out
+- **Previous plan path** — the resumed plan's `path`, if the user chose to continue above (omit otherwise)
 
 Wait for it to report the plan was saved and confirmed. Then spawn `architecture-designer:architecture-implementer`, passing it the implementation plan path from that report plus the same document path, existing project summary, technology stack, and remediation plan path (if any was passed to the planner). Do not spawn architecture-implementer if implementation-planner did not report a confirmed plan.
 
