@@ -39,6 +39,8 @@ platforms:
 - Version number and release date
 - All categorized entries by section (Breaking Changes, Added, Changed, Fixed, Reverted)
 
+This is the only place items come from — the script itself does not read `CHANGELOG.md` or extract anything from it. Deciding which entries become `--item` flags (if any) is entirely up to Claude, done here.
+
 ## Generate Notes
 
 For each platform, build and run one command with all language blocks:
@@ -46,25 +48,27 @@ For each platform, build and run one command with all language blocks:
 ```bash
 python3 $CLAUDE_PLUGIN_ROOT/scripts/generate-release-notes.py \
   --platform <platform> \
-  --lang <code1> --intro "<intro1>" [--item "<item1>" --item "<item2>"] [--outro "<outro1>"] \
-  --lang <code2> --intro "<intro2>" [--item "<item1>" --item "<item2>"] [--outro "<outro2>"]
+  --lang <code1> --summary "<summary1>" [--item "<item1>" --item "<item2>"] [--outro "<outro1>"] \
+  --lang <code2> --summary "<summary2>" [--item "<item1>" --item "<item2>"] [--outro "<outro2>"]
 ```
 
-**`--intro`** — at least 100 characters, capped at 2 sentences, friendly non-technical language. Include the version number or release context. Translate faithfully per language.
+**`--summary`** — at least 100 characters, capped at 2 sentences, friendly non-technical language. Include the version number or release context. Translate faithfully per language. Stands alone as the entire note when no `--item` flags are passed.
 
-**`--item`** (optional, repeatable) — if omitted, the script auto-extracts from CHANGELOG.md in priority order (Breaking Changes → Added → Changed → Fixed → Reverted), capped at 6. When provided, pass one `--item` flag per entry with user-friendly language. Max 6 items.
+**`--item`** (optional, repeatable) — pass one `--item` flag per entry, in user-friendly language, ordered by priority (Breaking Changes → Added → Changed → Fixed → Reverted — this ordering matters: `release-notes-validator` trims from the end of the list first, so put the lowest-priority entries last). Max 6 items; omitting `--item` entirely produces a summary-only section with no bullet list — no separate flag is needed for that.
 
-> **Non-English languages:** Always provide `--item` flags with translated content. Omitting `--item` for a non-English language causes the section to display raw English CHANGELOG text.
+> **Non-English languages:** Always translate `--item` values (or the `--summary` text, if going summary-only) — never pass the English CHANGELOG.md wording directly.
+
+Not every release reads well as a bullet list. A single small fix is the obvious case, but a handful of closely related changes can also read better woven into one or two friendly sentences than forced into separate bullets — bullets suit distinct, independent changes; prose suits a tightly-themed set of tweaks (e.g. "several small polish fixes to the settings screen"). In either case, just omit `--item` — the section is built from `--summary` (and optional `--outro`) alone.
 
 | Platform    | Recommended Items                                |
 |-------------|--------------------------------------------------|
-| `playstore` | 3–5 (max 6, must fit 500 chars including intro)  |
+| `playstore` | 3–5 (max 6, must fit 500 chars including summary) |
 | `appstore`  | 5–6 (can expand on key features)                 |
 | `web`       | Up to 6 significant changes, in full detail      |
 
 **`--outro`** (optional, strongly recommended) — 1-sentence closing appended after items with a blank line. Use for calls to action, thank-you notes, or support links. Translate per language. Omit for Play Store only if near 500 chars.
 
-For tone guidelines, language examples, localization tips, and a worked outro example, see **`references/platform-guide.md`** and **`examples/playstore-bilingual.md`**.
+For tone guidelines, language examples, localization tips, and a worked outro example, see **`references/platform-guide.md`** and **`examples/playstore-bilingual.md`**. For worked summary-only examples (a single small change, and a set of closely-themed changes folded into one sentence), see **`examples/summary-only-release-notes.md`**.
 
 ## Error Handling
 
@@ -78,12 +82,12 @@ Delegate to the **`release-notes-validator`** agent via the Agent tool (`subagen
 
 Only handle manually if the agent is unavailable, mirroring the agent's own order:
 1. Remove the outro if present
-2. Remove lowest-priority items (Reverted → Fixed → Changed)
-3. Shorten the intro to 1 sentence (~110–120 chars) — last resort
+2. Remove lowest-priority items (Reverted → Fixed → Changed) — no-op if no `--item` flags were passed (summary-only section), skip straight to step 3
+3. Shorten the summary to 1 sentence (~110–120 chars) — last resort
 4. Shorten remaining item text
 5. Re-run the script
 
-**Intro too short** (under 100 chars) — expand to be more descriptive; add release context.
+**Summary too short** (under 100 chars) — expand to be more descriptive; add release context.
 
 After generating, report the version, platforms, languages, files written, and any items omitted due to character limits.
 
@@ -91,5 +95,6 @@ After generating, report the version, platforms, languages, files written, and a
 
 - **`references/platform-guide.md`** — Tone guidelines, writing examples per platform, and localization tips
 - **`examples/playstore-bilingual.md`** — Complete worked example: Play Store with English + Indonesian output
+- **`examples/summary-only-release-notes.md`** — Worked summary-only examples (no `--item` flags): a single small fix, and a set of closely-themed fixes, each rendered as a friendly sentence instead of bullets
 
 The **`release-notes-validator`** agent (invoked automatically — see Error Handling) auto-trims items and appends closing phrases when char limits are exceeded.

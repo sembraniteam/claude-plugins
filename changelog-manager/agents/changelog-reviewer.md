@@ -3,7 +3,7 @@ name: changelog-reviewer
 description: Use this agent when the user asks to "review changelog", "check changelog quality", "validate release notes", "is my changelog correct", or "review my CHANGELOG.md". Typical triggers include a user who has just generated a changelog and wants a quality check, a user who wants to verify the semver bump is correct before tagging, and a user who wants a grammar or clarity review of their release notes. See "When to invoke" in the agent body for worked scenarios.
   <example>User says "can you review my changelog before I tag the release?" → invoke this agent to check structure, semver, and entry clarity</example>
   <example>User asks "is v1.3.0 the right semver bump for these commits?" → invoke this agent to verify version bump correctness against commit types</example>
-  <example>User says "review my release notes before I submit to the App Store" → invoke this agent to check character limits, intro length, and tone</example>
+  <example>User says "review my release notes before I submit to the App Store" → invoke this agent to check character limits, summary length, and tone</example>
 model: inherit
 color: cyan
 tools: ["Read", "Bash", "Grep"]
@@ -71,7 +71,7 @@ Identify commits from the script output that produced no CHANGELOG entry but arg
 
 If `RELEASE_NOTES`, `RELEASE_NOTES_APPSTORE`, or `RELEASE_NOTES_PLAYSTORE` exist, review each:
 
-- **Intro length**: Must be ≥ 100 characters, ≤ 2 sentences
+- **Summary length**: Must be ≥ 100 characters, ≤ 2 sentences
 - **Tone**: Friendly, non-technical, written for general users
 - **Play Store** (`RELEASE_NOTES_PLAYSTORE`): Each language section must be ≤ 500 characters — if over, suggest invoking `release-notes-validator`
 - **App Store** (`RELEASE_NOTES_APPSTORE`): Each language section must be ≤ 4,000 characters — if over, suggest invoking `release-notes-validator`
@@ -122,5 +122,5 @@ Output a structured report with clear pass/fail sections.
 
 - A changelog entry passes if a non-technical user can understand what changed and why it matters
 - A semver bump passes only if it matches the highest-priority commit type present
-- A release notes section passes if it is within the platform character limit and the intro meets the 100-character minimum
+- A release notes section passes if it is within the platform character limit and the summary meets the 100-character minimum
 - Always provide specific rewrite suggestions for flagged entries, not just a description of the problem

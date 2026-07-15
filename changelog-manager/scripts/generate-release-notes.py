@@ -4,8 +4,6 @@ import re
 import sys
 from pathlib import Path
 
-CHANGELOG = Path("CHANGELOG.md")
-
 PLATFORM_LIMITS = {
     "appstore": 4000,
     "playstore": 500,
@@ -24,40 +22,8 @@ PLATFORM_LABELS = {
     "web": "Web",
 }
 
-MIN_INTRO_CHARS = 100
+MIN_SUMMARY_CHARS = 100
 MAX_ITEMS = 6
-
-
-def latest_release_block(text: str) -> str:
-    parts = re.split(r"\n## ", text)
-    for part in parts[1:]:
-        if re.match(r"\[v?\d+\.\d+\.\d+\]", part):
-            return "## " + part
-    raise RuntimeError("No release section found in CHANGELOG.md")
-
-
-def extract_by_category(block: str) -> dict:
-    categories = {}
-    current = None
-    for line in block.splitlines():
-        m = re.match(r"^###\s+(.*)", line)
-        if m:
-            current = m.group(1).strip().lower()
-            categories[current] = []
-            continue
-        m = re.match(r"^- (.+)", line)
-        if m and current:
-            text = re.sub(r"\s*\(#\d+\)", "", m.group(1))
-            categories[current].append(text)
-    return categories
-
-
-def auto_extract(categories: dict) -> list:
-    order = ["breaking changes", "added", "changed", "fixed", "reverted"]
-    items = []
-    for cat in order:
-        items.extend(categories.get(cat, []))
-    return items
 
 
 def clean_items(raw: list) -> list:
@@ -70,29 +36,28 @@ def clean_items(raw: list) -> list:
     return items
 
 
-def build_section(intro: str, items: list, max_chars, outro: str = "") -> str:
-    intro = intro.strip()
-    if len(intro) < MIN_INTRO_CHARS:
+def build_section(summary: str, items: list, max_chars, outro: str = "") -> str:
+    summary = summary.strip()
+    if len(summary) < MIN_SUMMARY_CHARS:
         raise RuntimeError(
-            f"Intro must be at least {MIN_INTRO_CHARS} chars (got {len(intro)}). "
+            f"Summary must be at least {MIN_SUMMARY_CHARS} chars (got {len(summary)}). "
             "Write a fuller opening sentence."
         )
-    if not items:
-        raise RuntimeError("At least one item is required.")
-
     if len(items) > MAX_ITEMS:
         dropped = items[MAX_ITEMS:]
         print(f"Warning: dropped {len(dropped)} item(s) beyond the {MAX_ITEMS}-item cap: "
               f"{'; '.join(dropped)}", file=sys.stderr)
 
-    text = intro + "\n\n" + "\n".join(f"- {i}" for i in items[:MAX_ITEMS])
+    text = summary
+    if items:
+        text += "\n\n" + "\n".join(f"- {i}" for i in items[:MAX_ITEMS])
     if outro:
         text += "\n\n" + outro.strip()
 
     if max_chars and len(text) > max_chars:
         raise RuntimeError(
             f"Exceeds {max_chars} char limit (got {len(text)}). "
-            "Shorten intro, remove outro, or reduce items."
+            "Shorten the summary, remove outro, or reduce items."
         )
     return text
 
@@ -110,10 +75,10 @@ def parse_args(argv: list):
                 raise RuntimeError(f"Unknown platform '{platform}'. Valid: {', '.join(PLATFORM_LIMITS)}")
             i += 2
         elif arg == "--lang":
-            current = {"code": argv[i + 1], "intro": "", "items": [], "outro": ""}
+            current = {"code": argv[i + 1], "summary": "", "items": [], "outro": ""}
             langs.append(current)
             i += 2
-        elif arg in ("--intro", "--outro"):
+        elif arg in ("--summary", "--outro"):
             if not current:
                 raise RuntimeError(f"{arg} must come after --lang")
             current[arg[2:]] = argv[i + 1]
@@ -131,26 +96,15 @@ def parse_args(argv: list):
 
 
 def main():
-    if not CHANGELOG.exists():
-        raise FileNotFoundError("CHANGELOG.md not found")
-
     platform, langs_input = parse_args(sys.argv[1:])
     max_chars = PLATFORM_LIMITS[platform]
     output = PLATFORM_OUTPUT[platform]
 
-    changelog_text = CHANGELOG.read_text()
-    latest = latest_release_block(changelog_text)
-    categories = extract_by_category(latest)
-
     content = f"# Release Notes — {PLATFORM_LABELS[platform]}\n\n"
 
     for lang in langs_input:
-        if lang["items"]:
-            items = clean_items(lang["items"])
-        else:
-            items = clean_items(auto_extract(categories))
-
-        section = build_section(lang["intro"], items, max_chars, lang.get("outro", ""))
+        items = clean_items(lang["items"]) if lang["items"] else []
+        section = build_section(lang["summary"], items, max_chars, lang.get("outro", ""))
         content += f"## {lang['code'].upper()}\n{section}\n\n"
 
     output.write_text(content.strip(), encoding="utf-8")

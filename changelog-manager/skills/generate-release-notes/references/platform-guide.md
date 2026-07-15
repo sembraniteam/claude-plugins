@@ -4,9 +4,9 @@ For char limits, output files, and recommended item counts per platform, see the
 
 ---
 
-## Intro Rules (All Platforms)
+## Summary Rules (All Platforms)
 
-The intro appears before bullet points and sets the tone for the entire release note.
+The `--summary` text appears before bullet points and sets the tone for the entire release note — or stands alone, with no `--item` flags passed, for a small change or a handful of closely-themed changes folded into prose (see `SKILL.md`).
 
 **Requirements:**
 - Minimum 100 characters (enforced by script)
@@ -22,7 +22,7 @@ The intro appears before bullet points and sets the tone for the entire release 
 
 ## Play Store
 
-**Char limit:** 500 characters per language (intro + all bullet items combined)
+**Char limit:** 500 characters per language (summary + all bullet items combined)
 
 **Writing style:**
 - Ultra-concise — every character counts
@@ -31,7 +31,7 @@ The intro appears before bullet points and sets the tone for the entire release 
 - Avoid filler words
 
 **Budget breakdown (500 chars):**
-- Intro: ~110–130 chars (just over minimum)
+- Summary: ~110–130 chars (just over minimum)
 - Items: ~60–80 chars each → fits 3–5 items (script caps at 6)
 
 **English example:**
@@ -56,7 +56,7 @@ Pembaruan ini hadir untuk memberikan pengalaman yang lebih lancar, cepat, dan an
 
 ## App Store
 
-**Char limit:** 4,000 characters per language (intro + all bullet items combined)
+**Char limit:** 4,000 characters per language (summary + all bullet items combined)
 
 **Writing style:**
 - Warm and encouraging
@@ -142,7 +142,7 @@ Thank you to everyone who submitted feedback and bug reports. Keep them coming!
 
 ## Priority Order for Item Selection
 
-Items are kept/extracted in priority order: Breaking Changes → Added → Changed → Fixed → Reverted (see `SKILL.md`). When trimming for a character limit, remove from the end of that order first:
+Order `--item` flags by priority: Breaking Changes → Added → Changed → Fixed → Reverted (see `SKILL.md`) — the script itself doesn't order or select them, so this is on whoever builds the command. When trimming for a character limit, remove from the end of that order first:
 
 1. Reverted (remove first)
 2. Fixed

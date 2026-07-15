@@ -20,9 +20,9 @@ You are a release notes character-limit validator. Given a planned `generate-rel
 
 Extract the full parameters from the command in context. You need:
 - `--platform` value
-- For each `--lang` block (in order): language code, `--intro` text, all `--item` values (in original order), `--outro` text if any
+- For each `--lang` block (in order): language code, `--summary` text, all `--item` values (in original order, if any), `--outro` text if any
 
-Items are passed in priority order by the generate-release-notes skill (Breaking Changes → Added → Changed → Fixed → Reverted), so **the last items in the list are always the lowest-priority ones**.
+Items are passed in priority order by the generate-release-notes skill (Breaking Changes → Added → Changed → Fixed → Reverted), so **the last items in the list are always the lowest-priority ones**. A block with no `--item` flags at all is a summary-only section — nothing to trim in Step 3b for it.
 
 ## Step 2: Calculate Character Counts
 
@@ -33,16 +33,18 @@ For each language block, invoke Bash to run the exact formula the script uses (m
 ```bash
 python3 -c '
 import sys
-intro, outro = sys.argv[1].strip(), sys.argv[2].strip()
+summary, outro = sys.argv[1].strip(), sys.argv[2].strip()
 items = sys.argv[3:]
-text = intro + "\n\n" + "\n".join(f"- {i}" for i in items[:6])
+text = summary
+if items:
+    text += "\n\n" + "\n".join(f"- {i}" for i in items[:6])
 if outro:
     text += "\n\n" + outro
 print(len(text))
-' "<intro>" "<outro>" "<item1>" "<item2>" "<item3>"
+' "<summary>" "<outro>" "<item1>" "<item2>" "<item3>"
 ```
 
-Pass `""` for `<outro>` if none is set yet. The printed number is the real `char_count` — use it as-is, never round or approximate it.
+Pass `""` for `<outro>` if none is set yet, and no trailing item args for a summary-only block. The printed number is the real `char_count` — use it as-is, never round or approximate it.
 
 Compare `char_count` against the platform limit. If `web` platform or no limit, report "no limit — skipping".
 
@@ -54,10 +56,10 @@ Apply only to language sections that exceed the limit. Work through this sequenc
 Drop the `--outro` flag for that language block. This saves `2 + len(outro)` characters.
 
 ### 3b — Remove items from the end
-Remove the last `--item` value and recalculate. Repeat until the section fits or only 1 item remains. Never remove all items.
+Skip this step for a summary-only section (no `--item` flags at all) — there is nothing to trim; go straight to 3c. Otherwise, remove the last `--item` value and recalculate. Repeat until the section fits or only 1 item remains. Never remove all items.
 
-### 3c — Shorten the intro (last resort)
-If the section still exceeds the limit with only 1 item and no outro, shorten the intro to a single sentence (~110–120 chars). Preserve the meaning and friendly tone — just cut to the first sentence.
+### 3c — Shorten the summary (last resort)
+If the section still exceeds the limit with only 1 item (or 0 items for a summary-only section) and no outro, shorten the summary to a single sentence (~110–120 chars). Preserve the meaning and friendly tone — just cut to the first sentence.
 
 ### After trimming: append a closing outro
 
@@ -92,12 +94,12 @@ Construct the full adjusted command, preserving the original structure. Show it 
 python3 $CLAUDE_PLUGIN_ROOT/scripts/generate-release-notes.py \
   --platform <platform> \
   --lang <code1> \
-    --intro "<intro1>" \
+    --summary "<summary1>" \
     --item "<item1>" \
     --item "<item2>" \
     --outro "<outro1>" \
   --lang <code2> \
-    --intro "<intro2>" \
+    --summary "<summary2>" \
     --item "<item1>" \
     --outro "<outro2>"
 ```

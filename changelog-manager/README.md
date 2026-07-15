@@ -50,6 +50,8 @@ Creates bilingual, platform-specific release notes from the latest `CHANGELOG.md
 
 **Requires:** `CHANGELOG.md` to exist. Run `generate-changelog` first.
 
+Claude reads `CHANGELOG.md` itself and decides how to present each entry — as `--item` bullets, or, for a single small change or a handful of closely-themed changes, folded into a friendly one- or two-sentence summary with no bullet list at all.
+
 ---
 
 ### `/changelog-manager:changelog-config`
@@ -94,7 +96,7 @@ Reviews changelog and release notes quality on request.
 - Entry clarity (flags vague messages like "Fix bug")
 - Missing entries from git history
 - Release notes character limits per platform
-- Intro length (minimum 100 characters)
+- Summary length (minimum 100 characters)
 
 ---
 
