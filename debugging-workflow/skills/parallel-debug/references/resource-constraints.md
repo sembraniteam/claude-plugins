@@ -106,17 +106,23 @@ git -C .claude/debug-sessions/{session_id}/shared reset --hard {base_sha}
 git -C .claude/debug-sessions/{session_id}/shared clean -fd
 ```
 
-Use `reset --hard`, not `checkout -B`. `hypothesis-investigator` Phase 3 step 5 explicitly leaves an exhausted,
-unconfirmed hypothesis's worktree **uncommitted** rather than committing a failed fix — that instruction was
-written for standard mode, where the worktree is discarded afterward and uncommitted changes are inert. In
-degraded mode the same worktree is reused, so those uncommitted modifications to tracked files (a half-applied
-fix, or a lockfile Phase 1's install rewrote and left unstaged per `side_effects_flagged`) are still sitting in
-the working tree when the next hypothesis starts. `checkout -B` is a checkout operation and inherits checkout's
+Use `reset --hard`, not `checkout -B`. `hypothesis-investigator` never commits inside its worktree, for any
+outcome (see Phase 3 of `../../../agents/hypothesis-investigator.md`) — a confirmed fix is captured as text in
+`fix_diff` via `git diff`, but the actual file modifications stay uncommitted in the working tree, exactly like
+an exhausted, unconfirmed hypothesis's half-applied fix. In standard mode that's inert, since the worktree is
+discarded afterward. In degraded mode the same worktree is reused, so those uncommitted modifications to tracked
+files (a fix, a half-applied fix, or a lockfile Phase 1's install rewrote and left unstaged per
+`side_effects_flagged`) are still sitting in the working tree when the next hypothesis starts. `checkout -B` is
+a checkout operation and inherits checkout's
 safety behavior: it can refuse ("local changes would be overwritten") or, depending on exactly what changed,
 leave some of that dirty state in place — it does not guarantee a clean baseline. `reset --hard {base_sha}`
 unconditionally discards all uncommitted modifications to tracked files and moves the branch tip back to
 `base_sha` in the same step, with no refusal case; it is the only one of the two that actually delivers the
-"same baseline every time" guarantee this mode depends on. `clean -fd` still runs afterward to remove untracked
+"same baseline every time" guarantee this mode depends on. This includes the intent-to-add markers Phase 3 leaves
+behind for a brand-new test file (`git add -N`): git treats an intent-to-add path as tracked for reset purposes,
+so `reset --hard` removes both the index entry and the file's on-disk content, not just a partial revert — this
+is what actually prevents one hypothesis's new test file from leaking into the next hypothesis's `git status`.
+`clean -fd` still runs afterward to remove untracked
 files a failed attempt may have left behind, without `-x`, so gitignored directories (`node_modules/`, `.venv/`,
 build output) are preserved on disk rather than deleted.
 
@@ -151,9 +157,9 @@ git branch -D debug/{session_id}/shared
 - **No concurrency**: wall-clock time scales linearly with `hypothesis_count` instead of staying roughly
   constant — this is the whole point of the mode, but it means a 4-hypothesis session takes roughly 4x as long
   as it would with full parallelism, not the same time.
-- **Audit trail window**: after `reset --hard` moves the branch away from a hypothesis's commit, that commit is
-  no longer reachable from any branch ref. It remains a valid git object — Step 5's `git cat-file -e
-  <commit_sha>^{commit}` check and the cherry-pick itself still work by SHA, independent of branch reachability
-  — but it is only protected from garbage collection by the reflog's default retention window (90 days for
-  unreachable objects), not indefinitely. For a session that completes in the usual few minutes, this is not a
-  practical risk; it would only matter if a session were left abandoned for months before Step 5 ever ran.
+- **No audit-trail window to worry about**: because nothing is ever committed, `reset --hard` doesn't strand any
+  git object that needs reflog protection — the fix only ever exists as working-tree changes, which `reset --hard`
+  is about to discard on purpose. What has to survive is the *text* of `fix_diff`, and it already does: each
+  investigator finishes Phase 4 (writing its `hN.report.yaml`, `fix_diff` included) before the orchestrator resets
+  the shared worktree for the next hypothesis, per the ordering in `SKILL.md` Step 3. The report file lives one
+  level up, outside the worktree the reset touches, so it's unaffected by any of this.

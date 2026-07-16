@@ -139,10 +139,11 @@ confidence:
   Medium  → 2
   Low     → 1
 
-evidence_count:
-  3 points  → 3
-  2 points  → 2
-  1 point   → 1
+evidence_count (number of entries in the report's `evidence` list):
+  0 entries   → 0 points
+  1 entry     → 1 point
+  2 entries   → 2 points
+  3+ entries  → 3 points (capped — a longer list does not outscore a 3-entry one)
 ```
 
 `test_final_result` is derived from the YAML `test_result` field written by each investigator: `pass` → `PASS`, `fail` → `FAIL`, `not_run` → `ERROR` (an agent that timed out or crashed produced no verifiable result, so it scores the same as a run that errored out).

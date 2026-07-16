@@ -31,9 +31,9 @@ All file operations (Read, Edit, Bash commands that touch source) must target pa
 
 Before reading or touching source code:
 
-1. Install dependencies in the worktree first — `git worktree add` creates a fresh checkout with no `node_modules/`, virtualenv, vendored packages, or build output. Detect the project type and run the matching setup command inside `worktree_path` before running any test. Prefer the non-mutating variant when a lockfile is present, since a command that rewrites the lockfile leaves a diff that has nothing to do with the hypothesis and would otherwise ride along into the fix commit:
+1. Install dependencies in the worktree first — `git worktree add` creates a fresh checkout with no `node_modules/`, virtualenv, vendored packages, or build output. Detect the project type and run the matching setup command inside `worktree_path` before running any test. Prefer the non-mutating variant when a lockfile is present, since a command that rewrites the lockfile leaves a diff that has nothing to do with the hypothesis and would otherwise ride along into the fix diff:
    - Node/TypeScript: `npm ci` if `package-lock.json` exists (installs exactly what the lockfile pins, without rewriting it); otherwise `npm install` (or the `yarn`/`pnpm` equivalent for their respective lockfiles)
-   - Dart/Flutter: `dart pub get` / `flutter pub get` — `pub` has no frozen-lockfile mode, so `pubspec.lock` may still change; if it does and the hypothesis has nothing to do with dependencies, exclude it in Phase 3's commit
+   - Dart/Flutter: `dart pub get` / `flutter pub get` — `pub` has no frozen-lockfile mode, so `pubspec.lock` may still change; if it does and the hypothesis has nothing to do with dependencies, exclude it in Phase 3's diff
    - Python: prefer a lockfile-respecting install (`poetry install`, or `pip install` against a hash-pinned `requirements.txt`) into a virtualenv the project's `.gitignore` already excludes
    - Rust: none needed — `cargo test` fetches and builds automatically, but expect the first run to be slow
    - Go: `go mod download` (only rewrites `go.sum` if something is actually missing from it)
@@ -108,9 +108,9 @@ Apply a targeted fix consistent with the hypothesis (do not fix unrelated code):
 
 1. Make the minimal change that addresses the hypothesis mechanism
 2. Run the failing test from Phase 1 and record its actual output verbatim — this becomes `final_test_output_excerpt` once the test goes green. Never infer green/red from reading the diff instead of running the command.
-3. If green: run `git -C <worktree_path> status --short` before staging anything. Stage only the files the fix actually touches — the changed source file(s) and the test file — with `git -C <worktree_path> add <source_file> <test_file>`, never `git add -A`. Phase 1's dependency install can leave a rewritten lockfile or stray build artifacts on disk; a blanket `add -A` would sweep those into the commit as noise that then rides the cherry-pick onto the main branch. If `git status` shows any other changed path that isn't an intentional part of the hypothesis (e.g., an unrelated lockfile bump), leave it unstaged and record it in `side_effects_flagged` in the YAML report. Then commit (`git -C <worktree_path> commit -m "fix: <hypothesis-id> <short description>"`), record the resulting SHA (`git -C <worktree_path> rev-parse HEAD`), and proceed to Phase 4. Committing matters because the orchestrator applies the winning fix by cherry-picking this commit onto the main branch — a diff of source changes alone would leave the test file behind.
+3. If green: run `git -C <worktree_path> status --short` first. Never run `git commit` — the orchestrator applies fixes by patching diff text onto the main branch, not by cherry-picking a commit, so nothing in this workflow should create one. Mark only the files the fix actually touches — the changed source file(s) and the test file — as intent-to-add with `git -C <worktree_path> add -N <source_file> <test_file>` (required for a brand-new test file, since plain `git diff` ignores untracked paths; `-N` records the path without staging its content or creating a commit). Never use `git add -A` or `git add` without `-N`: Phase 1's dependency install can leave a rewritten lockfile or stray build artifacts on disk, and those would show up in the diff below if staged this way. Then capture the fix as text with `git -C <worktree_path> diff -- <source_file> <test_file>` — this becomes `fix_diff` in the Phase 4 report, the only artifact the orchestrator uses to apply the fix (via `git apply`), so it must include both the source change and the new test together. If `git status` shows any other changed path that isn't an intentional part of the hypothesis (e.g., an unrelated lockfile bump), leave it out of the `diff -- <files>` invocation and record it in `side_effects_flagged` in the YAML report instead. Leave the worktree exactly as it is — uncommitted, unstaged beyond the intent-to-add markers — and proceed to Phase 4.
 4. If still failing: analyze the output, adjust the fix, re-run
-5. Stop after the number of attempts specified in the **Iteration budget** field of the input prompt, regardless of outcome — do not exceed that budget. If the budget is exhausted without a passing fix, do not commit — leave the worktree uncommitted and report the hypothesis as not confirmed.
+5. Stop after the number of attempts specified in the **Iteration budget** field of the input prompt, regardless of outcome — do not exceed that budget. If the budget is exhausted without a passing fix, do not capture a diff — leave the worktree as-is and report the hypothesis as not confirmed.
 
 Fix principles:
 - Change only what the hypothesis predicts is broken
@@ -148,9 +148,8 @@ initial_test_output_excerpt: |       # verbatim last 5-10 lines of the Phase 1 t
     Expected: true
     Received: false
   Tests: 1 failed, 1 total
-fix_summary: "what was wrong -> what it was changed to, in <=20 words"  # "" if no fix committed
-commit_sha: "a1b2c3d"                # SHA of the commit in the worktree branch containing the fix + test, or "" if no fix was committed
-fix_diff: |                          # git diff HEAD~1 HEAD in the worktree — equivalent to diffing against base_sha, since the worktree branched at base_sha and holds exactly this one commit; for evidence/overlap review only, NOT used to apply the fix (the orchestrator cherry-picks commit_sha instead); "" if no fix
+fix_summary: "what was wrong -> what it was changed to, in <=20 words"  # "" if no fix captured
+fix_diff: |                          # git diff -- <source_file> <test_file> in the worktree, captured in Phase 3 step 3 after marking new files intent-to-add — the artifact the orchestrator applies with `git apply` (see SKILL.md Step 5), not just an evidence citation; "" if no fix
   --- a/src/auth.ts
   +++ b/src/auth.ts
   @@ -41,7 +41,7 @@
@@ -169,7 +168,7 @@ test_command: "npx jest auth.test.ts --no-coverage"
 test_scope_files:                    # files the test actually exercises
   - src/auth.ts
   - src/auth.test.ts
-side_effects_flagged:                # files changed outside the hypothesis scope (e.g. a lockfile the dependency install rewrote) — left uncommitted per Phase 3, or []
+side_effects_flagged:                # files changed outside the hypothesis scope (e.g. a lockfile the dependency install rewrote) — left out of fix_diff per Phase 3, or []
   []
 worktree_path: ".claude/debug-sessions/20260701-1432/h1"
 ```
