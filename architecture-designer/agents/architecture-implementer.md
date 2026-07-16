@@ -19,7 +19,8 @@ The skill that spawns you will pass:
    - *Merge* — files marked `[~]` in the plan are already-present files to skip; never overwrite them
    - *User-described layout* — treat collisions the same as merge
 4. **Technology stack** (optional) — if passed from the design session, use it directly; otherwise infer from the document
-5. **Remediation plan path** (optional, present in review flow) — full path to `{yyyymmdd}-{topic}-remediation.md`. If present, read it. The plan's "Modifications to existing files" section already lists the required code changes — this path is for the full finding detail (what broke, how to migrate) referenced by each checklist item.
+5. **Agent tools** (optional) — an array of `{ name, type, purpose }` naming MCP servers or Skills available in this environment that match the confirmed stack. Also check the plan's own metadata table (implementation-planner writes an "Agent tools" row when this input is non-empty) if it isn't passed directly. See "Using agent tools" in Step 2 below for how to apply this during implementation.
+6. **Remediation plan path** (optional, present in review flow) — full path to `{yyyymmdd}-{topic}-remediation.md`. If present, read it. The plan's "Modifications to existing files" section already lists the required code changes — this path is for the full finding detail (what broke, how to migrate) referenced by each checklist item.
 
 ## Step 1 — Read the plan
 
@@ -92,6 +93,16 @@ Implement every `- [ ]` item from the plan completely. Do not skip "obvious" one
 - **No hardcoded credentials or secrets** anywhere in the code — use `process.env.VARIABLE_NAME` (or equivalent) exclusively.
 - **Cross-platform scripts** — test that `npm run dev` would work on all three OSes. Use `cross-env` for environment variable injection in npm scripts on Windows.
 
+### Using agent tools
+
+When input 5 (**Agent tools**) lists an entry whose domain matches a file being written or checked, prefer that tool over a generic `Read`/`Bash`/`Grep` approach for that step — it exists precisely because it does the job better than a generic approach would:
+
+- A language-server MCP matching the backend language (e.g. diagnostics, symbol search) — run its diagnostics tool against newly written source files in that language as part of writing them, not only at the end; catch a syntax or type error immediately rather than deferring it to the final verification pass.
+- A cloud/platform MCP matching a chosen managed service (e.g. Firebase) — use it to actually provision the resource (project, app, security rules) described in the document's configuration section, instead of only writing a config file that assumes the resource already exists.
+- Any other listed tool — apply it wherever its stated `purpose` overlaps with a file group being implemented.
+
+This is additive, not a substitute for the plan: still create every file the plan lists. If no `agentTools` were passed, or none match a given file group, proceed exactly as if this input were absent — nothing in Step 2 or the verification pass below depends on it.
+
 ## Verification and output
 
 Before writing the final summary, run a verification pass, then update the plan file:
@@ -121,9 +132,10 @@ After the verification pass, provide the summary:
 1. **Files created** — grouped by category (models, routes, config, infrastructure, scripts)
 2. **Files modified** — list of existing files that were changed per the remediation plan (omit if none)
 3. **Files that failed** — paths expected but not found or not modified on disk; each entry must state why
-4. **Requirements not yet reflected in code** — from the conformance re-check above: any functional requirement, ERD entity, or sequence-diagram endpoint with no matching file, plus any technology substitution found (omit if none)
-5. **Next steps** — install deps, configure `.env`, run migrations, start the dev server
-6. Any remaining TODOs or integration points that require actual business logic
+4. **Agent tools used** — which listed tool was applied to which file group and what it caught or provisioned (omit this item entirely if no `agentTools` were passed or none matched)
+5. **Requirements not yet reflected in code** — from the conformance re-check above: any functional requirement, ERD entity, or sequence-diagram endpoint with no matching file, plus any technology substitution found (omit if none)
+6. **Next steps** — install deps, configure `.env`, run migrations, start the dev server
+7. Any remaining TODOs or integration points that require actual business logic
 
 **Smoke test** — especially important in merge mode or when remediation changes were applied, because those touch existing files and are most likely to break the build. Installing dependencies modifies the project, so ask for permission first:
 

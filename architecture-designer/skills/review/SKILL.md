@@ -16,7 +16,7 @@ This skill reviews an existing architecture (from a document, the codebase, or b
 
 Check for `docs/architecture-designer/session.json`:
 
-- **If the file exists**: read it in full, then run `node <scripts_dir>/validate-session.mjs` and show its output — this is a hard gate; do not proceed to Step 1 until it reports `SESSION CHECK PASSED`. See `design/references/session-schema.md` § "Session completeness gate" for what the script checks and how to resolve a failure (e.g. running `/architecture-designer:design` to fill the gaps). The session contents serve as the original requirements baseline for the architecture-reviewer and any revision agents — reviewing against a known-incomplete baseline risks misjudging drift.
+- **If the file exists**: read it in full, then run `python3 <scripts_dir>/validate-session.py` and show its output — this is a hard gate; do not proceed to Step 1 until it reports `SESSION CHECK PASSED`. See `design/references/session-schema.md` § "Session completeness gate" for what the script checks and how to resolve a failure (e.g. running `/architecture-designer:design` to fill the gaps). The session contents serve as the original requirements baseline for the architecture-reviewer and any revision agents — reviewing against a known-incomplete baseline risks misjudging drift.
 
 - **If the file does not exist**: this gate only applies when `session.json` exists — proceed without session context. Inform the user: "No session.json found — I won't have the original confirmed requirements on hand. The review will rely on the document and/or codebase alone. Sharing the original requirements now will improve the review quality."
 
@@ -211,10 +211,11 @@ Spawn `architecture-designer:implementation-planner`. Pass it:
 - The path to the approved document
 - **Existing project summary** — translated into the agent's expected strategy label: `Fresh start (empty project)` if the scan found nothing; `Merge` if the user chose (a); `Fresh start (existing project)` if the user chose (b); `User-described layout` if the user chose (c)
 - **Technology stack** — from the architecture document's Technology Decisions section (section 5)
+- **Agent tools** (optional) — `session.json`'s `"agentTools"` array, if present and non-empty (this key is written once at Stage 5 during `/architecture-designer:design` and is not re-derived here, but still valid and worth passing through unless the revision replaced the entire stack)
 - **Remediation plan path** — the full path to the `{yyyymmdd}-{topic}-remediation.md` file saved in step 4e (always present in the review flow) — a remediation plan does not by itself imply an existing codebase; trust the scan, not the plan's mere presence
 - **Previous plan path** — the resumed plan's `path`, if the user chose to continue (omit otherwise)
 
-Wait for it to report the plan was saved and confirmed. Then spawn `architecture-designer:architecture-implementer` with the implementation plan path from that report, plus the same document path, existing project summary, technology stack, and remediation plan path. Do not spawn it if implementation-planner did not report a confirmed plan.
+Wait for it to report the plan was saved and confirmed. Then spawn `architecture-designer:architecture-implementer` with the implementation plan path from that report, plus the same document path, existing project summary, technology stack, agent tools, and remediation plan path. Do not spawn it if implementation-planner did not report a confirmed plan.
 
 ---
 

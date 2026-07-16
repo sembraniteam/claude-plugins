@@ -12,7 +12,7 @@ Runs the full design process — six requirements/design stages followed by revi
 - **Stage 2 — Requirements analysis** — functional vs non-functional requirements (performance, security, scalability, availability)
 - **Stage 3 — Feasibility study and constraints** — budget, timeline, regulations, team competencies, legacy integrations
 - **Stage 4 — Capacity planning** — users, TPS, data volume, peak load, growth projections
-- **Stage 5 — Technology selection** — stack, architecture pattern, database, infrastructure, observability strategy, and DR approach; every choice justified against stages 1–4
+- **Stage 5 — Technology selection** — stack, architecture pattern, database, infrastructure, observability strategy, and DR approach; every choice justified against stages 1–4; optionally records which MCP servers/Skills available in the environment match the chosen stack, for use during implementation
 - **Stage 6 — Architecture and infrastructure design** — Database schema (ERD, index plan, engine selection), IaC tool selection and module structure, CI/CD pipeline design (platform, stages, branching strategy, environment promotion), and Mermaid diagrams rendered in the browser with zoom/pan/download
 - **Step 10 — Low-Level Design** — API contracts (per sequence diagram endpoint), business rules (pseudocode for non-trivial logic), DTOs, inter-service contracts (microservices/event-driven only), and error catalog (Steps 7–9 in between run architecture review, browser preview, and user confirmation)
 
@@ -92,7 +92,7 @@ Each reviewer has a paired fixer agent. When a reviewer returns findings, the sk
 
 ## Scripts
 
-All scripts are Node.js ESM (`.mjs`). They run identically on Windows, macOS, and Linux. The preview server loads Mermaid v11 and the ELK layout engine from CDN — an internet connection is required while the browser preview is open.
+Most scripts are Node.js ESM (`.mjs`); `validate-session.py` is a standalone Python 3 script (stdlib only, no dependencies) invoked with `python3`. They run identically on Windows, macOS, and Linux, given both a Node.js and a Python 3 runtime on `PATH`. The preview server loads Mermaid v11 and the ELK layout engine from CDN — an internet connection is required while the browser preview is open.
 
 `validate-diagrams.mjs` uses a two-tier strategy: the `mermaid` package (Jison parsers) for legacy types (flowchart, ERD, sequence, C4, class, state) and `@mermaid-js/parser` for new types (architecture-beta). If packages are missing it degrades gracefully to heuristics rather than crashing. Run `npm install` once in the `scripts/` directory before first use:
 
@@ -105,7 +105,7 @@ node scripts/validate-diagrams.mjs
 
 # Check that session.json's required fields (schemaVersion, project, description)
 # and stages 1-5 are complete before Stage 6
-node scripts/validate-session.mjs
+python3 scripts/validate-session.py
 
 # Find a free port in 3000–9000
 node scripts/find-port.mjs
@@ -116,7 +116,7 @@ node scripts/preview-server.mjs <port>
 
 The preview server reads `docs/architecture-designer/diagrams.json` on every request — reload the page to see diagram updates without restarting the server.
 
-`validate-diagrams.mjs` catches real Mermaid syntax errors using the mermaid package for legacy types and `@mermaid-js/parser` for new types. Diagrams validated only by heuristics (when parsers are unavailable) are marked `✓ (heuristics only)` in the output. The design skill runs it automatically before launching the preview, but you can run it manually at any time. `validate-session.mjs` is run automatically at the start of Stage 6 to confirm all requirement stages are on disk before sub-agents are spawned. The review and implement skills also run it as a hard gate whenever `session.json` exists — a failed check blocks progression until the missing fields/stages are completed (a missing `session.json` entirely is unaffected, since both skills can still work from the document or codebase alone).
+`validate-diagrams.mjs` catches real Mermaid syntax errors using the mermaid package for legacy types and `@mermaid-js/parser` for new types. Diagrams validated only by heuristics (when parsers are unavailable) are marked `✓ (heuristics only)` in the output. The design skill runs it automatically before launching the preview, but you can run it manually at any time. `validate-session.py` is run automatically at the start of Stage 6 to confirm all requirement stages are on disk before sub-agents are spawned. The review and implement skills also run it as a hard gate whenever `session.json` exists — a failed check blocks progression until the missing fields/stages are completed (a missing `session.json` entirely is unaffected, since both skills can still work from the document or codebase alone).
 
 ## `diagrams.json` schema
 
@@ -145,7 +145,9 @@ The preview server reads `docs/architecture-designer/diagrams.json` on every req
 
 ## `session.json` schema
 
-`docs/architecture-designer/session.json` is the requirements-and-history file every skill and agent reads and writes throughout a project's lifetime. It holds the confirmed answers from Stages 1–6c (`stage1`–`stage6c`), plus three history arrays: `documents` (every saved architecture document, oldest first), `remediationPlans` (every saved remediation plan from a review session), and `implementationPlans` (every saved implementation plan). Each array entry is an object — `{ path, createdAt }` for documents, plus `document`/`remediationPlan`/`supersedes` link fields on the plan arrays that tie a plan back to the document it targets, the remediation plan it consumed, and (if it replaced an earlier plan) the plan it superseded. Files written before this schema (v1) may still have plain path strings instead of objects; every reader treats a bare string as `{ path: <string>, ...other fields: null }` rather than failing.
+`docs/architecture-designer/session.json` is the requirements-and-history file every skill and agent reads and writes throughout a project's lifetime. It holds the confirmed answers from Stages 1–6c (`stage1`–`stage6c`), an optional `agentTools` list, and three history arrays: `documents` (every saved architecture document, oldest first), `remediationPlans` (every saved remediation plan from a review session), and `implementationPlans` (every saved implementation plan). Each array entry is an object — `{ path, createdAt }` for documents, plus `document`/`remediationPlan`/`supersedes` link fields on the plan arrays that tie a plan back to the document it targets, the remediation plan it consumed, and (if it replaced an earlier plan) the plan it superseded. Files written before this schema (v1) may still have plain path strings instead of objects; every reader treats a bare string as `{ path: <string>, ...other fields: null }` rather than failing.
+
+`agentTools` is optional and, unlike the history arrays above, is overwritten in full at each Stage 5 confirmation rather than appended to. It records MCP servers or Skills actually available in the current environment that match the confirmed stack — e.g. a Go language-server MCP for a Go backend — as `{ name, type, purpose }` entries, so `implementation-planner` and `architecture-implementer` can use them later instead of a generic `Read`/`Bash` approach. Selection rules and the category-to-tool mapping live in `skills/design/references/agent-tools.md`. An absent or empty list is the normal case and never blocks any step.
 
 Full schema, the single-writer-per-key rule (each key has exactly one skill/agent that appends to it), and the no-CAS read-fresh-modify-write-whole discipline are documented in `skills/design/references/session-schema.md`.
 
@@ -204,6 +206,7 @@ Detailed, less-frequently-needed content lives under `skills/design/references/`
 | `remediation-plan-guide.md`    | The remediation plan markdown format and checkbox/suffix conventions                                                                                                                                                                   |
 | `discovery-questions.md`       | The full Stage 1–4 requirements-gathering question banks                                                                                                                                                                               |
 | `tech-stacks.md`               | Concrete technology stack recommendations by architecture pattern and scale                                                                                                                                                            |
+| `agent-tools.md`               | Selection guide for the optional `agentTools` field — matching a confirmed stack against MCP servers/Skills actually available in the environment                                                                                      |
 | `iac-guide.md`                 | Infrastructure-as-Code tool selection and module breakdown guidance                                                                                                                                                                    |
 | `cicd-guide.md`                | CI/CD platform selection and pipeline stage guidance                                                                                                                                                                                   |
 | `lld-guide.md`                 | Low-Level Design artifact formats (API contracts, business rules, DTOs, error catalog)                                                                                                                                                 |

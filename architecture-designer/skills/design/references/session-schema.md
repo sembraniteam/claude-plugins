@@ -17,6 +17,9 @@ The top-level keys are fixed; the field names inside each stage object are the u
   "stage3": { "budget": "...", "timeline": "...", "regulations": "...", "teamCompetencies": "...", "legacySystems": "...", "cloudPreference": "..." },
   "stage4": { "registeredUsers": "...", "concurrentUsers": "...", "tps": "...", "dataVolume": "...", "readWriteRatio": "...", "peakPatterns": "...", "geography": "..." },
   "stage5": { "architecturePattern": "...", "backend": "...", "frontend": "...", "database": "...", "infrastructure": "...", "supportingServices": "...", "authentication": "...", "observability": "...", "disasterRecovery": "..." },
+  "agentTools": [
+    { "name": "gopls", "type": "mcp", "purpose": "Diagnostics and symbol search on generated Go files" }
+  ],
   "stage6b": { "tool": "...", "stateBackend": "...", "modules": "...", "envStrategy": "...", "driftDetection": "..." },
   "stage6c": { "platform": "...", "stages": "...", "branchingStrategy": "...", "envPromotion": "...", "secretInjection": "...", "artifactManagement": "..." },
   "documents": [
@@ -31,11 +34,13 @@ The top-level keys are fixed; the field names inside each stage object are the u
 }
 ```
 
-Sub-agents receive the full contents of this file as input and must read it tolerantly — inner field names are illustrative, not contractual. The only guaranteed top-level keys are `schemaVersion`, `project`, `description`, `stage1`–`stage5`, and (after Step 11) `documents`. `stage6b` and `stage6c` are written after Stage 6b/6c confirmation and must be included when passing session context to sub-agents. `remediationPlans` may also appear after `/architecture-designer:review` has run — written by that skill, and must be passed to implementation-planner when present. `implementationPlans` may also appear after `architecture-designer:implementation-planner` has run — written by that agent itself after saving its plan file, not by the `design` skill. `architecture-implementer` never writes to `session.json`; it only reads the plan path passed to it.
+Sub-agents receive the full contents of this file as input and must read it tolerantly — inner field names are illustrative, not contractual. The only guaranteed top-level keys are `schemaVersion`, `project`, `description`, `stage1`–`stage5`, and (after Step 11) `documents`. `agentTools` is written after Stage 5 confirmation but is never guaranteed — it may be absent or empty when no matching tools were found; pass it to sub-agents when present but never block on its absence. `stage6b` and `stage6c` are written after Stage 6b/6c confirmation and must be included when passing session context to sub-agents. `remediationPlans` may also appear after `/architecture-designer:review` has run — written by that skill, and must be passed to implementation-planner when present. `implementationPlans` may also appear after `architecture-designer:implementation-planner` has run — written by that agent itself after saving its plan file, not by the `design` skill. `architecture-implementer` never writes to `session.json`; it only reads the plan path passed to it.
 
 `schemaVersion`, `project`, and `description` are guaranteed present in files written under this schema (v2) — none of the three is optional, and a session.json missing any of them is malformed under v2 and must be treated the same as a v1 file for read purposes (see tolerant-read rule below) until repaired. They may be absent in files written before this schema existed (v1) — see "Legacy (schema v1) tolerant read" below; a reader must not assume their presence without checking `schemaVersion` first.
 
 **`description`** is a detailed, multi-sentence description of what the application is and does — its purpose, primary users, and the core problem it solves. It is not a one-line paraphrase or a restatement of the `project` slug; it must give a reader unfamiliar with the project enough context to understand what is being built without reading `stage1` in full. It has two valid sources: the user's own written text (used verbatim, never paraphrased), or a version drafted by `design/SKILL.md` from the Stage 1 answers (application goal, stakeholders, business processes, pain points) and shown to the user for approval/edits before being written. Either way it is required: `design/SKILL.md` must write it at the same time as `schemaVersion` and `project` (Stage 1 confirmation) and must not proceed past Stage 1 without it populated.
+
+**`agentTools`** is optional and, unlike `documents`/`remediationPlans`/`implementationPlans`, is not an append-only history — it is overwritten wholesale each time Stage 5 is confirmed (initial or revised), reflecting only the currently-recommended tools for the currently-confirmed stack. Each entry is `{ "name": "<exact MCP/skill identifier>", "type": "mcp" | "skill" | "plugin", "purpose": "<one line>" }`, drafted per `references/agent-tools.md` from MCP servers and Skills actually available in the environment at Stage 5 — never a fabricated or aspirational tool name. A missing key or an empty array both mean "no matching tools were available for this stack" and are the normal case; no reader should treat either as an error or block on it.
 
 ## Arrays are objects, not strings
 
@@ -53,7 +58,7 @@ The same link fields resolve the resume-plan flow: an implementation plan whose 
 
 ## Single writer per key
 
-`schemaVersion`, `project`, and `description` are written only by `design/SKILL.md`, at Stage 1 confirmation (and backfilled by the same skill on legacy files per Step 11). `stage1`–`stage6c` are written only by `design/SKILL.md`. `documents` is appended to by `design/SKILL.md` (Step 11) and by `review/SKILL.md` (step 4f). `remediationPlans` is appended to only by `review/SKILL.md` (step 4e). `implementationPlans` is appended to only by `implementation-planner`. `architecture-implementer` never writes to `session.json`. No key is ever written by more than the writers listed here.
+`schemaVersion`, `project`, and `description` are written only by `design/SKILL.md`, at Stage 1 confirmation (and backfilled by the same skill on legacy files per Step 11). `stage1`–`stage6c` are written only by `design/SKILL.md`. `agentTools` is written only by `design/SKILL.md`, at Stage 5 confirmation (overwritten in full on any Stage 5 revision, per `references/agent-tools.md`) — no other skill or agent writes to this key. `documents` is appended to by `design/SKILL.md` (Step 11) and by `review/SKILL.md` (step 4f). `remediationPlans` is appended to only by `review/SKILL.md` (step 4e). `implementationPlans` is appended to only by `implementation-planner`. `architecture-implementer` never writes to `session.json`. No key is ever written by more than the writers listed here.
 
 ## No CAS — always read-fresh-modify-write-whole
 
@@ -61,7 +66,7 @@ The same link fields resolve the resume-plan flow: an implementation plan whose 
 
 ## Session completeness gate
 
-`design/SKILL.md` (Stage 6), `review/SKILL.md` (before Step 1), and `implement/SKILL.md` (before Step 1) each run `node <scripts_dir>/validate-session.mjs` and show its output before proceeding, whenever `docs/architecture-designer/session.json` exists. The script checks the required top-level fields (`schemaVersion`, `project`, `description`) and confirmation stages 1–5, printing `SESSION CHECK PASSED` or `SESSION CHECK FAILED` with the specific missing fields/stages listed.
+`design/SKILL.md` (Stage 6), `review/SKILL.md` (before Step 1), and `implement/SKILL.md` (before Step 1) each run `python3 <scripts_dir>/validate-session.py` and show its output before proceeding, whenever `docs/architecture-designer/session.json` exists. The script checks the required top-level fields (`schemaVersion`, `project`, `description`) and confirmation stages 1–5, printing `SESSION CHECK PASSED` or `SESSION CHECK FAILED` with the specific missing fields/stages listed.
 
 **This is a hard gate in all three skills**: if the check fails, do not proceed past the gate. Tell the user which fields and/or stages are missing and ask them to complete them — resuming stages 1–5 in `design`, or supplying the missing information directly so `session.json` can be updated — before continuing. Only proceed once the script reports `SESSION CHECK PASSED`.
 

@@ -87,11 +87,13 @@ Every recommendation must cite a specific reason from stages 1–4. Present, dis
 
 **Version grounding**: every technology needs a specific version number. If WebSearch is available, verify the current stable release before writing it down; if not, write **"latest stable — verify at implementation time"** rather than a version from memory that may be stale. The same discipline applies to cloud managed-service names and compliance-specific claims (which controls a standard requires, whether a service holds a certification) — verify with WebSearch or label **"⚠ verify before relying"**.
 
+**Optional — agent tools for implementation**: once the stack above is confirmed, read `references/agent-tools.md` and check whether any MCP server or Skill actually available in this environment matches the confirmed stack (e.g. a Go language-server MCP for a Go backend, a Firebase MCP if Firebase was chosen). Never invent a tool that isn't actually connected/installed. If any match, propose them to the user as the `agentTools` addendum to the Stage 5 summary and let them drop any entry; if none match, say so and move on — this step never blocks Stage 5 confirmation. Write the confirmed list (or omit the key entirely if empty) to `session.json`'s `"agentTools"` at the same time as `"stage5"`.
+
 ---
 
 ## Stage 6 — Architecture and Infrastructure Design
 
-**Session completeness gate**: before spawning any sub-agent, run `node <scripts_dir>/validate-session.mjs` and show its output — this is a hard gate; do not proceed to 6a or any later step until it reports `SESSION CHECK PASSED`. See `references/session-schema.md` § "Session completeness gate" for what the script checks and how to resolve a failure. A missing top-level field on an otherwise-complete resumed session is the legacy-backfill case above, not a missing stage.
+**Session completeness gate**: before spawning any sub-agent, run `python3 <scripts_dir>/validate-session.py` and show its output — this is a hard gate; do not proceed to 6a or any later step until it reports `SESSION CHECK PASSED`. See `references/session-schema.md` § "Session completeness gate" for what the script checks and how to resolve a failure. A missing top-level field on an otherwise-complete resumed session is the legacy-backfill case above, not a missing stage.
 
 ### 6a. Database design (delegate to sub-agent)
 
@@ -197,6 +199,7 @@ After opening the browser, ask:
 If the user requests revisions:
 - Identify the affected stage, return to it, ask the relevant questions again, update the answers
 - **If Stage 1 is revised**: re-confirm `description` too — it can go stale once goal, stakeholders, or pain points change. Re-draft it (or accept the user's rewrite) the same way as the original confirmation.
+- **If Stage 5 is revised**: re-run the `agentTools` check too — a changed stack changes which tools match. Overwrite `agentTools` in full with the new result (per `references/session-schema.md`), not merge with the old list.
 - Regenerate the affected diagrams and re-run the architecture reviewer (step 7) — this may spawn architecture-fixer, which writes `diagrams.json` directly
 - Update `diagrams.json` with the revised diagrams (skip if the fixer already wrote it during the reviewer re-run)
 - Re-run `node <scripts_dir>/validate-diagrams.mjs` — same gate as Step 8; fix flagged issues and re-validate before continuing. Do not tell the user to refresh until it passes.
@@ -275,9 +278,10 @@ Spawn `architecture-designer:implementation-planner`. Pass it:
 - The path to the approved document
 - **Existing project summary** — translated into the agent's expected strategy label: `Fresh start (empty project)` if nothing was found; `Merge` if the user chose (a); `Fresh start (existing project)` if the user chose (b); `User-described layout` if the user chose (c)
 - The technology stack from stage 5
+- **Agent tools** (optional) — `session.json`'s `"agentTools"` array, if present and non-empty
 - **Remediation plan path** — resolved above, if it exists on disk and wasn't ruled out
 - **Previous plan path** — the resumed plan's `path`, if the user chose to continue (omit otherwise)
 
-Wait for it to report the plan was saved and confirmed. Then spawn `architecture-designer:architecture-implementer` with the implementation plan path from that report, plus the same document path, existing project summary, technology stack, and remediation plan path. Do not spawn it if implementation-planner did not report a confirmed plan.
+Wait for it to report the plan was saved and confirmed. Then spawn `architecture-designer:architecture-implementer` with the implementation plan path from that report, plus the same document path, existing project summary, technology stack, agent tools, and remediation plan path. Do not spawn it if implementation-planner did not report a confirmed plan.
 
 If the user says no: let them know they can run `/architecture-designer:review` at any time to revisit and revise the architecture.

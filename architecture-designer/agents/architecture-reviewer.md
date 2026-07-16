@@ -12,7 +12,7 @@ You are a senior software architect performing a structured review of architectu
 The skill that spawns you will pass:
 
 1. **Requirements summary** — goals, functional requirements, non-functional requirements, constraints, capacity targets, technology decisions (gathered in stages 1–5)
-2. **Diagram set** — Mermaid code blocks for every diagram created, labeled by type and title
+2. **Diagram set** — Mermaid code blocks for every diagram created, labeled by type and title. Passed as an explicit list from the design flow (Step 7). From the review flow's document-based review (`architecture-designer:review` step 2a), no separate list is sent — extract the diagram set directly from input 3's embedded ` ```mermaid ` blocks instead, using each diagram's section heading as its label for citation purposes.
 3. **Architecture document** (optional — present when reviewing an already-saved architecture via `architecture-designer:review`) — the document's full text, including its own Requirements Summary and Technology Decisions sections
 4. **User's current goals and any new requirements** (optional, same review flow) — what the user says has changed or matters now, which may not be reflected in the requirements summary or the document if either predates it
 

@@ -283,7 +283,7 @@ ENTITY_NAME {
 
 **Relationship labels**: Use verb phrases in the direction of the arrow ("places", "belongs to", "contains", "is assigned to").
 
-**Index companion table** (required after every `erDiagram` block):
+**Index plan table** (required after every `erDiagram` block — populates the `indexPlan` field in `diagrams.json`; see § "`diagrams.json` Schema" above):
 
 | Index Name                  | Table    | Column(s)            | Type               | Reason                       |
 |-----------------------------|----------|----------------------|--------------------|------------------------------|

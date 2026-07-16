@@ -16,7 +16,7 @@ This skill turns an approved architecture document into a working project skelet
 
 Check for `docs/architecture-designer/session.json`:
 
-- **If the file exists**: run `node <scripts_dir>/validate-session.mjs` and show its output — this is a hard gate; do not proceed to Step 1 until it reports `SESSION CHECK PASSED`. See `design/references/session-schema.md` § "Session completeness gate" for what the script checks, how to resolve a failure, and why this gate applies to `implement` even though neither of its steps reads stage 1–5 data directly.
+- **If the file exists**: run `python3 <scripts_dir>/validate-session.py` and show its output — this is a hard gate; do not proceed to Step 1 until it reports `SESSION CHECK PASSED`. See `design/references/session-schema.md` § "Session completeness gate" for what the script checks, how to resolve a failure, and why this gate applies to `implement` even though neither of its steps reads stage 1–5 data directly.
 - **If the file does not exist**: this gate only applies when `session.json` exists — proceed without it. The architecture document confirmed in Step 1 is the authoritative source of truth for implementation in that case.
 
 ---
@@ -68,6 +68,7 @@ Spawn `architecture-designer:implementation-planner`. Pass it:
 - **Architecture document path** — the file confirmed in Step 1
 - **Existing project summary** — what was found in Step 2, translated into the agent's expected strategy label: `Fresh start (empty project)` if the project looked empty; `Merge` if the user chose (a); `Fresh start (existing project)` if the user chose (b); `User-described layout` if the user chose (c)
 - **Technology stack** — if a prior design session is still in context, pass the technology stack from stage 5 directly so the agent doesn't have to re-infer it from the document
+- **Agent tools** (optional) — if `docs/architecture-designer/session.json` exists and contains a non-empty `"agentTools"` array, pass it along so the agent can note which MCP/Skill tools are available for later implementation steps
 - **Remediation plan path** — the remediation plan resolved above (matched by `document`), if it exists on disk and the "Skip if already resolved" check didn't rule it out. The strategy label above already reflects what Step 2's scan actually found — do not override it just because a remediation plan is present; a plan does not by itself prove an existing codebase.
 - **Previous plan path** — the resumed plan's `path`, if the user chose to continue above (omit otherwise)
 
@@ -91,6 +92,7 @@ Spawn `architecture-designer:architecture-implementer`. Pass it:
 - **Architecture document path** — the same file passed to the planner in Step 3
 - **Existing project summary** — the same strategy label passed to the planner in Step 3
 - **Technology stack** — the same value passed to the planner in Step 3, if any
+- **Agent tools** — the same value passed to the planner in Step 3, if any
 - **Remediation plan path** — the same value passed to the planner in Step 3, if any
 
 The agent will:

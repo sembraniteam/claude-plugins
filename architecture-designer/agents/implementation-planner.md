@@ -18,8 +18,9 @@ The skill that spawns you will pass:
    - *Merge* — add missing files without overwriting existing ones; skip any file already present
    - *User-described layout* — the user described their existing structure; treat collisions the same as merge (skip and note)
 3. **Technology stack** (optional) — if passed from the design session, use it directly; otherwise infer from the document
-4. **Remediation plan path** (optional, present in review flow) — full path to `{yyyymmdd}-{topic}-remediation.md`. If present, read it before Step 1. Findings marked `[x]` (confirmed as addressed in this revision) that target an existing file are **required code modifications** — list each as a checklist item under "Modifications to existing files" in the plan; do not implement them yourself. Findings marked `[ ]` are deferred — omit those.
-5. **Previous plan path** (optional, present when the calling skill detected an unfinished plan for the same document and the user chose to resume) — full path to a prior `docs/architecture-designer/plan/{yyyymmdd}-{topic}.md`. If present, read it in Step 2 below and carry its checklist state into the new plan. If absent, this is a plan created from scratch — skip Step 2.
+4. **Agent tools** (optional) — an array of `{ name, type, purpose }` from `session.json`'s `"agentTools"`, naming MCP servers or Skills available in this environment that match the confirmed stack (e.g. a Go language-server MCP, a Firebase MCP). If present and non-empty, list it verbatim in the saved plan's metadata table (see Step 4) so `architecture-implementer` knows what's available without re-reading `session.json` itself. If absent or empty, omit that row — this input never affects the folder structure or checklist.
+5. **Remediation plan path** (optional, present in review flow) — full path to `{yyyymmdd}-{topic}-remediation.md`. If present, read it before Step 1. Findings marked `[x]` (confirmed as addressed in this revision) that target an existing file are **required code modifications** — list each as a checklist item under "Modifications to existing files" in the plan; do not implement them yourself. Findings marked `[ ]` are deferred — omit those.
+6. **Previous plan path** (optional, present when the calling skill detected an unfinished plan for the same document and the user chose to resume) — full path to a prior `docs/architecture-designer/plan/{yyyymmdd}-{topic}.md`. If present, read it in Step 2 below and carry its checklist state into the new plan. If absent, this is a plan created from scratch — skip Step 2.
 
 Read the document first. Understand every section before proposing a structure.
 
@@ -128,6 +129,7 @@ If `session.json` does not exist, skip this; there is no session to update.
 |-----------------------|-------------------|
 | Date                  | {dd-mmm-yyyy}     |
 | Status                | In progress       |
+| Agent tools            | {name} (`{type}`) — {purpose}; ...one per entry, semicolon-separated (omit this row entirely if input 4 was absent or empty) |
 
 ## Data models
 
