@@ -72,6 +72,8 @@ Design a folder structure that matches the architecture pattern described in the
 | Serverless           | `functions/{function-name}/`, `shared/`                                                               |
 | Event-driven         | `producers/`, `consumers/`, `shared/schemas/`                                                         |
 
+**Decentralized / Web3 projects** (the document has a "Decentralized Architecture Considerations" section): add `contracts/` (or `programs/` per the target network's convention) for on-chain source, `scripts/deploy/` for deployment scripts, and `artifacts/` or `abi/` for compiled interface output, alongside whichever pattern above matches the off-chain/application side. Never write a specific-looking contract address, ABI value, or chain identifier into a file *description* in the plan — carry forward the `<VERIFY>` placeholder from the document instead, per `references/web3-guide.md`.
+
 Show the full tree (use ASCII tree notation). Include:
 - Application source directories
 - Configuration files (`package.json`, `tsconfig.json`, `.env.example`, `docker-compose.yml`, `Dockerfile`, etc.)
@@ -125,11 +127,11 @@ If `session.json` does not exist, skip this; there is no session to update.
 ```markdown
 # Implementation Plan: {topic}
 
-| Architecture document | `{document path}` |
-|-----------------------|-------------------|
-| Date                  | {dd-mmm-yyyy}     |
-| Status                | In progress       |
-| Agent tools            | {name} (`{type}`) — {purpose}; ...one per entry, semicolon-separated (omit this row entirely if input 4 was absent or empty) |
+| Architecture document | `{document path}`                                                                                                            |
+|-----------------------|------------------------------------------------------------------------------------------------------------------------------|
+| Date                  | {dd-mmm-yyyy}                                                                                                                |
+| Status                | In progress                                                                                                                  |
+| Agent tools           | {name} (`{type}`) — {purpose}; ...one per entry, semicolon-separated (omit this row entirely if input 4 was absent or empty) |
 
 ## Data models
 
@@ -171,16 +173,7 @@ For **merge mode**: any file that already exists should be marked `- [~] \`path\
 
 **When resuming (Step 2 ran)**: carried-over items keep the annotations produced in Step 2 — `- [~] \`path\` — already built in previous run`, `- [ ] \`path\` — previous attempt failed: {reason}`, or `- [ ] \`path\` — completed in previous run but file no longer found on disk, recreating`. Do not collapse these back to the plain `[~]`/`[ ]` wording used for fresh items; the annotation is what lets a human skimming the plan tell a first attempt from a retry.
 
-**Create implementation tasks**: Using the TaskCreate tool, create one task per file group. All start in `pending` status. Omit any group that has no files in the confirmed tree for this project. architecture-implementer will transition these through `in_progress` → `completed` as it writes each group.
-
-| Task title                 | What it covers                                                                          |
-|----------------------------|-----------------------------------------------------------------------------------------|
-| Implement data models      | Model files, migration files, schema/ORM definitions                                    |
-| Implement API routes       | Route handlers, controllers, middleware                                                 |
-| Write configuration files  | package.json, .env.example, tsconfig, docker-compose, Dockerfile                        |
-| Write infrastructure files | Terraform, CDK, Kubernetes manifests, CI/CD pipeline configs                            |
-| Write setup scripts        | npm scripts, cross-platform setup and run commands                                      |
-| Apply remediation changes  | Modifications to existing files per the remediation plan (only when a plan is provided) |
+**Create implementation tasks**: Using the TaskCreate tool, create one task per file group per `references/session-schema.md` section "Implementation task-group table" — the same titles `architecture-implementer` looks up later. All start in `pending` status. Omit any group that has no files in the confirmed tree for this project. architecture-implementer will transition these through `in_progress` → `completed` as it writes each group.
 
 ## Output
 

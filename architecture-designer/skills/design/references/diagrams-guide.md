@@ -213,7 +213,7 @@ flowchart LR
 
 **Purpose**: Models a real-world workflow — with branching decisions, parallel paths, and exception paths — at the business level. Bridges the gap between how the business thinks about a process and how the system will implement it.
 
-**When to create**: Any process with more than two decision points, or any process where the happy path and error handling both need to be visible to stakeholders.
+**When to create**: Any process with 2 or more decision points (matches the "2+ decision branches" trigger in `SKILL.md`'s diagram-type table — keep the two in sync), or any process where the happy path and error handling both need to be visible to stakeholders.
 
 **What to include**:
 - Start and end nodes: `([Start])` and `([End])`
@@ -283,7 +283,7 @@ ENTITY_NAME {
 
 **Relationship labels**: Use verb phrases in the direction of the arrow ("places", "belongs to", "contains", "is assigned to").
 
-**Index plan table** (required after every `erDiagram` block — populates the `indexPlan` field in `diagrams.json`; see § "`diagrams.json` Schema" above):
+**Index plan table** (required after every `erDiagram` block — populates the `indexPlan` field in `diagrams.json`; see section "`diagrams.json` Schema" above):
 
 | Index Name                  | Table    | Column(s)            | Type               | Reason                       |
 |-----------------------------|----------|----------------------|--------------------|------------------------------|
@@ -689,6 +689,7 @@ C4Container
 - Security zone boundaries (VPC, subnets, security groups) as subgraphs
 - Explicit labels on all connections showing protocol and whether traffic is encrypted
 - Managed services clearly labeled (e.g., "Amazon RDS", "Google Cloud SQL")
+- **When the Web3 track is active** (`session.json` has a `web3` key): an on-chain zone, visually separated from every off-chain zone above — see "On-chain / off-chain boundary" below
 
 **Using `flowchart TD`** (most compatible, use this unless `architecture-beta` is specified):
 - Subgraphs represent zones: `subgraph Internet["Internet Zone"]`
@@ -699,13 +700,13 @@ C4Container
 
 Node types (there are only three):
 
-| Declaration | Purpose |
-|---|---|
-| `group {id}({icon})[{label}]` | Zone/boundary container (VPC, subnet, cloud region) |
-| `group {id}({icon})[{label}] in {parentId}` | Nested boundary inside another group |
-| `service {id}({icon})[{label}]` | A component or resource node |
-| `service {id}({icon})[{label}] in {groupId}` | Component placed inside a group |
-| `junction {id}` | 4-way traffic split point (no icon) |
+| Declaration                                  | Purpose                                             |
+|----------------------------------------------|-----------------------------------------------------|
+| `group {id}({icon})[{label}]`                | Zone/boundary container (VPC, subnet, cloud region) |
+| `group {id}({icon})[{label}] in {parentId}`  | Nested boundary inside another group                |
+| `service {id}({icon})[{label}]`              | A component or resource node                        |
+| `service {id}({icon})[{label}] in {groupId}` | Component placed inside a group                     |
+| `junction {id}`                              | 4-way traffic split point (no icon)                 |
 
 Built-in icon names (for the `(icon)` slot): `cloud`, `database`, `disk`, `internet`, `server`
 
@@ -732,6 +733,8 @@ Use `align` directives to lock nodes into a grid layout before edges are drawn �
 3. **DMZ / Public Subnet** — load balancers, API gateways, bastion hosts
 4. **Application Subnet (Private)** — app servers, workers (no direct internet access)
 5. **Data Subnet (Private, isolated)** — databases, caches (only accessible from App Subnet)
+
+**On-chain / off-chain boundary** (only when `session.json` has a `web3` key — see `web3-guide.md` dimension 3): add a distinct zone for on-chain components (deployed contracts, chain nodes the application connects to) and keep it visually separate from every off-chain zone above — a subgraph like `subgraph OnChain["On-Chain (target network)"]` in `flowchart TD`, or its own `group` in `architecture-beta`. Off-chain components that read chain state (indexers, RPC gateways) belong in the Application or DMZ zone with an explicit edge into the on-chain zone, not inside it. `architecture-reviewer`'s Web3 dimension flags this boundary as **Major** if it isn't visually distinguishable. Never label a node with a specific-looking contract address, ABI hash, or chain identifier unless it came from the document or user input — use the `<VERIFY against {target network}'s official docs: ...>` placeholder instead.
 
 **Common mistakes**:
 - Not showing security zone boundaries — a flat diagram that omits subnets/security groups misses half the value

@@ -13,7 +13,7 @@ The skill that spawns you will pass:
 
 1. **Architecture review report** — the structured Critical / Major / Minor findings from architecture-reviewer
 2. **`diagrams.json` path** — read it to get the current Mermaid code for each diagram
-3. **Requirements summary** — goals, functional requirements, NFRs, constraints, and technology decisions from stages 1–5, so you know what the correct design looks like
+3. **Requirements summary** — goals, functional requirements, NFRs, constraints, and technology decisions from stages 1–5, plus `stage6b`/`stage6c`/`agentTools`/`web3` when present — every relevant top-level key, not stages alone — so you know what the correct design looks like
 
 ## What you fix (and what you don't)
 
@@ -27,6 +27,7 @@ The skill that spawns you will pass:
 - Missing components implied by NFRs (e.g., load balancer for high availability, log sink for observability): **do not add these directly**. Adding a component is a design decision, even when the NFR implies it. Instead, list each in the **Proposed Additions** section of your fix log with: which NFR implies it, which diagram it would appear in, and a one-line description of the proposed change. The calling skill will present these to the user for confirmation before any insertion happens.
 - Orphan states or unreachable terminal states in state diagrams
 - C4Container entries absent from the deployment diagram, or vice versa
+- **Web3 dimension 7 findings** (only when the requirements summary has a `web3` key): a missing on-chain/off-chain visual boundary in the deployment diagram — group on-chain components (contracts, chain nodes) separately from off-chain ones (indexers, RPC gateways, app servers). A fabricated contract address/ABI/chain identifier finding — replace the fabricated value with a `<VERIFY against {target network}'s official docs: ...>` placeholder per `references/web3-guide.md`, **never** substitute a different invented-looking value.
 
 **Do not attempt to fix:**
 

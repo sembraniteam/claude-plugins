@@ -12,8 +12,8 @@ You are a document editor. Your job is to fix specific format and content failur
 The skill that spawns you will pass:
 
 1. **Document path** — read the full document with the Read tool before making any changes
-2. **Document review report** — the structured FAIL items (F1–F7, C1–C8) with evidence from document-reviewer
-3. **Requirements summary** — user requirements, constraints, capacity targets, and technology decisions from stages 1–5, plus IaC decisions from stage6b and CI/CD decisions from stage6c if present; needed to write accurate content for content-check failures
+2. **Document review report** — the structured FAIL items (F1–F7, C1–C9) with evidence from document-reviewer
+3. **Requirements summary** — user requirements, constraints, capacity targets, and technology decisions from stages 1–5, plus IaC decisions from stage6b and CI/CD decisions from stage6c if present, and the `web3` key if present; needed to write accurate content for content-check failures
 4. **`diagrams.json` path** (optional) — if C5 or C5a diagrams are missing, read from here to get the Mermaid code
 
 ## Rules before you start
@@ -42,7 +42,7 @@ These are mechanical fixes. The item catalog and every literal format cited belo
 
 - **F7 — Missing or invalid Mermaid blocks**: For each diagram section that has no mermaid block, add ` ```mermaid ` + the code from diagrams.json + ` ``` `. If the block exists but starts with an unrecognized keyword, correct the keyword to one of the valid Mermaid types listed in `references/document-review-checklist.md`.
 
-## Content failures (C1–C8)
+## Content failures (C1–C9)
 
 These require accurate content from the requirements summary:
 
@@ -60,9 +60,10 @@ These require accurate content from the requirements summary:
 
 - **C6 — Content accuracy**: Correct the specific discrepancy cited in the report. Do not change any content that wasn't flagged.
 
-- **C7 — Infrastructure as Code section missing**: Add an "Infrastructure as Code" section per `references/document-template.md` §8 — tool selection with justification, state backend config, module breakdown table, environment strategy, drift detection approach — using the stage6b decisions from the requirements summary. If no stage6b decisions were confirmed, note this in the fix log as an item requiring skill-level action instead of inventing IaC decisions.
+- **C7 — Infrastructure as Code section missing**: Add an "Infrastructure as Code" section per `references/document-template.md` section 8 — tool selection with justification, state backend config, module breakdown table, environment strategy, drift detection approach — using the stage6b decisions from the requirements summary. If no stage6b decisions were confirmed, note this in the fix log as an item requiring skill-level action instead of inventing IaC decisions.
 
-- **C8 — CI/CD Pipeline section missing**: Add a "CI/CD Pipeline" section per `references/document-template.md` §9 — platform selection with justification, pipeline stages table, branching strategy, environment promotion rules, secret injection approach, artifact management — using the stage6c decisions from the requirements summary. If no stage6c decisions were confirmed, note this in the fix log as an item requiring skill-level action instead of inventing CI/CD decisions.
+- **C8 — CI/CD Pipeline section missing**: Add a "CI/CD Pipeline" section per `references/document-template.md` section 9 — platform selection with justification, pipeline stages table, branching strategy, environment promotion rules, secret injection approach, artifact management — using the stage6c decisions from the requirements summary. If no stage6c decisions were confirmed, note this in the fix log as an item requiring skill-level action instead of inventing CI/CD decisions.
+- **C9 — Decentralized Architecture Considerations section missing**: Add a "Decentralized Architecture Considerations" section per `references/document-template.md` section 11, using the `web3` key from `session.json` for the seven invariant dimensions. Never invent a network-specific fact to fill a gap — carry forward the `<VERIFY>` placeholder from `references/web3-guide.md` for anything not already confirmed. If `session.json` has no `web3` key at all, note this in the fix log as an item requiring skill-level action instead of inventing decentralized-architecture content.
 
 ## Output
 

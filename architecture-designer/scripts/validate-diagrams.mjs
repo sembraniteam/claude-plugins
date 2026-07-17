@@ -33,7 +33,7 @@ import path from 'path';
 const LEGACY_TYPES = new Set([
   'flowchart', 'graph', 'sequenceDiagram', 'classDiagram', 'erDiagram',
   'stateDiagram-v2', 'stateDiagram',
-  'C4Context', 'C4Container', 'C4Component',
+  'C4Context', 'C4Container',
   'gantt', 'pie', 'gitGraph', 'mindmap', 'timeline',
   'quadrantChart', 'xychart-beta',
 ]);

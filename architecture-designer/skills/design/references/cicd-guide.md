@@ -21,7 +21,7 @@ Use this guide when executing Stage 6c — CI/CD Pipeline Design. It defines how
 
 1. Source code on GitHub → **GitHub Actions** (default)
 2. Source code on GitLab → **GitLab CI/CD**
-3. Kubernetes deployment target → consider **Argo CD** for the CD leg (any CI tool for the CI leg)
+3. Kubernetes deployment target → consider **Argo CD or Flux CD** for the CD leg (any CI tool for the CI leg)
 4. AWS-native with CodeDeploy → **AWS CodePipeline**
 5. Azure-native → **Azure DevOps**
 6. Strong existing Jenkins investment → **Jenkins** (with caution — high maintenance)

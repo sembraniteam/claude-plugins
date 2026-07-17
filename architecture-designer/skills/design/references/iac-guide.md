@@ -6,23 +6,25 @@ Use this guide when executing Stage 6b — IaC Design. It defines how to select 
 
 ## 1. Tool Selection
 
-| Tool           | Best for                                            | Language                     | State backend                                                       |
-|----------------|-----------------------------------------------------|------------------------------|---------------------------------------------------------------------|
-| Terraform      | Multi-cloud, largest ecosystem, most examples       | HCL                          | S3 + DynamoDB (AWS), GCS (GCP), Azure Blob (Azure), Terraform Cloud |
-| OpenTofu       | Terraform OSS fork — BSL-free, drop-in replacement  | HCL                          | Same as Terraform                                                   |
-| Pulumi         | Developer-centric teams who prefer code over config | TypeScript, Python, Go, .NET | Pulumi Cloud, S3, GCS, Azure Blob                                   |
-| AWS CDK        | AWS-only projects with TypeScript or Python teams   | TypeScript, Python, Java, Go | CloudFormation (managed by AWS)                                     |
-| CloudFormation | AWS-only with no extra tooling requirement          | YAML / JSON                  | Managed by AWS                                                      |
-| Bicep          | Azure-only projects                                 | DSL                          | ARM (managed by Azure)                                              |
+| Tool                            | Best for                                                                                                                                    | Language                     | State backend                                                                                                                   |
+|---------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------|------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
+| Terraform                       | Multi-cloud, largest ecosystem, most examples                                                                                               | HCL                          | S3 + DynamoDB (AWS), GCS (GCP), Azure Blob (Azure), Terraform Cloud                                                             |
+| OpenTofu                        | Terraform OSS fork — BSL-free, drop-in replacement                                                                                          | HCL                          | Same as Terraform                                                                                                               |
+| Pulumi                          | Developer-centric teams who prefer code over config                                                                                         | TypeScript, Python, Go, .NET | Pulumi Cloud, S3, GCS, Azure Blob                                                                                               |
+| AWS CDK                         | AWS-only projects with TypeScript or Python teams                                                                                           | TypeScript, Python, Java, Go | CloudFormation (managed by AWS)                                                                                                 |
+| CloudFormation                  | AWS-only with no extra tooling requirement                                                                                                  | YAML / JSON                  | Managed by AWS                                                                                                                  |
+| Bicep                           | Azure-only projects                                                                                                                         | DSL                          | ARM (managed by Azure)                                                                                                          |
+| Ansible (+ Terraform if hybrid) | On-premise / self-hosted / bare metal — Stage 3's "on-premise or bare metal" answer, or `tech-stacks.md`'s self-hosted stack recommendation | YAML                         | Git-tracked playbooks/inventory (no cloud state backend); add Terraform's own backend only for the hybrid-cloud portion, if any |
 
 **Decision rules — apply in order:**
 
-1. If the requirements include multi-cloud or cloud-agnostic as a constraint → **Terraform / OpenTofu**
-2. If the team is developer-first and dislikes HCL syntax → **Pulumi**
-3. If AWS-only and the team has strong TypeScript or Python → **AWS CDK**
-4. If AWS-only and the team wants no extra tooling → **CloudFormation**
-5. If Azure-only → **Bicep**
-6. Default for all other cases → **Terraform** (largest community, most provider coverage, most hiring pool)
+1. If Stage 3's infrastructure constraint is on-premise, bare metal, or self-hosted with no cloud component → **Ansible** (configuration management, not provisioning — there's no cloud API to provision against). If a portion is hybrid-cloud, add Terraform for that portion only per rule 6 below.
+2. If the requirements include multi-cloud or cloud-agnostic as a constraint → **Terraform / OpenTofu**
+3. If the team is developer-first and dislikes HCL syntax → **Pulumi**
+4. If AWS-only and the team has strong TypeScript or Python → **AWS CDK**
+5. If AWS-only and the team wants no extra tooling → **CloudFormation**
+6. If Azure-only → **Bicep**
+7. Default for all other cases → **Terraform** (largest community, most provider coverage, most hiring pool)
 
 ---
 
@@ -42,6 +44,8 @@ Always use a remote state backend. Never commit state files to version control.
 ---
 
 ## 3. Module / Stack Structure
+
+**This structure is for cloud deployments.** For an Ansible-based on-premise/self-hosted setup (tool selection rule 1 above), organize by `roles/` (one per service — e.g. `roles/database/`, `roles/app-server/`) and `inventory/` (per-environment host lists) instead of the `modules/`/`environments/` split below; state/locking concerns don't apply since there's no remote backend to manage.
 
 Organize by infrastructure concern, not by resource type. Standard layer split:
 

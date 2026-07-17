@@ -37,7 +37,7 @@ Work through every dimension. Be specific: cite table names, column names, and i
 - PKs should be surrogate keys (`UUID` or `BIGSERIAL`/`BIGINT AUTO_INCREMENT`) — not mutable natural keys
 - Flag as **Critical** if a data type choice would cause data corruption or loss; **Major** for normalization violations or wrong types; **Minor** for style.
 
-### 3. ERD accuracy
+### 3. ERD accuracy (SQL databases)
 
 - Does every table in the schema appear in the ERD, and vice versa?
 - Is the cardinality correct for each relationship? (user places many orders → `USERS ||--o{ ORDERS`)
@@ -81,6 +81,8 @@ Work through every dimension. Be specific: cite table names, column names, and i
 ```
 
 **Empty sections**: if a severity level has no findings, omit that section entirely — do not write "None." or "No issues found." (This differs from the architecture-reviewer, which uses an `### Examined` sub-list. The database-reviewer's narrower scope doesn't need it.)
+
+**NoSQL-only projects**: dimensions 2 and 3 do not apply when every database in scope is NoSQL — note this explicitly in the Summary (e.g. "Dimensions 2–3: not applicable — NoSQL-only project") rather than silently omitting them, so a reader can tell "skipped because not applicable" apart from "checked, no findings."
 
 If no Critical or Major findings: `DATABASE REVIEW PASSED — embed in architecture document.`
 If Critical or Major findings exist: `DATABASE REVIEW FAILED — fix before embedding.`

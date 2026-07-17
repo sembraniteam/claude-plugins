@@ -1,6 +1,6 @@
 {
   "name": "architecture-designer",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "description": "Guided architecture and infrastructure design workflow — from requirements gathering to code implementation — with interactive Mermaid diagrams, browser preview, and structured documentation.",
   "author": {
     "name": "Ahmad Rifa'i",

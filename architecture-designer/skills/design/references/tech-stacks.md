@@ -42,7 +42,7 @@ Before recommending a stack, answer these four questions from the requirements y
 | Data volume | < 100 GB        | 100 GB – 5 TB   | > 5 TB                    |
 | Budget      | Minimize cost   | Moderate        | Cost-optimized at scale   |
 
-**Architecture pattern rule of thumb**:
+**Architecture pattern rule of thumb** — these thresholds are deliberately looser than the tier table above (a well-optimized monolith often outperforms the "Small/Startup" TPS ceiling before microservices become necessary); use the tier table above for sizing infrastructure/budget, and this rule of thumb only for the monolith-vs-microservices pattern call:
 - 1–5 devs, < 500 TPS → **Modular monolith** (default)
 - 5–20 devs, need independent deploy cadence → **Microservices** (only if teams are ready for the ops overhead)
 - Sporadic/event-driven workload, no persistent connections → **Serverless**

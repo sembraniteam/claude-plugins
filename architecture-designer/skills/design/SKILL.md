@@ -22,7 +22,7 @@ Always use this skill for new architecture design, even if the user has already 
 
 If continuing: brief the user on where the previous session left off and resume from the first incomplete stage. If starting fresh: delete `docs/architecture-designer/session.json` (and `docs/architecture-designer/diagrams.json` if present) first.
 
-**Legacy-session backfill check**: if resuming and `stage1`–`stage5` are confirmed but `schemaVersion`, `project`, or `description` is missing, backfill it immediately here (don't wait for Step 11) — synthesize `description` from `stage1` per `references/session-schema.md`'s backfill rule and write it silently. Skipping this will otherwise fail the Session completeness gate at Stage 6 with no way to recover, since Stage 1 won't run again.
+**Legacy-session backfill check**: if resuming and `schemaVersion`, `project`, or `description` is missing, backfill it immediately here (don't wait for Step 11) — synthesize `description` from whatever `stage1` content is already present per `references/session-schema.md`'s backfill rule, and write it silently, **regardless of how many of stage1–5 are confirmed at this point** (even a session resumed after only stage1–2 was ever confirmed needs this now, since stages 3–6 never re-touch these top-level fields). Re-run this same check immediately before the Stage 6 gate below as a second pass, in case the session was resumed partway and only reached full stage1–5 confirmation after this point in the conversation. Skipping this will otherwise fail the Session completeness gate at Stage 6 with no way to recover, since Stage 1 won't run again.
 
 Work through Stages 1–6 in order, then Steps 7–13. At the end of each stage, summarize the user's answers and ask:
 > "Does this summary look correct? Shall we move to the next stage?"
@@ -53,6 +53,8 @@ Ask the Stage 2 questions in `references/discovery-questions.md`.
 
 > **Compliance grounding rule**: When the user names a compliance framework, record it as a stated requirement — do not assert specific technical controls from memory (e.g., "GDPR requires X-day retention"). Regulatory specifics vary by jurisdiction and change over time; model-generated compliance claims are expensive to correct. Mark every compliance-specific control in the document with **"⚠ Needs legal/compliance validation"** and defer exact requirements to the user's legal team.
 
+> **Web3 / decentralized detection**: if the application is described as decentralized, blockchain-based, or on-chain, note this now — Stage 5 will read `references/web3-guide.md` and work through its additional questions before the stack is finalized. The same applies if this isn't apparent until Stage 5 names a distributed-ledger platform directly.
+
 Summarize as two lists (functional and non-functional), confirm, then proceed.
 
 ---
@@ -79,35 +81,37 @@ Ask the Stage 4 questions in `references/discovery-questions.md`. Summarize with
 
 Goal: recommend a specific, justified technology stack.
 
-**Read `references/tech-stacks.md` before making recommendations.** It contains concrete options organized by architecture pattern, scale tier, team size, cloud provider, database type, auth approach, and frontend, plus the citation pattern for tracing each choice back to stages 1–4 (§ "How to justify recommendations") — use it to ground suggestions in real technology names rather than abstract categories.
+**Read `references/tech-stacks.md` before making recommendations.** It contains concrete options organized by architecture pattern, scale tier, team size, cloud provider, database type, auth approach, and frontend, plus the citation pattern for tracing each choice back to stages 1–4 (section "How to justify recommendations") — use it to ground suggestions in real technology names rather than abstract categories.
 
 Based on everything gathered in stages 1–4, propose and justify, in order: **(1) architecture pattern** (monolith/modular monolith/microservices/serverless/event-driven — a modular monolith is almost always right for small, early-stage teams); **(2) backend language and framework**, named specifically (e.g. "Fastify 5", not "Node.js"); **(3) frontend** framework and version, if applicable; **(4) database engine(s)** — a high-level call; the database-designer agent designs the full schema in Stage 6; **(5) infrastructure provider and key managed services**, named specifically (e.g. "AWS ECS Fargate", not "containers on AWS"); **(6) supporting services** (queue, cache, search, object storage) — only if the functional requirements need them; **(7) authentication approach**, justified by user roles, security requirements, and team capacity; **(8) observability strategy** — logging aggregator (e.g. ELK, Grafana Loki, Datadog, CloudWatch), metrics/dashboards, and distributed tracing (OpenTelemetry + Jaeger/Tempo) if multiple services or async flows are involved, scaled to what the system's actual operational maturity requires — a small monolith may need only structured logging and one dashboard; **(9) disaster recovery** — RPO/RTO derived from the Stage 2 availability NFR, backup strategy, failover approach.
 
 Every recommendation must cite a specific reason from stages 1–4. Present, discuss, adjust, confirm, then proceed.
 
-**Version grounding**: every technology needs a specific version number. If WebSearch is available, verify the current stable release before writing it down; if not, write **"latest stable — verify at implementation time"** rather than a version from memory that may be stale. The same discipline applies to cloud managed-service names and compliance-specific claims (which controls a standard requires, whether a service holds a certification) — verify with WebSearch or label **"⚠ verify before relying"**.
+**Version grounding**: every technology needs a specific version number. If WebSearch is available, verify the current stable release before writing it down; if not, write **"latest stable — verify at implementation time"** rather than a version from memory that may be stale. The same discipline applies to cloud managed-service names and compliance-specific *vendor/service* claims (e.g., whether a specific service holds a certification like SOC 2 or ISO 27001) — verify with WebSearch or label **"⚠ verify before relying"**. This is a distinct claim from the Stage 2 compliance-grounding rule above (which *regulatory controls* a framework requires, tagged **"⚠ Needs legal/compliance validation"**): a vendor certification is a checkable fact, a regulatory control is a legal interpretation — keep the two tags visually distinct rather than merging them.
 
-**Optional — agent tools for implementation**: once the stack above is confirmed, read `references/agent-tools.md` and check whether any MCP server or Skill actually available in this environment matches the confirmed stack (e.g. a Go language-server MCP for a Go backend, a Firebase MCP if Firebase was chosen). Never invent a tool that isn't actually connected/installed. If any match, propose them to the user as the `agentTools` addendum to the Stage 5 summary and let them drop any entry; if none match, say so and move on — this step never blocks Stage 5 confirmation. Write the confirmed list (or omit the key entirely if empty) to `session.json`'s `"agentTools"` at the same time as `"stage5"`.
+**Optional — Web3 / decentralized track**: if Stage 1–2 flagged the application as decentralized/blockchain/on-chain, or a distributed-ledger platform is named as part of the stack above, read `references/web3-guide.md` in full before finalizing the stack. Work through its seven invariant dimensions (see `references/web3-guide.md` for the canonical list) as additional questions — ask about the *target network's* specifics rather than asserting them from memory; every network-specific fact becomes a `<VERIFY against {target network}'s official docs: ...>` placeholder until the user supplies or confirms it. Present the dimensions, discuss, confirm, then write the confirmed answers to `session.json`'s `"web3"` key (create it) at the same time as `"stage5"`. Skip this step entirely — do not create the key — for non-decentralized applications.
+
+**Optional — agent tools for implementation**: independent of the Web3 track above and always worth checking even for a decentralized stack (a matched blockchain MCP/skill in `agent-tools.md`'s category table answers "what tool is available," not "what has the user confirmed about the target network" — the two never substitute for each other). Once the stack above is confirmed, read `references/agent-tools.md` and check whether any MCP server or Skill actually available in this environment matches the confirmed stack (e.g. a Go language-server MCP for a Go backend, a Firebase MCP if Firebase was chosen, a Stellar-ecosystem plugin if a Stellar-based stack was chosen). Never invent a tool that isn't actually connected/installed. If any match, propose them to the user as the `agentTools` addendum to the Stage 5 summary and let them drop any entry; if none match, say so and move on — this step never blocks Stage 5 confirmation. Write the confirmed list (or omit the key entirely if empty) to `session.json`'s `"agentTools"` at the same time as `"stage5"`.
 
 ---
 
 ## Stage 6 — Architecture and Infrastructure Design
 
-**Session completeness gate**: before spawning any sub-agent, run `python3 <scripts_dir>/validate-session.py` and show its output — this is a hard gate; do not proceed to 6a or any later step until it reports `SESSION CHECK PASSED`. See `references/session-schema.md` § "Session completeness gate" for what the script checks and how to resolve a failure. A missing top-level field on an otherwise-complete resumed session is the legacy-backfill case above, not a missing stage.
+**Session completeness gate**: re-run the legacy-session backfill check above once more here, immediately before this gate, in case stage1–5 only just became fully confirmed. Then run `python3 <scripts_dir>/validate-session.py` and show its output — this is a hard gate; do not proceed to 6a or any later step until it reports `SESSION CHECK PASSED`. See `references/session-schema.md` section "Session completeness gate" for what the script checks and how to resolve a failure. A missing top-level field on an otherwise-complete resumed session is the legacy-backfill case above, not a missing stage.
 
 ### 6a. Database design (delegate to sub-agent)
 
 Spawn the `architecture-designer:database-designer` agent. Pass it the complete requirements summary (read from `docs/architecture-designer/session.json`, not from memory), the domain entities extracted from the functional requirements, and the access patterns from the business processes. Wait for it to return ERD, index plan, engine recommendation, and secure connection config.
 
-Then spawn `architecture-designer:database-reviewer` with the full database-designer output and the requirements summary. If it returns `DATABASE REVIEW FAILED`: spawn `architecture-designer:database-fixer` with the review report, the database-designer output, the requirements summary, and the path to `docs/architecture-designer/diagrams.json`. The fixer writes the corrected ERD and indexPlan directly into `diagrams.json` **and returns the corrected schema, ERD, index plan, and connection config as text** — replace the database-designer output held in context with this corrected text; it is what gets embedded in Step 11. Apply `references/session-schema.md` § "Proposed Additions rejection handling" if the fix log contains that section. Then re-spawn `architecture-designer:database-reviewer` to verify. Repeat the reviewer–fixer cycle until `DATABASE REVIEW PASSED`, **up to 3 cycles**. If it still fails after 3, stop, present the remaining findings verbatim, and ask the user for guidance.
+Then spawn `architecture-designer:database-reviewer` with the full database-designer output and the requirements summary. If it returns `DATABASE REVIEW FAILED`, follow `references/session-schema.md` section "Reviewer–fixer cycle procedure" (binary verdict — cycle until `DATABASE REVIEW PASSED`): the fixer receives the review report, the database-designer output, the requirements summary, and the path to `docs/architecture-designer/diagrams.json`. It writes the corrected ERD and indexPlan directly into `diagrams.json` **and returns the corrected schema, ERD, index plan, and connection config as text** — replace the database-designer output held in context with this corrected text; it is what gets embedded in Step 11.
 
-**The database design embedded in the document (Step 11, §7) and the diagram set must be the final approved version** — the fixer's corrected text if any cycle ran, otherwise the original output. Never fall back to the original after a fixer cycle has produced a correction; the two must never diverge.
+**The database design embedded in the document (Step 11, section 7) and the diagram set must be the final approved version** — the fixer's corrected text if any cycle ran, otherwise the original output. Never fall back to the original after a fixer cycle has produced a correction; the two must never diverge.
 
 ### 6b. Infrastructure as Code (IaC)
 
 **Read `references/iac-guide.md` before making recommendations** — it has the decision tables, module structure, and the exact content to produce for each point below.
 
-Based on the cloud provider chosen in Stage 5 and the infrastructure shape from the capacity plan, define and confirm, in order: **(1) tool selection** (Terraform, OpenTofu, Pulumi, AWS CDK, CloudFormation, or Bicep — never local state; see guide § 1 for decision rules); **(2) state backend**; **(3) module breakdown**, omitting modules for services not in scope; **(4) environment strategy** (default: directory-per-environment); **(5) drift detection**, matched to the team's operational maturity.
+Based on the cloud provider chosen in Stage 5 and the infrastructure shape from the capacity plan, define and confirm, in order: **(1) tool selection** (Terraform, OpenTofu, Pulumi, AWS CDK, CloudFormation, or Bicep — never local state; see guide section 1 for decision rules); **(2) state backend**; **(3) module breakdown**, omitting modules for services not in scope; **(4) environment strategy** (default: directory-per-environment); **(5) drift detection**, matched to the team's operational maturity.
 
 Present the plan, discuss open questions, adjust, and confirm before continuing.
 
@@ -119,7 +123,7 @@ After confirmation, append the confirmed decisions to `docs/architecture-designe
 
 **Read `references/cicd-guide.md` before making recommendations** — it has the decision tables, standard stage template, and the exact content to produce for each point below.
 
-Based on where the code is hosted, the deployment target, and the architecture pattern, define and confirm, in order: **(1) platform selection** (see guide § 1 for decision rules; for Kubernetes targets, consider splitting CI platform for build and Argo CD/Flux for the CD leg); **(2) pipeline stages** with trigger and gate condition per stage, omitting what the project doesn't need; **(3) branching strategy** (default: GitHub Flow); **(4) environment promotion**, dev → staging → prod, with a manual approval gate on prod by default and a documented rollback procedure; **(5) secret injection** — prefer OIDC over long-lived keys, and confirm no secrets are hardcoded or committed; **(6) artifact management** — registry, tagging scheme (git SHA), retention policy.
+Based on where the code is hosted, the deployment target, and the architecture pattern, define and confirm, in order: **(1) platform selection** (see guide section 1 for decision rules; for Kubernetes targets, consider splitting CI platform for build and Argo CD/Flux for the CD leg); **(2) pipeline stages** with trigger and gate condition per stage, omitting what the project doesn't need; **(3) branching strategy** (default: GitHub Flow); **(4) environment promotion**, dev → staging → prod, with a manual approval gate on prod by default and a documented rollback procedure; **(5) secret injection** — prefer OIDC over long-lived keys, and confirm no secrets are hardcoded or committed; **(6) artifact management** — registry, tagging scheme (git SHA), retention policy.
 
 Present the plan, discuss, adjust, and confirm before continuing.
 
@@ -154,31 +158,31 @@ Generate Mermaid diagrams relevant to the project. **All diagrams are optional**
 
 ### 6e. Mermaid compatibility and diagrams.json
 
-Read `references/diagrams-guide.md` § "Mermaid v11.16 Compatibility Rules" and § "Preventing Node Overlap" before finalizing diagram code — they cover required syntax (e.g. `flowchart` not `graph`, `architecture-beta` icon slots) and anti-overlap rules (ELK layout, `align` directives, label length, C4 layout config).
+Read `references/diagrams-guide.md` section "Mermaid v11.16 Compatibility Rules" and section "Preventing Node Overlap" before finalizing diagram code — they cover required syntax (e.g. `flowchart` not `graph`, `architecture-beta` icon slots) and anti-overlap rules (ELK layout, `align` directives, label length, C4 layout config).
 
-After applying those rules and finalizing all diagram code, **immediately write `docs/architecture-designer/diagrams.json`** following the schema in `references/diagrams-guide.md` § "`diagrams.json` Schema" (create `docs/architecture-designer/` if needed). This must happen before Step 7 — the architecture-fixer reads and updates the file in place during the review cycle and will fail if the file does not exist.
+After applying those rules and finalizing all diagram code, **immediately write `docs/architecture-designer/diagrams.json`** following the schema in `references/diagrams-guide.md` section "`diagrams.json` Schema" (create `docs/architecture-designer/` if needed). This must happen before Step 7 — the architecture-fixer reads and updates the file in place during the review cycle and will fail if the file does not exist.
 
 ---
 
 ## Step 7 — Architecture Review (BEFORE preview)
 
 Spawn the `architecture-designer:architecture-reviewer` agent. Pass it:
-- The full requirements summary — read from `docs/architecture-designer/session.json` (confirmed stages 1–5, plus stage6b/stage6c if present). Do not rely solely on conversation memory.
+- The full requirements summary — read from `docs/architecture-designer/session.json` (confirmed stages 1–5, the top-level `description`, and `agentTools`/`stage6b`/`stage6c`/`web3` when present — every relevant top-level key, not stages alone, so the reviewer's Web3 dimension can actually fire on this first pass, not only on a later `/architecture-designer:review`). Do not rely solely on conversation memory.
 - All generated Mermaid diagram code, labeled by type
 
 Wait for the review report.
 
-**If the report contains CRITICAL or MAJOR items**: spawn `architecture-designer:architecture-fixer` with the review report, the path to `docs/architecture-designer/diagrams.json`, and the requirements summary. After the fixer updates `diagrams.json`, apply `references/session-schema.md` § "Proposed Additions rejection handling" if the fix log contains that section. Then re-spawn `architecture-designer:architecture-reviewer` to verify. Repeat until the verdict line reads `REVIEW PASSED` or `REVIEW CONDITIONALLY PASSED` with all Major items resolved, **up to a maximum of 3 reviewer–fixer cycles**. If issues persist after 3 cycles, stop, present the remaining findings verbatim, and ask the user for guidance rather than cycling further.
+**If the report contains CRITICAL or MAJOR items**: follow `references/session-schema.md` section "Reviewer–fixer cycle procedure" (three-tier verdict): spawn `architecture-designer:architecture-fixer` with the review report, the path to `docs/architecture-designer/diagrams.json`, and the requirements summary, then re-spawn `architecture-designer:architecture-reviewer` to verify per that section.
 
 **If the report contains only MINOR items**: note them for the user and proceed.
 
-Do not open the browser preview until the reviewer reports `REVIEW PASSED` or `REVIEW CONDITIONALLY PASSED` with all Major items resolved.
+Do not open the browser preview until the exit condition in section "Reviewer–fixer cycle procedure" is met.
 
 ---
 
 ## Step 8 — Browser Preview
 
-1. **Confirm `diagrams.json` is current** at `docs/architecture-designer/diagrams.json` — written at the end of Stage 6d, possibly updated by architecture-fixer in Step 7. Must follow the schema in `references/diagrams-guide.md` § "`diagrams.json` Schema"; re-write it if step 2 flags issues.
+1. **Confirm `diagrams.json` is current** at `docs/architecture-designer/diagrams.json` — written at the end of Stage 6d, possibly updated by architecture-fixer in Step 7. Must follow the schema in `references/diagrams-guide.md` section "`diagrams.json` Schema"; re-write it if step 2 flags issues.
 
 2. **Validate diagrams**: run `node <scripts_dir>/validate-diagrams.mjs`. If it exits non-zero or prints `VALIDATION FAILED`, fix the flagged issues and re-write `diagrams.json` — do this regardless of `DEGRADED MODE`, which is not itself a pass/fail signal and can co-occur with a real failure. Do not proceed until it prints `VALIDATION PASSED`. If `DEGRADED MODE` still appears once passed, the real syntax parser was unavailable and some diagrams were only checked heuristically — proceed, but tell the user: "Diagram validation ran in degraded mode (parser dependencies not installed in `scripts/`) — some syntax errors may not have been caught. Run `npm install` in the plugin's `scripts/` directory for full validation coverage."
 
@@ -199,7 +203,7 @@ After opening the browser, ask:
 If the user requests revisions:
 - Identify the affected stage, return to it, ask the relevant questions again, update the answers
 - **If Stage 1 is revised**: re-confirm `description` too — it can go stale once goal, stakeholders, or pain points change. Re-draft it (or accept the user's rewrite) the same way as the original confirmation.
-- **If Stage 5 is revised**: re-run the `agentTools` check too — a changed stack changes which tools match. Overwrite `agentTools` in full with the new result (per `references/session-schema.md`), not merge with the old list.
+- **If Stage 5 is revised**: re-run the `agentTools` check too — a changed stack changes which tools match. Overwrite `agentTools` in full with the new result (per `references/session-schema.md`), not merge with the old list. Also re-evaluate the Web3 track: if the revised stack now names a distributed-ledger platform where it didn't before, work through `references/web3-guide.md`'s dimensions and write the new `web3` key; if the revised stack dropped its decentralized component, delete the `web3` key entirely (do not leave a stale one behind); if it's still decentralized but the target network or a dimension's answer changed, re-run the dimensions and overwrite `web3` in full — same "overwrite, don't merge" rule as `agentTools`.
 - Regenerate the affected diagrams and re-run the architecture reviewer (step 7) — this may spawn architecture-fixer, which writes `diagrams.json` directly
 - Update `diagrams.json` with the revised diagrams (skip if the fixer already wrote it during the reviewer re-run)
 - Re-run `node <scripts_dir>/validate-diagrams.mjs` — same gate as Step 8; fix flagged issues and re-validate before continuing. Do not tell the user to refresh until it passes.
@@ -244,15 +248,15 @@ After saving, append `{ "path": "<absolute path of the saved file>", "createdAt"
 
 - `dd-mmm-y` format: day is zero-padded (e.g., `05`), month is 3-letter capitalized abbreviation (`Jan`, `Feb`, `Mar`, `Apr`, `May`, `Jun`, `Jul`, `Aug`, `Sep`, `Oct`, `Nov`, `Dec`), year is 4 digits. Example: `05-Jul-2026`.
 
-**Document body sections (in order)**: follow `references/document-template.md` — ten sections from Project Overview through Low-Level Design, each pulling from the corresponding stage or sub-agent output.
+**Document body sections (in order)**: follow `references/document-template.md` — ten fixed sections from Project Overview through Low-Level Design, each pulling from the corresponding stage or sub-agent output, plus an 11th conditional "Decentralized Architecture Considerations" section when the Web3 track was active.
 
 ---
 
 ## Step 12 — Document Review
 
-Spawn the `architecture-designer:document-reviewer` agent with the path to the saved document, the requirements summary (all confirmed stages from `session.json`), and the expected filename. Wait for the verdict.
+Spawn the `architecture-designer:document-reviewer` agent with the path to the saved document, the requirements summary (all confirmed stages from `session.json`, plus `agentTools`, `stage6b`, `stage6c`, and `web3` when present — every relevant top-level key, not stages alone), and the expected filename. Wait for the verdict.
 
-**If DOCUMENT REVIEW FAILED**: spawn `architecture-designer:document-fixer` with the document path, the review report, the requirements summary, and the path to `docs/architecture-designer/diagrams.json`. After it overwrites the document, re-spawn `document-reviewer` to verify — rename the file first if the fixer's log says it must be renamed (F6). Repeat until DOCUMENT REVIEW PASSED, **up to 3 cycles**. If failures persist after 3, present the remaining FAIL items to the user and ask for their input.
+**If DOCUMENT REVIEW FAILED**: spawn `architecture-designer:document-fixer` with the document path, the review report, the requirements summary, and the path to `docs/architecture-designer/diagrams.json`. After it overwrites the document, rename the file first if the fixer's log says it must be renamed (F6), then follow `references/session-schema.md` section "Reviewer–fixer cycle procedure" (binary verdict — cycle until DOCUMENT REVIEW PASSED) to re-spawn `document-reviewer` and verify.
 
 **Once it passes**: update the `Status` column in the metadata table from `Draft` to `Approved`. The table should now read:
 
@@ -268,11 +272,11 @@ After the document is approved, ask:
 
 > **"The architecture document is approved. Would you like me to proceed with implementation — generating the project skeleton, data models, and infrastructure files based on this document?"**
 
-If yes: scan the working directory for signs of an existing project — `package.json`, `go.mod`, `Cargo.toml`, `requirements.txt`, `pyproject.toml`, `pom.xml`, and source directories (`src/`, `app/`, `lib/`, `cmd/`, `internal/`).
+If yes: scan the working directory for signs of an existing project, per `references/session-schema.md` section "Existing-project scan categories".
 
-**If files already exist**: summarize what was found and ask the question in `references/session-schema.md` § "Merge-strategy question". **If the scan finds nothing**: no question needed — proceed as a fresh start into an empty project.
+**If files already exist**: summarize what was found and ask the question in `references/session-schema.md` section "Merge-strategy question". **If the scan finds nothing**: no question needed — proceed as a fresh start into an empty project.
 
-Before spawning, check `session.json` for a `"remediationPlans"` array: find the entry whose `document` field equals the approved document's path — if found and its `path` exists on disk, this is the remediation plan to pass along, unless `references/session-schema.md` § "Checking whether a remediation plan is fully resolved" rules it out. Then run `references/session-schema.md` § "Resumable-plan detection procedure" using the approved document's path as `{document}` to produce the **Previous plan path**, if the user chooses to resume.
+Before spawning, resolve the applicable remediation plan per `references/session-schema.md` section "Finding the applicable remediation plan", using the approved document's path. Then run `references/session-schema.md` section "Resumable-plan detection procedure" using the approved document's path as `{document}` to produce the **Previous plan path**, if the user chooses to resume.
 
 Spawn `architecture-designer:implementation-planner`. Pass it:
 - The path to the approved document

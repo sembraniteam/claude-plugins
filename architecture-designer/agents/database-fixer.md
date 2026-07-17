@@ -13,7 +13,7 @@ The skill that spawns you will pass:
 
 1. **Database review report** — the structured Critical / Major / Minor findings from database-reviewer
 2. **Original database-designer output** — schema description, ERD Mermaid code, index plan table (markdown), and secure connection config
-3. **Requirements summary** — access patterns, NFRs, and technology decisions from stages 1–5
+3. **Requirements summary** — access patterns, NFRs, and technology decisions from stages 1–5, plus `stage6b`/`stage6c`/`agentTools`/`web3` when present — every relevant top-level key, not stages alone
 4. **`diagrams.json` path** — read it to locate the ERD entry; you will update it in place at the end
 
 ## How to approach fixes
@@ -37,6 +37,7 @@ Work through every Critical finding first, then Major findings. For each:
 - **Missing TLS config**: Add the correct TLS option for the engine (e.g., `sslmode=require` for PostgreSQL, `ssl: { rejectUnauthorized: true }` for Node.js `pg`).
 - **Missing least-privilege user**: Add a `CREATE USER` / `GRANT` example with only the permissions the application needs (`SELECT`, `INSERT`, `UPDATE`, `DELETE` on specific tables — no `SUPERUSER`, no `CREATE`).
 - **Hardcoded credential**: Replace with `process.env.DB_PASSWORD` (or equivalent) and add a note that it must come from the environment or a secrets manager.
+- **Fabricated network fact** (only when the requirements summary has a `web3` key): if a fix would otherwise require a contract address, ABI, chain identifier, or similar network-specific value (e.g. an off-chain indexer's schema referencing a token contract), never invent one — use the `<VERIFY against {target network}'s official docs: ...>` placeholder from `references/web3-guide.md` instead.
 
 ## What you don't fix
 

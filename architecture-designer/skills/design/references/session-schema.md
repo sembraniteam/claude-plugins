@@ -20,13 +20,14 @@ The top-level keys are fixed; the field names inside each stage object are the u
   "agentTools": [
     { "name": "gopls", "type": "mcp", "purpose": "Diagnostics and symbol search on generated Go files" }
   ],
+  "web3": { "trustModel": "...", "immutability": "...", "onChainOffChainBoundary": "...", "externalDataOracles": "...", "finality": "...", "keyManagement": "...", "auditTier": "..." },
   "stage6b": { "tool": "...", "stateBackend": "...", "modules": "...", "envStrategy": "...", "driftDetection": "..." },
   "stage6c": { "platform": "...", "stages": "...", "branchingStrategy": "...", "envPromotion": "...", "secretInjection": "...", "artifactManagement": "..." },
   "documents": [
     { "path": "/absolute/path/to/docs/architecture-designer/architecture/YYYYMMDD-topic.md", "createdAt": "2026-07-13T09:10:00Z" }
   ],
   "remediationPlans": [
-    { "path": "/absolute/path/to/docs/architecture-designer/plan/YYYYMMDD-topic-remediation.md", "document": "/absolute/path/to/docs/architecture-designer/architecture/YYYYMMDD-topic.md", "createdAt": "2026-07-13T10:05:00Z" }
+    { "path": "/absolute/path/to/docs/architecture-designer/plan/YYYYMMDD-topic-remediation.md", "document": "/absolute/path/to/docs/architecture-designer/architecture/YYYYMMDD-topic.md", "supersedes": null, "createdAt": "2026-07-13T10:05:00Z" }
   ],
   "implementationPlans": [
     { "path": "/absolute/path/to/docs/architecture-designer/plan/YYYYMMDD-topic.md", "document": "/absolute/path/to/docs/architecture-designer/architecture/YYYYMMDD-topic.md", "remediationPlan": null, "supersedes": null, "createdAt": "2026-07-13T10:40:00Z" }
@@ -41,6 +42,8 @@ Sub-agents receive the full contents of this file as input and must read it tole
 **`description`** is a detailed, multi-sentence description of what the application is and does — its purpose, primary users, and the core problem it solves. It is not a one-line paraphrase or a restatement of the `project` slug; it must give a reader unfamiliar with the project enough context to understand what is being built without reading `stage1` in full. It has two valid sources: the user's own written text (used verbatim, never paraphrased), or a version drafted by `design/SKILL.md` from the Stage 1 answers (application goal, stakeholders, business processes, pain points) and shown to the user for approval/edits before being written. Either way it is required: `design/SKILL.md` must write it at the same time as `schemaVersion` and `project` (Stage 1 confirmation) and must not proceed past Stage 1 without it populated.
 
 **`agentTools`** is optional and, unlike `documents`/`remediationPlans`/`implementationPlans`, is not an append-only history — it is overwritten wholesale each time Stage 5 is confirmed (initial or revised), reflecting only the currently-recommended tools for the currently-confirmed stack. Each entry is `{ "name": "<exact MCP/skill identifier>", "type": "mcp" | "skill" | "plugin", "purpose": "<one line>" }`, drafted per `references/agent-tools.md` from MCP servers and Skills actually available in the environment at Stage 5 — never a fabricated or aspirational tool name. A missing key or an empty array both mean "no matching tools were available for this stack" and are the normal case; no reader should treat either as an error or block on it.
+
+**`web3`** is optional and only written when the Web3 / decentralized track is active per `references/web3-guide.md` — most sessions never write this key. Like `agentTools`, it is overwritten wholesale each time Stage 5 is confirmed (initial or revised), not appended to. Its inner fields are the user's confirmed answers to the guide's seven invariant dimensions; any value not yet confirmed by the user must be a `<VERIFY against {target network}'s official docs: ...>` placeholder, never a value stated from memory. Absence of this key means the application is not decentralized — no reader should treat that as an error.
 
 ## Arrays are objects, not strings
 
@@ -58,7 +61,13 @@ The same link fields resolve the resume-plan flow: an implementation plan whose 
 
 ## Single writer per key
 
-`schemaVersion`, `project`, and `description` are written only by `design/SKILL.md`, at Stage 1 confirmation (and backfilled by the same skill on legacy files per Step 11). `stage1`–`stage6c` are written only by `design/SKILL.md`. `agentTools` is written only by `design/SKILL.md`, at Stage 5 confirmation (overwritten in full on any Stage 5 revision, per `references/agent-tools.md`) — no other skill or agent writes to this key. `documents` is appended to by `design/SKILL.md` (Step 11) and by `review/SKILL.md` (step 4f). `remediationPlans` is appended to only by `review/SKILL.md` (step 4e). `implementationPlans` is appended to only by `implementation-planner`. `architecture-implementer` never writes to `session.json`. No key is ever written by more than the writers listed here.
+"Single writer" means single *mutator*: each key has exactly one writer that may set or overwrite its value, except `documents`, which is append-only and has two legitimate appenders (see the exception below) — append-only removes the lost-update risk that the single-writer rule exists to prevent, so the same guarantee holds without restricting the key to one caller.
+
+`schemaVersion`, `project`, and `description` are written only by `design/SKILL.md`, at Stage 1 confirmation (and backfilled by the same skill on legacy files per Step 11). `stage1`–`stage6c` are written only by `design/SKILL.md`. `agentTools` is written only by `design/SKILL.md`, at Stage 5 confirmation (overwritten in full on any Stage 5 revision, per `references/agent-tools.md`) — no other skill or agent writes to this key. `web3` is written only by `design/SKILL.md`, at Stage 5 confirmation, and only when the Web3 track is active (overwritten in full on any Stage 5 revision, per `references/web3-guide.md`) — no other skill or agent writes to this key.
+
+**Exception — `documents` has two legitimate appenders:** `design/SKILL.md` (Step 11) and `review/SKILL.md` (step 4f) both append to it, and both are valid — each produces an architecture document (an initial design and a revision, respectively), so each is entitled to record the artifact it just wrote. Neither ever mutates or removes another writer's entry; each only appends its own new one. That append-only discipline is what makes two appenders safe here — there is no lost-update to guard against, since no writer's change can clobber another's. `remediationPlans` and `implementationPlans` are also append-only but, unlike `documents`, each currently has only one appender in practice (see below) — nothing here forbids a second legitimate appender being added for those keys too, as long as it only appends.
+
+`remediationPlans` is appended to only by `review/SKILL.md` (step 4e). `implementationPlans` is appended to only by `implementation-planner`. `architecture-implementer` never writes to `session.json`. No key is ever written by more writers than listed here — for `documents`, that means no writer beyond the two named above; for every other key, exactly the one named.
 
 ## No CAS — always read-fresh-modify-write-whole
 
@@ -91,7 +100,33 @@ When an existing project is found in the working directory and there is an archi
 > **(b) Fresh start** — generate the complete skeleton; any file that already exists will be flagged before being overwritten — you decide per collision
 > **(c) Let me describe what to keep** — I'll describe my existing layout and we'll work around it"
 
-Wait for the answer before proceeding. `design/SKILL.md` (Step 13), `review/SKILL.md` (step 4h), and `implement/SKILL.md` (Step 2) all ask this identical question before spawning `implementation-planner` — `implement/SKILL.md` is the canonical source of this text.
+Wait for the answer before proceeding. `design/SKILL.md` (Step 13), `review/SKILL.md` (step 4h), and `implement/SKILL.md` (Step 2) all ask this identical question before spawning `implementation-planner` — `implement/SKILL.md` is the authoritative owner of this question's exact wording (even though the copy quoted above lives here); if the wording ever needs to change, edit it here and treat `implement/SKILL.md`'s intent as the tiebreaker.
+
+## Existing-project scan categories
+
+Before asking the "Merge-strategy question" above, `design/SKILL.md` (Step 13), `review/SKILL.md` (step 4h), and `implement/SKILL.md` (Step 2) each scan the working directory for signs of an existing project. All three use the same four categories, so that scanning the same directory from any of the three skills reaches the same "empty vs. not empty" conclusion:
+
+- Dependency manifests: `package.json`, `go.mod`, `Cargo.toml`, `requirements.txt`, `pyproject.toml`, `pom.xml`
+- Source directories: `src/`, `app/`, `lib/`, `cmd/`, `internal/`
+- Configuration: `Dockerfile`, `docker-compose.yml`, `.env`, `.env.example`
+- Test directories: `tests/`, `test/`, `spec/`, `__tests__/`
+
+A project is "empty" only if none of the four categories finds anything. If any single category finds something, treat it as "files already exist" and ask the Merge-strategy question above.
+
+## Implementation task-group table
+
+`implementation-planner` (Step 4, "Create implementation tasks") and `architecture-implementer` (Step 1, "Locate the pre-created tasks") both need the identical file-group-to-task-title mapping — the planner creates one `TaskCreate` per row below, and the implementer looks them up by the same titles via `TaskList`. Both agents use this exact table; neither restates it independently:
+
+| Task title                 | What it covers                                                                          |
+|----------------------------|-----------------------------------------------------------------------------------------|
+| Implement data models      | Model files, migration files, schema/ORM definitions                                    |
+| Implement API routes       | Route handlers, controllers, middleware                                                 |
+| Write configuration files  | package.json, .env.example, tsconfig, docker-compose, Dockerfile                        |
+| Write infrastructure files | Terraform, CDK, Kubernetes manifests, CI/CD pipeline configs                            |
+| Write setup scripts        | npm scripts, cross-platform setup and run commands                                      |
+| Apply remediation changes  | Modifications to existing files per the remediation plan (only when a plan is provided) |
+
+`implementation-planner` omits any row with no files in the confirmed tree for the current project; `architecture-implementer` only looks up rows that were actually created.
 
 ## Checking whether a remediation plan is fully resolved
 
@@ -100,6 +135,37 @@ A remediation plan (a `remediationPlans` entry) is fully resolved once every cod
 Two consumers apply this check for different purposes:
 - `review/SKILL.md`'s pre-Step-1 load ("Check for an existing remediation plan"): if resolved, skip straight to the "fully complete" message without re-parsing the remediation plan's own checkboxes.
 - `design/SKILL.md` (Step 13) and `implement/SKILL.md` (Step 3), before spawning `implementation-planner`: if resolved, do not pass the remediation plan path — there is nothing left to plan or implement.
+
+## Finding the applicable remediation plan
+
+Before spawning `implementation-planner`, `design/SKILL.md` (Step 13) and `implement/SKILL.md` (Step 3) both need to know whether an unresolved remediation plan applies to the document being implemented. Both use the same lookup: in `session.json`'s `remediationPlans` array, find the entry whose `document` field equals the confirmed architecture document's path. If found and its `path` still exists on disk, it is the remediation plan to pass along — unless section "Checking whether a remediation plan is fully resolved" above rules it out (a fully resolved plan is never passed).
+
+A remediation plan's mere presence does not by itself prove an existing codebase. When translating the existing-project scan into the strategy label passed to `implementation-planner`, trust the scan (section "Existing-project scan categories" above), not whether a remediation plan happens to exist — a remediation plan can exist for a project that was never actually built.
+
+## Superseding a remediation plan
+
+`remediationPlans` entries carry a `supersedes` field (mirroring `implementationPlans`), used when `review/SKILL.md`'s pre-Step-1 check offers to carry a previous plan's deferred `[ ]` items forward (see "Check for an existing remediation plan" in that skill) and the user accepts. The old plan file is never edited in place to add or resolve findings — remediation plans follow the same "new file each revision" convention as architecture documents (`review/SKILL.md` step 4e always writes a fresh, collision-suffixed file, never overwriting). Instead, once the new plan is saved in step 4e:
+
+- Set the new entry's `supersedes` field to the old plan's `path`.
+- Make one terminal write to the *old* plan file — change its `Status` row to `Superseded by {new plan path}` — the same pattern `implementation-planner` uses for `implementationPlans` (see "Resolving links between arrays" above).
+
+This is what closes out an old plan whose deferred items were folded into a new one. A plan whose deferred items the user declined to carry forward is left untouched and is simply re-offered on the next review session's pre-Step-1 check.
+
+## Reviewer–fixer cycle procedure
+
+Six call sites across `design/SKILL.md` and `review/SKILL.md` spawn a reviewer agent (`architecture-reviewer`, `database-reviewer`, or `document-reviewer`), and on a failing verdict, spawn the matching fixer (`architecture-fixer`, `database-fixer`, or `document-fixer`) before re-verifying. All six follow this same procedure — only the agent names, the artifact being fixed, and the verdict vocabulary vary:
+
+1. Spawn the fixer with the review report, the artifact being corrected (`diagrams.json` path, or the document path for `document-fixer`), and the requirements summary.
+2. After the fixer applies its correction, apply section "Proposed Additions rejection handling" above if the fixer's log contains that section.
+3. Re-spawn the reviewer to verify. Read the verdict line itself — do not re-derive pass/fail from the findings list.
+4. Repeat from step 1 until the exit condition below is met, **up to a maximum of 3 reviewer–fixer cycles**. If it is not met after 3 cycles, stop, present the remaining findings verbatim, and ask the user for guidance rather than cycling further.
+
+**Exit condition — read the reviewer's literal verdict string; the two verdict vocabularies are not interchangeable:**
+
+- **Binary reviewers** (`database-reviewer`, `document-reviewer`): stop once the verdict reads `DATABASE REVIEW PASSED` / `DOCUMENT REVIEW PASSED`. Any `FAILED` verdict means cycle again.
+- **Three-tier reviewer** (`architecture-reviewer`): stop once the verdict reads `REVIEW PASSED`. `REVIEW CONDITIONALLY PASSED` is emitted *specifically because* Major findings remain — by the reviewer's own verdict definitions, it can never mean "all Major items resolved." Treat `REVIEW CONDITIONALLY PASSED` as a stop condition only once every remaining Major finding has been through step 2 above (the user explicitly accepted the residual risk or provided an alternative fix for each) — otherwise keep cycling. `REVIEW FAILED` (Critical present) always means cycle again.
+
+Do not open the browser preview, or proceed past the calling step, until this exit condition is met.
 
 ## Resumable-plan detection procedure
 

@@ -51,30 +51,11 @@ For each **NoSQL** database:
 
 ## Step 3 — ERD (SQL databases)
 
-Produce a Mermaid `erDiagram` block for each SQL database with:
+**Read `references/diagrams-guide.md`'s "Entity Relationship Diagram (`erDiagram`)" section before producing this block** — it is the canonical format spec (attribute-comment notation, the full cardinality table, relationship-label conventions) that every diagram-writing step in this plugin follows; do not restate or diverge from it here.
 
-- All entities, attributes, data types
-- PK marked with comment `"PK"`, FK with `"FK"`, indexed columns with `"idx"`
-- Correct cardinality notation (`||--o{`, `}|--|{`, etc.)
-- Relationship labels (verb phrases: "places", "belongs to", "has many")
+Produce a Mermaid `erDiagram` block for each SQL database with all entities, attributes, and data types, per that spec.
 
-Example attribute format (use comment notation only — no native PK/FK keywords):
-```
-USERS {
-    uuid        id              "PK"
-    varchar     email           "idx"
-    varchar     password_hash
-    timestamptz created_at      "idx"
-    boolean     is_active
-}
-ORDERS {
-    uuid        id              "PK"
-    uuid        user_id         "FK idx"
-    varchar     status          "idx"
-    decimal     total_amount
-    timestamptz created_at      "idx"
-}
-```
+**Web3 / decentralized projects** (the requirements summary has a `web3` key): entities sourced from on-chain state (e.g. a cached token balance, an indexed event log) are derived data, not this database's source of truth — flag them as such in the entity's description rather than modeling them with ordinary FK relationships to authoritative tables. Never invent a contract address, ABI, or chain identifier to justify a schema decision — use the `<VERIFY against {target network}'s official docs: ...>` placeholder from `references/web3-guide.md` instead.
 
 ## Step 4 — Index plan
 

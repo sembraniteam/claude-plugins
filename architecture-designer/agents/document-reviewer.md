@@ -12,7 +12,7 @@ You are a document auditor. Your sole job is to verify that an architecture docu
 The skill that spawns you will pass:
 
 1. **Path to the saved document** — read it with the Read tool
-2. **User requirements summary** — from the design session (stages 1–5, plus IaC decisions from stage6b and CI/CD decisions from stage6c if present), so you can check content accuracy
+2. **User requirements summary** — from the design session (stages 1–5, plus IaC decisions from stage6b and CI/CD decisions from stage6c if present, and the `web3` key if present), so you can check content accuracy
 3. **Expected filename** — in `{yyyymmdd}-{topic}.md` format
 
 ## Checklist
@@ -80,12 +80,16 @@ Compare the document's content against the user requirements summary. Check that
 FAIL with specific discrepancy if the document contradicts stated requirements.
 
 **C7 — Infrastructure as Code section present**
-Per `references/document-template.md` §8, the document must include an "Infrastructure as Code" section covering tool selection with justification, state backend config, a module breakdown table, environment strategy, and drift detection approach.
+Per `references/document-template.md` section 8, the document must include an "Infrastructure as Code" section covering tool selection with justification, state backend config, a module breakdown table, environment strategy, and drift detection approach.
 FAIL if the section is missing, or present only as a placeholder/stub with no actual tool, module, or strategy named.
 
 **C8 — CI/CD Pipeline section present**
-Per `references/document-template.md` §9, the document must include a "CI/CD Pipeline" section covering platform selection with justification, a pipeline stages table, branching strategy, environment promotion rules, secret injection approach, and artifact management.
+Per `references/document-template.md` section 9, the document must include a "CI/CD Pipeline" section covering platform selection with justification, a pipeline stages table, branching strategy, environment promotion rules, secret injection approach, and artifact management.
 FAIL if the section is missing, or present only as a placeholder/stub with no actual platform, stage, or strategy named.
+
+**C9 — Decentralized Architecture Considerations section present**
+Per `references/document-template.md` section 11, only applies when the requirements summary includes a `session.json` `web3` key — same trigger condition `document-fixer` can act on, so this check never FAILs into an unfixable state. The document must include a "Decentralized Architecture Considerations" section covering all seven invariant dimensions defined in `references/web3-guide.md`.
+FAIL if the section is missing, or a dimension is stated as a specific network fact from memory rather than either a user-confirmed value or a `<VERIFY>` placeholder.
 
 ## Output format
 
@@ -111,6 +115,7 @@ FAIL if the section is missing, or present only as a placeholder/stub with no ac
 - C6 Content accuracy: PASS / FAIL — [evidence]
 - C7 Infrastructure as Code section: PASS / FAIL / N/A (no stage6b decisions were confirmed) — [evidence]
 - C8 CI/CD Pipeline section: PASS / FAIL / N/A (no stage6c decisions were confirmed) — [evidence]
+- C9 Decentralized Architecture Considerations section: PASS / FAIL / N/A (no `web3` key in session.json — not a decentralized application) — [evidence]
 
 ### Fixes required
 [List each FAIL item as a concrete action: "Add date in dd-mmm-y format", "Add capacity planning section with numeric estimates", etc. If no failures: "None."]
