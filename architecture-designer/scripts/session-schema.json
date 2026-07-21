@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://architecture-designer.local/schemas/session.schema.json",
+  "title": "docs/architecture-designer/session.json",
+  "description": "Structural schema for the fixed-shape parts of session.json. stage1-stage5, web3, stage6b, stage6c, pending.answers, and progress.reviewCycles are intentionally left as free-form objects here -- their inner field names are the user's own confirmed answers or agent-recorded text and vary by project. The full narrative contract (single-writer rules, when each key is written, how array links resolve) lives in skills/design/references/session-schema.md; this file only covers what can be checked mechanically: presence, type, and the array-of-objects-or-legacy-string shape. Read and applied by scripts/validate-session.py, which implements a small purpose-built subset of JSON Schema (type/properties/required/items/oneOf/enum/minimum) rather than depending on a third-party validator, to keep the script stdlib-only.",
+  "type": "object",
+  "properties": {
+    "schemaVersion": { "type": "integer" },
+    "project": { "type": "string" },
+    "description": { "type": "string" },
+    "updatedAt": { "type": "string" },
+    "stage1": { "type": "object" },
+    "stage2": { "type": "object" },
+    "stage3": { "type": "object" },
+    "stage4": { "type": "object" },
+    "stage5": { "type": "object" },
+    "stage6b": { "type": "object" },
+    "stage6c": { "type": "object" },
+    "web3": { "type": "object" },
+    "agentTools": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "type", "purpose"],
+        "properties": {
+          "name": { "type": "string" },
+          "type": { "enum": ["mcp", "skill", "plugin"] },
+          "purpose": { "type": "string" }
+        }
+      }
+    },
+    "pending": {
+      "type": "object",
+      "required": ["stage"],
+      "properties": {
+        "stage": { "type": "string" },
+        "answers": { "type": "object" },
+        "updatedAt": { "type": "string" }
+      }
+    },
+    "progress": {
+      "type": "object",
+      "properties": {
+        "owner": { "enum": ["design", "review"] },
+        "lastCompletedStep": { "type": "string" },
+        "reviewCycles": { "type": "object" },
+        "updatedAt": { "type": "string" }
+      }
+    },
+    "lld": {
+      "type": "object",
+      "properties": {
+        "confirmedGroups": {
+          "type": "array",
+          "items": { "enum": ["apiContracts", "businessRules", "dtos", "interServiceContracts", "errorCatalog"] }
+        },
+        "updatedAt": { "type": "string" }
+      }
+    },
+    "documents": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "type": "string" },
+          {
+            "type": "object",
+            "required": ["path"],
+            "properties": {
+              "path": { "type": "string" },
+              "createdAt": { "type": ["string", "null"] }
+            }
+          }
+        ]
+      }
+    },
+    "remediationPlans": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "type": "string" },
+          {
+            "type": "object",
+            "required": ["path"],
+            "properties": {
+              "path": { "type": "string" },
+              "document": { "type": ["string", "null"] },
+              "supersedes": { "type": ["string", "null"] },
+              "createdAt": { "type": ["string", "null"] }
+            }
+          }
+        ]
+      }
+    },
+    "implementationPlans": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "type": "string" },
+          {
+            "type": "object",
+            "required": ["path"],
+            "properties": {
+              "path": { "type": "string" },
+              "document": { "type": ["string", "null"] },
+              "remediationPlan": { "type": ["string", "null"] },
+              "supersedes": { "type": ["string", "null"] },
+              "createdAt": { "type": ["string", "null"] },
+              "split": {
+                "type": "object",
+                "required": ["part", "total", "previousPlan", "nextPlan"],
+                "properties": {
+                  "part": { "type": "integer", "minimum": 1 },
+                  "total": { "type": "integer", "minimum": 1 },
+                  "previousPlan": { "type": ["string", "null"] },
+                  "nextPlan": { "type": ["string", "null"] }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

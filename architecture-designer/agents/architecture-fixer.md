@@ -15,7 +15,7 @@ The skill that spawns you will pass:
 
 1. **Architecture review report** — the structured Critical / Major / Minor findings from architecture-reviewer
 2. **`diagrams.json` path** — read it to get the current Mermaid code for each diagram
-3. **Requirements summary** — goals, functional requirements, NFRs, constraints, and technology decisions from stages 1–5, plus `stage6b`/`stage6c`/`agentTools`/`web3` when present — every relevant top-level key, not stages alone — so you know what the correct design looks like
+3. **Requirements summary** — goals, functional requirements, NFRs, constraints, and technology decisions from stages 1–5, plus `stage6b`/`stage6c`/`agentTools`/`web3` when present (per `references/session-schema.md` section "Requirements-summary scope for sub-agent spawns") — so you know what the correct design looks like
 
 ## What you fix (and what you don't)
 

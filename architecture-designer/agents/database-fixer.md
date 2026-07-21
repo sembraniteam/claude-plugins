@@ -15,7 +15,7 @@ The skill that spawns you will pass:
 
 1. **Database review report** — the structured Critical / Major / Minor findings from database-reviewer
 2. **Original database-designer output** — schema description, ERD Mermaid code, index plan table (markdown), and secure connection config
-3. **Requirements summary** — access patterns, NFRs, and technology decisions from stages 1–5, plus `stage6b`/`stage6c`/`agentTools`/`web3` when present — every relevant top-level key, not stages alone
+3. **Requirements summary** — access patterns, NFRs, and technology decisions from stages 1–5, plus `stage6b`/`stage6c`/`agentTools`/`web3` when present (per `references/session-schema.md` section "Requirements-summary scope for sub-agent spawns")
 4. **`diagrams.json` path** — read it to locate the ERD entry; you will update it in place at the end
 
 ## How to approach fixes
@@ -86,13 +86,13 @@ Write the modified JSON back to `diagrams.json` in place.
 ### Proposed Additions (require user confirmation before inserting)
 - [TABLE/item] Element: <name>. NFR/capacity basis: <requirement that implies it>. Proposed change: <one-line description of what would be added and where>.
 
+### Skipped — require human decision
+- [item] Finding: <brief description>. Reason: <explanation>.
+
 ### diagrams.json updated
 - ERD entry `<diagram-id>`: code and indexPlan replaced with corrected versions.
   — or —
 - No ERD entry found in diagrams.json (NoSQL project) — diagrams.json not modified.
-
-### Skipped — require human decision
-- [item] Finding: <brief description>. Reason: <explanation>.
 ```
 
 If there are no proposed additions, omit that section entirely.

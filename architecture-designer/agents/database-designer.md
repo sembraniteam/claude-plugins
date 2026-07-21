@@ -13,7 +13,7 @@ You are a data architecture expert. Your job is to design the complete data laye
 
 The skill that spawns you will pass:
 
-1. **Requirements summary** — functional requirements, non-functional requirements, capacity targets, technology decisions
+1. **Requirements summary** — functional requirements, non-functional requirements, capacity targets, and technology decisions, plus `stage6b`/`stage6c`/`agentTools`/`web3` when present (per `references/session-schema.md` section "Requirements-summary scope for sub-agent spawns") — the `web3` key in particular is what triggers the Web3 step below
 2. **Domain entities** — nouns from the requirements (users, orders, products, sessions, events, etc.)
 3. **Access patterns** — how the data will be read and written (e.g., "look up user by email", "list orders by status sorted by date", "increment counter on every page view")
 

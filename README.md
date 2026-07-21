@@ -16,14 +16,14 @@ Guided architecture and infrastructure design workflow — from requirements gat
 | `architecture-reviewer` agent      | Evaluates technical correctness across diagrams, alignment with requirements, and risks (SPOF, bottlenecks, security gaps, observability, DR); returns Critical / Major / Minor findings with a REVIEW PASSED / CONDITIONALLY PASSED / FAILED verdict                                                                                                                                   |
 | `architecture-fixer` agent         | Applies targeted fixes to Mermaid diagrams based on architecture-reviewer findings; updates `diagrams.json` in place and returns a fix log                                                                                                                                                                                                                                              |
 | `database-designer` agent          | Designs the full data layer: engine selection, normalized schema, ERD, index plan, and secure connection configuration; output is incorporated directly into the architecture document                                                                                                                                                                                                  |
-| `database-reviewer` agent          | Audits database-designer output across five dimensions: engine fit, schema/3NF, ERD accuracy, index completeness, and security config; returns DATABASE REVIEW PASSED / FAILED                                                                                                                                                                                                          |
-| `database-fixer` agent             | Applies targeted corrections to schema, ERD, index plan, and connection config; writes the corrected ERD and `indexPlan` directly into `diagrams.json` (same pattern as `architecture-fixer`), and returns the corrected schema, ERD, index plan, and connection config for document embedding                                                                                          |
+| `database-reviewer` agent          | Audits database-designer output across six dimensions: engine fit, schema/3NF, ERD accuracy, index completeness, security config, and (when the project is decentralized) Web3 data-modeling checks; returns DATABASE REVIEW PASSED / FAILED                                                                                                                                            |
+| `database-fixer` agent             | Applies targeted corrections to schema, ERD, index plan, and connection config; writes the corrected ERD and `indexPlan` directly into `diagrams.json` (same pattern as `architecture-fixer`, renaming the legacy `companionTable` key to `indexPlan` if found), and returns the corrected schema, ERD, index plan, and connection config for document embedding                        |
 | `document-reviewer` agent          | Audits format compliance (metadata table, `dd-mmm-yyyy` date, filename pattern, Mermaid fenced blocks) and content completeness; returns DOCUMENT REVIEW PASSED / FAILED                                                                                                                                                                                                                |
-| `document-fixer` agent             | Fixes specific F1–F7 format and C1–C8 content failures in the architecture document based on document-reviewer findings; overwrites the draft in place                                                                                                                                                                                                                                  |
+| `document-fixer` agent             | Fixes specific F1–F7 format and C1–C9 content failures in the architecture document based on document-reviewer findings; overwrites the draft in place                                                                                                                                                                                                                                  |
 | `implementation-planner` agent     | Resolves implementation ambiguities, proposes a folder structure, waits for confirmation, and saves the implementation plan (split into parts for large projects); does not write application code                                                                                                                                                                                      |
 | `architecture-implementer` agent   | Reads the confirmed implementation plan and the approved document, then scaffolds project code (models from ERD, handlers from sequence diagrams) and infrastructure files, checkpointing each file's checkbox in the plan immediately as it's written (write-through) so an interrupted run resumes without redoing completed work; refuses to run without a confirmed plan            |
 
-**Prerequisites:** Node.js; run `npm install` in `architecture-designer/scripts/` once to enable full Mermaid diagram syntax validation
+**Prerequisites:** Node.js and Python 3. Run `npm install` in `architecture-designer/scripts/` once to enable full Mermaid diagram syntax validation and the browser preview — the session-completeness/port-finding/hashing scripts are stdlib-only Python and need no install step
 
 ---
 
@@ -255,11 +255,12 @@ Regenerates and saves `SECURITY-AUDIT.md` from the current session's findings; `
 │   │   ├── architecture-reviewer.md    # Technical correctness + requirements alignment; REVIEW PASSED / FAILED
 │   │   ├── architecture-fixer.md       # Fixes Mermaid diagrams from reviewer findings; updates diagrams.json
 │   │   ├── database-designer.md        # ERD, index plan, engine selection, and secure connection config
-│   │   ├── database-reviewer.md        # Audits database design across 5 dimensions; DATABASE REVIEW PASSED / FAILED
-│   │   ├── database-fixer.md           # Fixes schema, ERD, index plan; writes ERD + companionTable to diagrams.json in place
+│   │   ├── database-reviewer.md        # Audits database design across 6 dimensions (incl. conditional Web3); DATABASE REVIEW PASSED / FAILED
+│   │   ├── database-fixer.md           # Fixes schema, ERD, index plan; writes ERD + indexPlan to diagrams.json in place
 │   │   ├── document-reviewer.md        # Format + content auditor; DOCUMENT REVIEW PASSED / FAILED
-│   │   ├── document-fixer.md           # Fixes F1–F7 format and C1–C6 content failures in place
-│   │   └── architecture-implementer.md # Scaffold generator from architecture document
+│   │   ├── document-fixer.md           # Fixes F1–F7 format and C1–C9 content failures in place
+│   │   ├── implementation-planner.md   # Resolves ambiguities, proposes folder structure, saves the plan
+│   │   └── architecture-implementer.md # Reads confirmed plan, scaffolds code with write-through checkpointing
 │   ├── skills/
 │   │   ├── design/
 │   │   │   ├── SKILL.md                # Six-stage design + review/preview/LLD steps: requirements → technology → IaC → CI/CD → LLD → document
@@ -273,11 +274,15 @@ Regenerates and saves `SECURITY-AUDIT.md` from the current session's findings; `
 │   │   │   └── SKILL.md                # Review document / codebase drift → revise → new document
 │   │   └── implement/
 │   │       └── SKILL.md                # Standalone implementation: find doc → assess project → save plan → scaffold
+│   ├── hooks/
+│   │   └── hooks.json                  # PreCompact hook — reminds Claude to persist checkpoints before compaction
 │   └── scripts/
-│       ├── find-port.mjs               # Finds available port 3000–9000 via net.createServer()
+│       ├── find-port.py                # Finds available port 3000–9000 via socket.bind() — stdlib only
+│       ├── hash-file.py                # sha256 digest of a file — stdlib only, detects stale reviewer verdicts
 │       ├── preview-server.mjs          # Serves preview HTML; auto-opens browser; 2× resolution PNG export
 │       ├── validate-diagrams.mjs       # Validates diagrams.json syntax (mermaid + @mermaid-js/parser); exits 0/1
-│       ├── validate-session.mjs        # Pre-flight check that session.json stages 1–5 are complete
+│       ├── validate-session.py         # Completeness + JSON-schema + link check on session.json — stdlib only
+│       ├── session-schema.json         # JSON Schema for session.json's fixed-shape parts
 │       ├── package.json                # mermaid, jsdom, @mermaid-js/parser — run `npm install` once
 │       └── .gitignore                  # Excludes node_modules/
 ├── changelog-manager/
