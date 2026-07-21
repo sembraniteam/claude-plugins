@@ -6,7 +6,7 @@ The section order and content for the architecture document saved by `design/SKI
 2. **Requirements Summary** — functional and non-functional requirements from stages 1–2
 3. **Constraints and Feasibility** — from stage 3
 4. **Capacity Planning** — from stage 4 with numeric estimates
-5. **Technology Decisions** — stack, architecture pattern, database, infrastructure, observability strategy, and DR approach, with justifications from stages 1–4
+5. **Technology Decisions** — stack, architecture pattern, database, infrastructure, observability strategy, DR approach, and error handling/resilience strategy (retry policy, circuit breaker, timeout budgets, graceful degradation), with justifications from stages 1–4
 6. **Architecture Diagrams** — every created diagram with: a heading, a paragraph description, then the mermaid code block. For the ERD, include the index list table immediately after the mermaid block.
 7. **Database Design** — the full output from the database-designer agent (schema, ERD explanation, index plan, connection config), or database-fixer's corrected version if a fixer cycle ran — never the pre-fix original once a fix has been applied
 8. **Infrastructure as Code** — IaC tool and justification, state backend config, module breakdown table (module name, what it provisions, environment-specific sizing), environment strategy, drift detection approach. Follow `iac-guide.md` section 6 for the exact format.

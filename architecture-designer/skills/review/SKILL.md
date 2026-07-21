@@ -1,7 +1,7 @@
 ---
 name: review
 description: This skill should be used when the user wants to review or revise an existing architecture, says "review my architecture", "audit my architecture", "check my architecture", "my architecture needs review", "update my architecture document", "revise the architecture", "architecture drift", "compare design vs implementation", "architecture is outdated", "architecture inconsistency", "check if my code matches my design", or wants to compare their architecture document against their current codebase. Also trigger when the user mentions their architecture document needs updating after new features were added or requirements changed.
-allowed-tools: ["Read", "Write", "Edit", "Bash", "Agent"]
+allowed-tools: ["Read", "Write", "Edit", "Bash", "Glob", "Agent"]
 ---
 
 # Architecture Designer — Review and Revision Workflow
@@ -20,17 +20,17 @@ Check for `docs/architecture-designer/session.json`:
 
 - **If the file does not exist**: this gate only applies when `session.json` exists — proceed without session context. Inform the user: "No session.json found — I won't have the original confirmed requirements on hand. The review will rely on the document and/or codebase alone. Sharing the original requirements now will improve the review quality."
 
-**Check for an existing remediation plan**: if `session.json` contains a `"remediationPlans"` array, read the file at its last entry's `path` (the most recently saved remediation plan; entries are objects, or legacy bare-string paths in older files — see the schema and tolerant-read rule in `design/references/session-schema.md`). Then:
+**Check for an existing remediation plan**: if `session.json` contains a `"remediationPlans"` array, scan **every** entry (not just the last one — entries are objects, or legacy bare-string paths in older files; see the schema and tolerant-read rule in `design/references/session-schema.md`), skipping any whose `path` no longer exists on disk and any whose on-disk `Status` already reads `Superseded by ...` (already closed out per `design/references/session-schema.md` section "Superseding a remediation plan", so not re-offered). Checking only the latest entry would miss an older plan whose deferred items the user previously declined to carry forward — that plan is left un-superseded on purpose (see the "if the user says no" branch below) and must keep surfacing on every future scan, per `design/references/session-schema.md`'s "left untouched... re-offered on the next review session's pre-Step-1 check" guarantee. This mirrors how "Orphaned plans from a prior document revision" in that same file scans all matching entries rather than assuming the latest is the only one relevant. For each remaining entry:
 
-- **Cross-check against the implementation plan first**: apply `design/references/session-schema.md` section "Checking whether a remediation plan is fully resolved". If resolved, skip straight to the "fully complete" message below without re-parsing the remediation plan's own checkboxes. Otherwise, fall through to inspecting the remediation plan file directly, as below.
-- **If the file no longer exists at the stored path**: note it and continue without loading it.
-- **If the file exists and has `[ ]` (deferred) items**: surface them before Step 1:
+- **Cross-check against the implementation plan first**: apply `design/references/session-schema.md` section "Checking whether a remediation plan is fully resolved". If resolved, treat this entry as fully complete (see below) without re-parsing its own checkboxes. Otherwise, fall through to inspecting the remediation plan file directly, as below.
+- **If an entry has `[ ]` (deferred) items**: surface it before Step 1 (one prompt per entry with deferred items, if more than one). **At most one entry can be carried forward and superseded per review session** — `session.json`'s `remediationPlans` schema gives each new entry a single `supersedes` path, so only the one plan named there actually gets closed out when step 4e saves; a second "yes" in the same session would have no `supersedes` slot to record it in, and that plan would incorrectly keep surfacing as un-superseded forever despite its items having been addressed. So: prompt about the most recent entry with deferred items first:
   > "I found a previous remediation plan at `{path}` with **{N} deferred item(s)** not yet addressed. Here they are:
   > {list of [ ] items}
   > Would you like to include these in this review session?"
-  If the user says yes, carry the deferred items forward into step 4a (revision scope) so they can be addressed or remain deferred, and remember this plan's path — if a new remediation plan is saved in step 4e as a result, it will supersede this one per `design/references/session-schema.md` section "Superseding a remediation plan".
-- **If the file exists but every item is `[x] *(code aligned)*`** (nothing deferred, all complete): note it briefly to the user:
-  > "Previous remediation plan at `{path}` is fully complete — all findings have been code-aligned. Starting fresh review."
+  If the user says yes, carry the deferred items forward into step 4a (revision scope) so they can be addressed or remain deferred, and remember this plan's path as the one step 4e's new plan will supersede. **If the user says no**: proceed without carrying this plan's items forward — do not mark it `Superseded`; its deferred items remain outstanding and this same scan surfaces it again on the next review session. **If any other, older entries also have deferred items**: note them to the user for awareness (path and count only) but do not offer to carry them forward in this same session — each can only be picked up as the single carried-forward plan in a future review session, one at a time.
+- **If zero entries remain after filtering** (nothing matched, or every match was already superseded/missing from disk): proceed to Step 1 without comment.
+- **If every remaining entry is either fully resolved or has every item `[x] *(code aligned)*`** (nothing deferred anywhere): note it briefly to the user:
+  > "Previous remediation plan(s) are fully complete — all findings have been code-aligned. Starting fresh review."
   Then continue to Step 1.
 
 ---
@@ -41,7 +41,7 @@ Ask the user:
 
 > "What would you like me to review? I can:
 > **(a)** Review your existing architecture document in `docs/architecture-designer/architecture/`
-> **(b)** Scan your current codebase and reconstruct the actual architecture
+> **(b)** Scan your current codebase and reconstruct the actual architecture — useful both for auditing a system you already understand and for producing a first architecture document for a project that was never formally documented
 > **(c)** Do both — compare the document against the codebase to find drift
 >
 > Which would you prefer?"
@@ -98,39 +98,45 @@ If the user also has a document (option c): compare the reconstructed architectu
 
 ## Step 3 — Present findings and ask for revision
 
-Present the review findings (architecture review report, drift report, or both) to the user. If the architecture review report includes a Dimension 6 ("Document and current-intent alignment") finding — one that treats the document as outdated relative to what the user described as their current goal — call it out distinctly from the ordinary diagram findings: it means the document's own prose, not just the diagrams, needs updating in step 4f, and it should factor into the revision scope discussed in step 4a. Then ask:
+Present the review findings (architecture review report, drift report, or both) to the user. **For option (b) alone** (no document was ever reviewed in this session — Step 1 chose codebase reconstruction only): there is no architecture review report or drift report to present, since both require a document (per Steps 2a/2b); present the Reconstructed Architecture Summary directly instead, and ask whether the user wants to formalize it into a first architecture document (step 4f's no-prior-document path handles this).
+
+Otherwise, if the architecture review report includes a Dimension 6 ("Document and current-intent alignment") finding — one that treats the document as outdated relative to what the user described as their current goal — call it out distinctly from the ordinary diagram findings: it means the document's own prose, not just the diagrams, needs updating in step 4f, and it should factor into the revision scope discussed in step 4a. Then ask:
 
 > **"Based on these findings, would you like to revise the architecture? I can update the affected diagrams, create a new versioned document, and optionally regenerate the implementation skeleton."**
 
-If the user does not want to revise: acknowledge the review is complete. They can run this skill again at any time.
+If the user does not want to revise (or, for option (b) alone, does not want to formalize the summary into a document): acknowledge the review is complete. They can run this skill again at any time.
 
 ---
 
 ## Step 4 — Revision process
 
-If the user agrees to revise:
+If the user agrees to revise (or, for option (b) alone, agrees to formalize):
 
 ### 4a. Gather revision scope
 
 Ask:
-- Which findings should be addressed in this revision? (Include any deferred items carried forward from the pre-Step-1 remediation-plan check, if the user opted in.)
+- Which findings should be addressed in this revision? (Include any deferred items carried forward from the pre-Step-1 remediation-plan check, if the user opted in.) For option (b) alone, there are no findings yet — skip this question; the Reconstructed Architecture Summary from Step 2b is the starting point for 4b to diagram, not a set of findings to address.
 - Are there new requirements that should be incorporated?
 - Is this a minor revision (1.1) or a major redesign (2.0)? If no prior document exists (Step 1 option (b) alone, with nothing to revise), this question doesn't apply — see step 4f's no-prior-document fallback instead.
 - Does this revision change whether the stack is decentralized/blockchain-based (adding, removing, or changing the target network)? If so, flag it for 4b — the Web3 track needs to be re-run or removed, mirroring `design/SKILL.md` Step 9's handling of a Stage 5 revision.
+- Does this revision change the cloud/infrastructure provider, IaC tool, or CI/CD platform? If so, flag it for 4b — `session.json`'s `stage6b`/`stage6c` and the document's IaC/CI-CD sections need to be updated to match, the same way a Web3 status change updates `web3`.
 
 ### 4b. Update diagrams
 
-Based on the revision scope:
+**For option (b) alone** (formalizing a Reconstructed Architecture Summary into a first document, nothing to "update" yet): generate a fresh diagram set from that summary instead of editing an existing one — apply `design/SKILL.md` Stage 6d's diagram-type selection table and Stage 6a-6e's generation steps (database design, diagram rules, `diagrams.json` schema) as if this were a first design session, using the reconstructed architecture pattern, tech stack, and components as the input in place of stages 1–5. Then continue to 4c as normal.
+
+Otherwise, based on the revision scope:
 - For architecture changes: update the affected Mermaid diagrams (C4, sequence, deployment)
-- For database changes: re-spawn the `architecture-designer:database-designer` agent with the same three inputs `design/SKILL.md` Stage 6a passes on first use — the updated requirements summary, the domain entities extracted from the (now updated) functional requirements, and the access patterns from the business processes — then validate with `architecture-designer:database-reviewer`. If the reviewer returns `DATABASE REVIEW FAILED`, follow `design/references/session-schema.md` section "Reviewer–fixer cycle procedure" (binary verdict — cycle until `DATABASE REVIEW PASSED`): the fixer receives the review report, the database-designer output, the requirements summary, and the path to `docs/architecture-designer/diagrams.json`. It writes the corrected ERD and indexPlan directly into `diagrams.json` **and returns the corrected schema, ERD, index plan, and connection config as text — replace the database-designer output held in context with this corrected text; it is what gets embedded in the revised document (step 4f), not the original.**
+- For database changes: re-spawn the `architecture-designer:database-designer` agent with the same three inputs `design/SKILL.md` Stage 6a passes on first use — the updated requirements summary (every relevant top-level key, not stages alone, including `web3` when present — same scope and fallback as 4c below), the domain entities extracted from the (now updated) functional requirements, and the access patterns from the business processes — then validate with `architecture-designer:database-reviewer` (same requirements-summary scope). If the reviewer returns `DATABASE REVIEW FAILED`, follow `design/references/session-schema.md` section "Reviewer–fixer cycle procedure" (binary verdict — cycle until `DATABASE REVIEW PASSED`): the fixer receives the review report, the database-designer output, the requirements summary (same scope), and the path to `docs/architecture-designer/diagrams.json`. It writes the corrected ERD and indexPlan directly into `diagrams.json` **and returns the corrected schema, ERD, index plan, and connection config as text — replace the database-designer output held in context with this corrected text; it is what gets embedded in the revised document (step 4f), not the original.**
 - For new features: add new diagram elements as needed
 - For removed components: remove the relevant elements
 - If 4a flagged a change in decentralization status: read `design/references/web3-guide.md`, work through its seven dimensions against the revised stack, and update `session.json`'s `web3` key accordingly — create it if the revision newly added a decentralized component, overwrite it in full if an existing dimension's answer changed, or delete it entirely if the decentralized component was removed. Update the architecture diagram's on-chain/off-chain boundary to match (dimension 3).
+- If 4a flagged a change in infrastructure provider, IaC tool, or CI/CD platform: read `design/references/iac-guide.md` and/or `design/references/cicd-guide.md` as applicable, work through the affected decision points against the revised stack, and overwrite `session.json`'s `stage6b`/`stage6c` in full to match (this skill is an authorized second writer of these keys for exactly this case — see `design/references/session-schema.md` section "Single writer per key"). Update the deployment/infrastructure and CI/CD pipeline diagrams, and note in 4f that the document's IaC (section 8) and CI/CD (section 9) sections need regenerating from the new decisions rather than carried over unchanged.
 
 ### 4c. Architecture re-review
 
 Spawn the `architecture-designer:architecture-reviewer` agent with:
-- The requirements summary — read from `docs/architecture-designer/session.json` (the original confirmed stages 1–5, the top-level `description`, and `agentTools`/`stage6b`/`stage6c`/`web3` when present — every relevant top-level key, not stages alone, and reflecting whatever 4b just wrote to `web3`). If session.json is absent, use the previous document's Requirements Summary section.
+- The requirements summary — read from `docs/architecture-designer/session.json` (the original confirmed stages 1–5, the top-level `description`, and `agentTools`/`stage6b`/`stage6c`/`web3` when present — every relevant top-level key, not stages alone, and reflecting whatever 4b just wrote to `web3`). If session.json is absent, use the previous document's Requirements Summary section. If both are absent (option (b) alone with no session.json — nothing to fall back to), use the Reconstructed Architecture Summary from Step 2b as the requirements baseline instead.
 - The user's current context/goals and any new requirements or constraints gathered in step 4a — kept as its own item, separate from the requirements summary above, so the agent can tell it received current-intent context (its Dimension 6 input) rather than folding it into the original baseline.
 - All updated diagrams
 
@@ -147,9 +153,13 @@ If further revisions are needed, repeat from step 4b.
 
 ### 4e. Save remediation plan
 
-Once the user confirms the revised architecture looks correct, persist the confirmed findings as a living remediation plan.
+**Skip this step entirely for option (b) alone**: there are no findings to remediate — a first-time formalization has nothing to reconcile against, so no remediation plan is created. Proceed straight to 4f.
 
-Save to:
+Otherwise, once the user confirms the revised architecture looks correct, persist the confirmed findings as a living remediation plan.
+
+**Determine the revised document's future path first — do not save the document yet (that is step 4f)**: this plan's `document` field must point at the *revised* document, not the pre-revision one read in Step 2a, since that is what `design/references/session-schema.md` section "Finding the applicable remediation plan" will match against in every future session. Work out the exact filename step 4f is about to save to — `docs/architecture-designer/architecture/{yyyymmdd}-{topic}.md`, applying the same `-2`/`-3` collision-avoidance check 4f uses — now, so this plan can reference it correctly. Step 4f must then save to this exact same filename rather than recomputing it independently, so the two never disagree.
+
+Save the remediation plan to:
 ```
 docs/architecture-designer/plan/{yyyymmdd}-{topic}-remediation.md
 ```
@@ -160,16 +170,13 @@ docs/architecture-designer/plan/{yyyymmdd}-{topic}-remediation.md
 
 Create the `docs/architecture-designer/plan/` directory if it doesn't exist.
 
-**Plan format**: follow `design/references/remediation-plan-guide.md` exactly — the checkbox-per-finding rule, mandatory source path, and the two-phase suffix progression for `[x]` items.
+**Plan format**: follow `design/references/remediation-plan-guide.md` exactly — the checkbox-per-finding rule, mandatory source path, and the two-phase suffix progression for `[x]` items. The "Architecture document" metadata-table row is the revised document's path determined above, not the pre-revision document.
 
-After saving, append `{ "path": "<absolute path of this file>", "document": "<the architecture document path this remediation plan targets>", "supersedes": "<previous remediation plan path, if this plan carried its deferred items forward per the pre-Step-1 check — otherwise null>", "createdAt": "<current ISO timestamp>" }` to `session.json`'s top-level `"remediationPlans"` array (create it if absent). If `supersedes` is non-null, also make the terminal write described in `design/references/session-schema.md` section "Superseding a remediation plan" to close out the old plan file. Note the path for passing to the implementer in step 4h.
+After saving, append `{ "path": "<absolute path of this file>", "document": "<the revised document's path determined above — the one step 4f is about to save to>", "supersedes": "<previous remediation plan path, if this plan carried its deferred items forward per the pre-Step-1 check — otherwise null>", "createdAt": "<current ISO timestamp>" }` to `session.json`'s top-level `"remediationPlans"` array (create it if absent). If `supersedes` is non-null, also make the terminal write described in `design/references/session-schema.md` section "Superseding a remediation plan" to close out the old plan file. Note the path for passing to the implementer in step 4h.
 
 ### 4f. Save the revised document
 
-Once the user confirms the revision, save to:
-```
-docs/architecture-designer/architecture/{yyyymmdd}-{topic}.md
-```
+Once the user confirms the revision, save to `docs/architecture-designer/architecture/{yyyymmdd}-{topic}.md`. **If step 4e ran** (every case except option (b) alone, which skips 4e entirely): use the exact filename 4e already determined and committed to in the remediation plan's `document` field — do not recompute the collision check independently here. **If step 4e was skipped** (option (b) alone): determine the filename here for the first time, applying the `-2`/`-3` collision-avoidance check directly, since there is no remediation plan to have pre-committed it.
 
 **Important**: never overwrite the previous document. Always create a new file. The history must remain intact.
 
@@ -212,15 +219,15 @@ If yes: scan the working directory for signs of an existing project, per `design
 
 Run `design/references/session-schema.md` section "Resumable-plan detection procedure" using the approved document's path as `{document}` to produce the **Previous plan path**, if the user chooses to resume.
 
-Spawn `architecture-designer:implementation-planner`. Pass it:
+Then follow `design/references/session-schema.md` section "Implementation-planner → architecture-implementer spawn sequence" to spawn `implementation-planner` and, once its plan is confirmed, `architecture-implementer`, passing these six inputs:
 - The path to the approved document
 - **Existing project summary** — translated into the agent's expected strategy label: `Fresh start (empty project)` if the scan found nothing; `Merge` if the user chose (a); `Fresh start (existing project)` if the user chose (b); `User-described layout` if the user chose (c)
 - **Technology stack** — from the architecture document's Technology Decisions section (section 5)
 - **Agent tools** (optional) — `session.json`'s `"agentTools"` array, if present and non-empty (this key is written once at Stage 5 during `/architecture-designer:design` and is not re-derived here, but still valid and worth passing through unless the revision replaced the entire stack)
-- **Remediation plan path** — the full path to the `{yyyymmdd}-{topic}-remediation.md` file saved in step 4e (always present in the review flow) — see `design/references/session-schema.md` section "Finding the applicable remediation plan" for why its presence must not override the scan-based strategy label
+- **Remediation plan path** — the full path to the `{yyyymmdd}-{topic}-remediation.md` file saved in step 4e (present whenever step 4e ran — i.e. every case except option (b) alone, which skips it entirely; omit this input for that case) — see `design/references/session-schema.md` section "Finding the applicable remediation plan" for why its presence must not override the scan-based strategy label
 - **Previous plan path** — the resumed plan's `path`, if the user chose to continue (omit otherwise)
 
-Wait for it to report the plan was saved and confirmed. Then spawn `architecture-designer:architecture-implementer` with the implementation plan path from that report, plus the same document path, existing project summary, technology stack, agent tools, and remediation plan path. Do not spawn it if implementation-planner did not report a confirmed plan.
+If the user says no: let them know they can run `/architecture-designer:implement` at any time to generate the skeleton from this approved document later.
 
 ---
 

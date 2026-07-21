@@ -69,7 +69,7 @@ After applying layout rules and finalizing all diagram code, write `docs/archite
 
 - **`indexPlan`** (optional, ERD diagrams only): Copy the index plan rows from the database-designer output into this structured array — nothing else. This is not a general-purpose "companion table" for entity descriptions or other ERD commentary; every entry is one database index. Each row maps to one index and must have exactly these five keys: `name` is the index identifier (e.g., `idx_users_email`), `table` is the table it belongs to, `columns` is the indexed column(s) as a string, `type` is the index type (e.g., `UNIQUE B-TREE`, `B-TREE`, `GIN`), and `reason` is the query it serves. Rendered as a visible HTML table immediately below the ERD titled "Index plan" — omit this field entirely for all non-ERD diagrams and for ERD diagrams with no indexes to report; do not fill it with anything else. `validate-diagrams.mjs` checks that every row has all five keys and will fail loudly if not.
 
-  **Legacy key**: entries written before this field was renamed may still use `companionTable` instead of `indexPlan`. Readers (`preview-server.mjs`, `validate-diagrams.mjs`) fall back to `companionTable` when `indexPlan` is absent, so old `diagrams.json` files keep working — but any agent writing to a diagram's ERD entry (`database-fixer`, `document-fixer`) must rename `companionTable` to `indexPlan` while it's already touching that entry. This is the canonical statement of the deprecation; other files reference it rather than restating it.
+  **Legacy key**: entries written before this field was renamed may still use `companionTable` instead of `indexPlan`. Readers (`preview-server.mjs`, `validate-diagrams.mjs`) fall back to `companionTable` when `indexPlan` is absent, so old `diagrams.json` files keep working — but any agent writing to a diagram's ERD entry (`architecture-fixer`, `database-fixer` — the two agents that write `diagrams.json` in place; `document-fixer` only reads it, never writes it) must rename `companionTable` to `indexPlan` while it's already touching that entry. This is the canonical statement of the deprecation; other files reference it rather than restating it.
 
 This must happen before Step 7 in the design workflow — the architecture-fixer reads and updates the file in place during the review cycle and will fail if the file does not exist.
 
@@ -346,7 +346,7 @@ erDiagram
 
 **When to create**:
 - **Authentication flow**: always, for any system with login/logout/token refresh
-- **Primary transaction flow**: the most important user-facing operation (placing an order, submitting a form, processing a payment)
+- **Core feature flows**: one dedicated sequence diagram per distinct core feature confirmed in Stage 2 — not just the single most important transaction (placing an order, submitting a form, processing a payment). See SKILL.md's "Core feature coverage requirement": a project with multiple distinct user-facing features needs a diagram per feature, not one "primary transaction" diagram covering only the most obvious one.
 - Additional flows for: webhook handling, background job processing, third-party integration
 
 **What to include**:

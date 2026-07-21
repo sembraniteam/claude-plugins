@@ -12,7 +12,7 @@ Runs the full design process — six requirements/design stages followed by revi
 - **Stage 2 — Requirements analysis** — functional vs non-functional requirements (performance, security, scalability, availability)
 - **Stage 3 — Feasibility study and constraints** — budget, timeline, regulations, team competencies, legacy integrations
 - **Stage 4 — Capacity planning** — users, TPS, data volume, peak load, growth projections
-- **Stage 5 — Technology selection** — stack, architecture pattern, database, infrastructure, observability strategy, and DR approach; every choice justified against stages 1–4; optionally records which MCP servers/Skills available in the environment match the chosen stack, for use during implementation
+- **Stage 5 — Technology selection** — stack, architecture pattern, database, infrastructure, observability strategy, DR approach, and error handling/resilience strategy (retry, circuit breaker, timeouts, graceful degradation); every choice justified against stages 1–4; optionally records which MCP servers/Skills available in the environment match the chosen stack, for use during implementation
 - **Stage 6 — Architecture and infrastructure design** — Database schema (ERD, index plan, engine selection), IaC tool selection and module structure, CI/CD pipeline design (platform, stages, branching strategy, environment promotion), and Mermaid diagrams rendered in the browser with zoom/pan/download
 - **Step 10 — Low-Level Design** — API contracts (per sequence diagram endpoint), business rules (pseudocode for non-trivial logic), DTOs, inter-service contracts (microservices/event-driven only), and error catalog (Steps 7–9 in between run architecture review, browser preview, and user confirmation)
 
@@ -37,7 +37,7 @@ Turns an approved architecture document into a working project skeleton. Can be 
 1. Locates the architecture document — from session context or lets you choose from saved documents
 2. Scans the working directory for an existing project structure
 3. Asks how to proceed: merge into existing code, fresh start, or work around a described layout
-4. Spawns `implementation-planner` to propose a folder structure, wait for your confirmation, and save an implementation plan to `docs/architecture-designer/plan/{yyyymmdd}-{topic}.md` — a markdown checklist of every file to be created, grouped by category (models, routes, config, infrastructure, scripts)
+4. Spawns `implementation-planner` to propose a folder structure, wait for confirmation, and save an implementation plan to `docs/architecture-designer/plan/{yyyymmdd}-{topic}.md` — a markdown checklist of every file to be created, grouped by category (models, routes, config, infrastructure, scripts, tests). For large projects (more than 40 checklist items), the plan is split into a `{yyyymmdd}-{topic}-part{n}-of-{N}.md` sequence instead, each part linked to its neighbor via `Previous plan`/`Next plan` metadata rows
 5. Spawns `architecture-implementer`, which reads the confirmed plan and generates all files; updates the plan checkboxes to `[x]` / `[~]` / `[ ] FAIL` when done
 
 ## Design workflow
@@ -159,6 +159,8 @@ Resuming carries the old plan's state forward: completed files become `[~]` (ski
 
 A remediation plan (`docs/architecture-designer/plan/{yyyymmdd}-{topic}-remediation.md`, produced by `/architecture-designer:review` step 4e — format documented in `skills/design/references/remediation-plan-guide.md`) can be resumed the same way, and can be in play at the same time as a resumed implementation plan; `implementation-planner` reconciles the two if they both touch the same file.
 
+**Split plans for large projects**: once a plan's checklist exceeds 40 items (files plus setup/run commands), `implementation-planner` saves it as a sequence of parts instead of one file (`{yyyymmdd}-{topic}-part1-of-3.md`, `-part2-of-3.md`, ...), each with `Split` / `Previous plan` / `Next plan` metadata-table rows. The calling skill spawns `architecture-implementer` once per part, in order, using each part's `Next plan` row to find the next file until the final part reports `None — final part`.
+
 ## Document format
 
 Architecture documents are saved to:
@@ -183,7 +185,7 @@ Revisions create new files (never overwrite), with `Version` incremented, `Reaso
 | Use case         | `flowchart LR`                     | Multiple user roles              |
 | Business process | `flowchart TD`                     | Complex multi-step workflows     |
 | ERD              | `erDiagram`                        | SQL databases                    |
-| Sequence         | `sequenceDiagram`                  | Auth flow + main transaction     |
+| Sequence         | `sequenceDiagram`                  | Auth flow + one per core feature |
 | Class            | `classDiagram`                     | Rich domain model                |
 | State            | `stateDiagram-v2`                  | Entities with status lifecycles  |
 | C4 Context       | `C4Context`                        | External actors and integrations |

@@ -1,12 +1,12 @@
 ---
 name: implement
 description: This skill should be used when the user wants to turn an approved architecture document into working code, or wants to generate/scaffold a project after a design or review session — says "implement the architecture", "scaffold the project", "generate the code from my architecture", "create project files from the design", "turn my architecture into code", "create the folder structure", "start implementation", "let's start coding", or "generate the project skeleton".
-allowed-tools: ["Read", "Edit", "Glob", "Bash", "Agent"]
+allowed-tools: ["Read", "Glob", "Bash", "Agent"]
 ---
 
 # Architecture Designer — Implementation Workflow
 
-This skill turns an approved architecture document into a working project skeleton: data models, API stubs, configuration files, and infrastructure files. It always proposes a folder structure first and waits for your confirmation before writing any files.
+This skill turns an approved architecture document into a working project skeleton: data models, API stubs, configuration files, and infrastructure files. It always proposes a folder structure first and waits for the user's confirmation before writing any files.
 
 **Scripts directory:** see "Path resolution" at the bottom of this file.
 
@@ -16,7 +16,7 @@ This skill turns an approved architecture document into a working project skelet
 
 Check for `docs/architecture-designer/session.json`:
 
-- **If the file exists**: run `python3 <scripts_dir>/validate-session.py` and show its output — this is a hard gate; do not proceed to Step 1 until it reports `SESSION CHECK PASSED`. See `design/references/session-schema.md` section "Session completeness gate" for what the script checks, how to resolve a failure, and why this gate applies to `implement` even though neither of its steps reads stage 1–5 data directly.
+- **If the file exists**: read it in full, then run `python3 <scripts_dir>/validate-session.py` and show its output — this is a hard gate; do not proceed to Step 1 until it reports `SESSION CHECK PASSED`. See `design/references/session-schema.md` section "Session completeness gate" for what the script checks, how to resolve a failure, and why this gate applies to `implement` even though its steps mostly work from the confirmed architecture document rather than the session stages directly. Reading it in full here (rather than only running the validator) is what makes its `stage5` object available as a fallback for Step 3's "Technology stack" input when no prior design session is in conversation context.
 - **If the file does not exist**: this gate only applies when `session.json` exists — proceed without it. The architecture document confirmed in Step 1 is the authoritative source of truth for implementation in that case.
 
 ---
@@ -58,47 +58,26 @@ Resolve the applicable remediation plan per `design/references/session-schema.md
 
 Then run `design/references/session-schema.md` section "Resumable-plan detection procedure" (this skill is one of its three canonical call sites) using the document confirmed in Step 1 as `{document}` to produce the **Previous plan path**, if the user chooses to resume.
 
-Spawn `architecture-designer:implementation-planner`. Pass it:
+Then follow `design/references/session-schema.md` section "Implementation-planner → architecture-implementer spawn sequence" to spawn `implementation-planner` and, once its plan is confirmed, `architecture-implementer` (Step 4 below), passing these six inputs:
 
 - **Architecture document path** — the file confirmed in Step 1
 - **Existing project summary** — what was found in Step 2, translated into the agent's expected strategy label: `Fresh start (empty project)` if the project looked empty; `Merge` if the user chose (a); `Fresh start (existing project)` if the user chose (b); `User-described layout` if the user chose (c)
-- **Technology stack** — if a prior design session is still in context, pass the technology stack from stage 5 directly so the agent doesn't have to re-infer it from the document
+- **Technology stack** — if `docs/architecture-designer/session.json` was read at the gate above and contains a `stage5` object, pass that directly; otherwise, if a prior design session is still in context, pass the technology stack from stage 5 there; otherwise the agent infers it from the document
 - **Agent tools** (optional) — if `docs/architecture-designer/session.json` exists and contains a non-empty `"agentTools"` array, pass it along so the agent can note which MCP/Skill tools are available for later implementation steps
 - **Remediation plan path** — resolved per `design/references/session-schema.md` section "Finding the applicable remediation plan" above. The strategy label above already reflects what Step 2's scan actually found — do not override it just because a remediation plan is present (see that same section).
 - **Previous plan path** — the resumed plan's `path`, if the user chose to continue above (omit otherwise)
 
-The agent will:
-1. Read the document and surface any remaining ambiguities (framework choice, ORM vs raw SQL, etc.) — all at once, not one by one
-2. If a **Previous plan path** was passed, carry forward its checklist items (done, pending, and failed) into the proposed structure before presenting it — see implementation-planner's carry-over rules
-3. Propose a full folder structure as an ASCII tree, annotating any files that already exist; if fresh-starting into an existing project, ask how to handle collisions before saving anything
-4. Wait for your confirmation or adjustments before saving the plan
-5. Save an implementation plan to `docs/architecture-designer/plan/{yyyymmdd}-{topic}.md` — a markdown checklist of every file to be created, grouped by category — and create one task per file group; if resumed, also mark the previous plan `Superseded`
-6. Report back the plan file path once it's saved and confirmed
-
-Wait for the agent to complete and confirm the plan was saved successfully before proceeding to Step 4. If it reports it could not save a confirmed plan (e.g., ambiguities were never resolved), do not proceed to Step 4 — resolve the blocker with the user and re-spawn it instead.
+For reference, `implementation-planner` in turn: reads the document and surfaces any remaining ambiguities all at once, not one by one; if a **Previous plan path** was passed, carries forward its checklist items (done, pending, and failed) into the proposed structure before presenting it; proposes a full folder structure as an ASCII tree, annotating any files that already exist and asking how to handle collisions if fresh-starting into an existing project; waits for the user's confirmation or adjustments; saves the plan (split into `{yyyymmdd}-{topic}-part{n}-of-{N}.md` parts instead of one file for large projects — more than 40 checklist items — per its "Splitting large plans" step; marks a resumed previous plan `Superseded`); and reports back the plan file path(s).
 
 ---
 
 ## Step 4 — Spawn the architecture-implementer agent
 
-Spawn `architecture-designer:architecture-implementer`. Pass it:
+`architecture-implementer` (spawned per the shared sequence above) reads the confirmed plan and the architecture document, then: implements every file — models from the ERD, route stubs from sequence diagrams, configuration files, Docker setup, infrastructure as code; updates the plan file's checkboxes (`[x]` completed, `[~]` skipped, `[ ] FAIL: {reason}` failed) and sets `Status` to `Complete`; re-checks the result against the document — confirming generated models/routes actually match the ERD/sequence diagrams and that named technologies weren't substituted, flagging any functional requirement with no corresponding file under "Requirements not yet reflected in code"; and offers an optional smoke test that installs dependencies and verifies the project compiles or starts (requires the user's confirmation since it modifies the project directory).
 
-- **Implementation plan path** — reported by implementation-planner in Step 3. This is required; do not spawn the agent without it.
-- **Architecture document path** — the same file passed to the planner in Step 3
-- **Existing project summary** — the same strategy label passed to the planner in Step 3
-- **Technology stack** — the same value passed to the planner in Step 3, if any
-- **Agent tools** — the same value passed to the planner in Step 3, if any
-- **Remediation plan path** — the same value passed to the planner in Step 3, if any
+No further guidance is needed once it's spawned — it has complete instructions. If it refuses to proceed (e.g. reports "No confirmed implementation plan found") or reports a mid-run blocker it cannot resolve on its own (something the plan doesn't cover), do not treat this as a normal completion — resolve the blocker with the user (which may mean re-spawning `implementation-planner` to update the plan) and re-spawn `architecture-implementer` once resolved, the same as Step 3's contingency for `implementation-planner`.
 
-The agent will:
-1. Read the plan and confirm it's `In progress` — refuses to proceed otherwise
-2. Read the architecture document for the technical detail needed to write each file
-3. Implement every file — models from the ERD, route stubs from sequence diagrams, configuration files, Docker setup, infrastructure as code
-4. Update the plan file: mark completed files `[x]`, skipped files `[~]`, failed files `[ ] FAIL: {reason}`, and set Status to Complete
-5. Re-check the result against the document: confirm generated models/routes actually match the ERD/sequence diagrams and that named technologies weren't substituted, flagging any functional requirement with no corresponding file under "Requirements not yet reflected in code"
-6. Offer an optional smoke test — installs dependencies and verifies the project compiles or starts (requires your confirmation since it modifies the project directory)
-
-Wait for the agent to complete. You do not need to guide it further — it has complete instructions. If it refuses to proceed (e.g. reports "No confirmed implementation plan found") or reports a mid-run blocker it cannot resolve on its own (something the plan doesn't cover), do not treat this as a normal completion — resolve the blocker with the user (which may mean re-spawning `implementation-planner` to update the plan) and re-spawn `architecture-implementer` once resolved, the same as Step 3's contingency for `implementation-planner`.
+Proceed to Step 5 once the final part (or the only part, if the plan was not split) reports `Status: Complete`.
 
 ---
 
@@ -108,7 +87,7 @@ Wait for the agent to complete. You do not need to guide it further — it has c
 
 Once the agent reports completion, remind the user:
 
-1. Open the implementation plan file in `docs/architecture-designer/plan/` — the name follows `{yyyymmdd}-{topic}.md`; if you ran implementation multiple times on the same day, the latest will have a `-2`, `-3` suffix
+1. Open the implementation plan file(s) in `docs/architecture-designer/plan/` — the name follows `{yyyymmdd}-{topic}.md`, or `{yyyymmdd}-{topic}-part{n}-of-{N}.md` per part if the plan was split for size; if implementation ran multiple times on the same day, the latest will have a `-2`, `-3` suffix
 2. Copy `.env.example` → `.env` and fill in real credentials (database URL, secrets, API keys)
 3. Run the setup command the agent provided (typically `npm install && npm run setup` or equivalent)
 4. Start the dev server and verify the app boots without errors

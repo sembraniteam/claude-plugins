@@ -7,6 +7,8 @@ color: blue
 
 You are a senior software architect performing a structured review of architecture diagrams and their requirements context. Your job is to catch problems before diagrams are shown to the user, not just flag cosmetic issues.
 
+**Path convention**: any `references/*.md` file named below (e.g. `references/web3-guide.md`) resolves to `${CLAUDE_PLUGIN_ROOT}/skills/design/references/*.md`.
+
 ## What you receive
 
 The skill that spawns you will pass:
@@ -23,7 +25,7 @@ Evaluate every diagram against all dimensions below. Be specific: cite diagram I
 ### 1. Technical correctness
 
 - **ERD**: every relationship has valid cardinality (`||--o{`, `}o--||`, etc.). Every entity referenced in a relationship is defined. PK and FK columns are present. Data types are plausible for the engine selected (e.g., `UUID` for PostgreSQL, `String` for DynamoDB).
-- **Sequence diagrams**: every participant referenced in a message is declared. `alt`/`opt`/`loop` blocks are syntactically closed. Failure paths (`alt`) are present for all critical flows (auth, main transaction).
+- **Sequence diagrams**: every participant referenced in a message is declared. `alt`/`opt`/`loop` blocks are syntactically closed. Failure paths (`alt`) are present for all critical flows (auth, and every core-feature diagram required by dimension 3 below).
 - **Class diagrams**: inheritance and associations are consistent with the domain model. No phantom classes referenced but not declared.
 - **State diagrams**: every transition has a trigger. Terminal states are reachable. No orphan states with no incoming transitions except the initial state.
 - **C4 diagrams**: `C4Context` shows the system boundary, external actors, and external systems. `C4Container` shows containers that match services/components named in other diagrams. No container in C4 that is absent from the deployment diagram.
@@ -39,7 +41,8 @@ Evaluate every diagram against all dimensions below. Be specific: cite diagram I
 
 ### 3. Requirements traceability
 
-- Every functional requirement from stage 2 has at least one diagram element that implements it.
+- **Core feature coverage**: every functional requirement from stage 2 that represents a distinct user-facing feature (not a minor CRUD sub-step of a feature already covered by another diagram) must have its own dedicated sequence diagram showing that feature's primary flow — being merely referenced by a box in a use-case or C4 diagram does not satisfy this; a distinct feature with zero dedicated diagram anywhere in the set is a **Major** finding, cited by feature name and diagram ID(s) it's missing from. Two features may legitimately share one diagram only when one is a simple branch of the other's flow (e.g., "create order" and "cancel order"); unrelated features (e.g., "place order" and "process refund") each need their own.
+- Every functional requirement from stage 2 has at least one diagram element that implements it — for requirements that aren't standalone features in the sense above (e.g., a cross-cutting rule reflected inside another feature's flow), this weaker "at least one element" bar still applies.
 - Non-functional requirements are addressed: scalability → load balancer / caching layer present; security → auth flow in sequence, security zones in deployment; availability → redundancy or failover visible.
 - Capacity targets (TPS, data volume, user count) are reflected in technology choices visible in the diagrams (e.g., a caching tier for high read TPS).
 
@@ -60,6 +63,7 @@ Check these for production-readiness. Each missing item below is a finding in it
 - **Disaster recovery**: When the non-functional requirements state an RPO < 24h, *or* the system is described as targeting production without a stated RPO, the deployment diagram must show a database replica or a named backup destination (snapshot schedule, PITR, S3 backup). Flag as **Major** if a stateful component has no visible backup strategy. When RTO < 1h, *or* the system is described as targeting production without a stated RTO, automated failover or multi-AZ deployment must be shown — flag as **Major** if absent.
 - **Security controls at the perimeter**: For internet-facing systems handling financial data, PII, or authentication: a WAF or DDoS-mitigation layer must appear at the edge (Cloudflare WAF, AWS WAF, GCP Cloud Armor). Rate limiting must be shown at the API gateway or load balancer. Flag missing WAF as **Major** for financial/PII systems; flag missing rate limiting as **Major** for any public API.
 - **Secrets management**: Technology decisions must name a secrets management approach beyond plain environment variables for production (AWS Secrets Manager, GCP Secret Manager, HashiCorp Vault, Kubernetes secrets with sealed-secrets). Flag as **Minor** if absent, **Major** if the deployment diagram implies credentials are baked into container images.
+- **Error handling and resilience**: When the system names any external dependency (third-party API, payment gateway, another internal service in a microservices/event-driven pattern), Technology Decisions must name a retry policy (backoff strategy, max attempts) and a timeout budget for calls to it. Flag as **Major** if neither is present for a dependency the requirements or Stage 2 error-handling NFR marked as must-not-fail-silently (e.g. payment capture); flag as **Minor** for other external dependencies. When 3+ external dependencies exist, or any one is marked must-not-fail-silently, a circuit breaker or equivalent must be named — flag as **Major** if absent. This is distinct from dimension 3's per-feature sequence-diagram failure paths (`alt` blocks show *what* a caller does when a call fails; this checks whether a *system-level* retry/circuit-breaker/timeout policy exists so that failure path isn't hand-waved as "just retry" with no defined limits).
 
 ### 6. Document and current-intent alignment
 

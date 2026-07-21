@@ -1,12 +1,12 @@
 ---
 name: design
-description: This skill should be used when the user wants to design a new application's architecture or infrastructure — says "design my architecture", "help me plan the architecture", "create architecture diagrams", "I need to plan a new system", or is starting a new project and needs a structured design process. Also trigger when the user mentions HLD, LLD, API contracts, or system design. Guides from requirements gathering through capacity planning, technology selection, diagram generation, low-level design, document saving, and code skeleton implementation.
-allowed-tools: ["Read", "Write", "Edit", "Bash", "Agent", "WebSearch"]
+description: This skill should be used when the user wants to design a new application's architecture or infrastructure — says "design my architecture", "help me plan the architecture", "create architecture diagrams", "I need to plan a new system", or is starting a new project and needs a structured design process. Also trigger when the user mentions HLD, LLD, API contracts, or system design.
+allowed-tools: ["Read", "Write", "Edit", "Bash", "Glob", "Agent", "WebSearch"]
 ---
 
 # Architecture Designer — Main Design Workflow
 
-This skill guides the user through a six-stage design process plus seven post-design steps (review, preview, LLD, document save, implementation), ending with browser-rendered Mermaid diagrams, low-level design artifacts, a reviewed and approved document, and an optional code skeleton.
+This skill guides the user through a six-stage design process plus seven post-design steps (architecture review, browser preview, user confirmation, low-level design, document save, document review, implementation offer), ending with browser-rendered Mermaid diagrams, low-level design artifacts, a reviewed and approved document, and an optional code skeleton.
 
 Always use this skill for new architecture design, even if the user has already started describing their system in the conversation — do not skip straight to diagram generation or freeform advice.
 
@@ -83,7 +83,7 @@ Goal: recommend a specific, justified technology stack.
 
 **Read `references/tech-stacks.md` before making recommendations.** It contains concrete options organized by architecture pattern, scale tier, team size, cloud provider, database type, auth approach, and frontend, plus the citation pattern for tracing each choice back to stages 1–4 (section "How to justify recommendations") — use it to ground suggestions in real technology names rather than abstract categories.
 
-Based on everything gathered in stages 1–4, propose and justify, in order: **(1) architecture pattern** (monolith/modular monolith/microservices/serverless/event-driven — a modular monolith is almost always right for small, early-stage teams); **(2) backend language and framework**, named specifically (e.g. "Fastify 5", not "Node.js"); **(3) frontend** framework and version, if applicable; **(4) database engine(s)** — a high-level call; the database-designer agent designs the full schema in Stage 6; **(5) infrastructure provider and key managed services**, named specifically (e.g. "AWS ECS Fargate", not "containers on AWS"); **(6) supporting services** (queue, cache, search, object storage) — only if the functional requirements need them; **(7) authentication approach**, justified by user roles, security requirements, and team capacity; **(8) observability strategy** — logging aggregator (e.g. ELK, Grafana Loki, Datadog, CloudWatch), metrics/dashboards, and distributed tracing (OpenTelemetry + Jaeger/Tempo) if multiple services or async flows are involved, scaled to what the system's actual operational maturity requires — a small monolith may need only structured logging and one dashboard; **(9) disaster recovery** — RPO/RTO derived from the Stage 2 availability NFR, backup strategy, failover approach.
+Based on everything gathered in stages 1–4, propose and justify, in order: **(1) architecture pattern** (monolith/modular monolith/microservices/serverless/event-driven — a modular monolith is almost always right for small, early-stage teams); **(2) backend language and framework**, named specifically (e.g. "Fastify 5", not "Node.js"); **(3) frontend** framework and version, if applicable; **(4) database engine(s)** — a high-level call; the database-designer agent designs the full schema in Stage 6; **(5) infrastructure provider and key managed services**, named specifically (e.g. "AWS ECS Fargate", not "containers on AWS"); **(6) supporting services** (queue, cache, search, object storage) — only if the functional requirements need them; **(7) authentication approach**, justified by user roles, security requirements, and team capacity; **(8) observability strategy** — logging aggregator (e.g. ELK, Grafana Loki, Datadog, CloudWatch), metrics/dashboards, and distributed tracing (OpenTelemetry + Jaeger/Tempo) if multiple services or async flows are involved, scaled to what the system's actual operational maturity requires — a small monolith may need only structured logging and one dashboard; **(9) disaster recovery** — RPO/RTO derived from the Stage 2 availability NFR, backup strategy, failover approach; **(10) error handling and resilience strategy** — derived from the Stage 2 error-handling NFR: retry policy (backoff strategy, max attempts) for calls to external dependencies named in stages 1–4, a circuit breaker or equivalent for any dependency the NFR marked as must-not-fail-silently, timeout budgets for synchronous calls, and the graceful-degradation behavior (if any) for non-critical features when a dependency is down. Name a specific library/pattern per language (e.g. `opossum` for Node circuit breakers, `resilience4j` for Java, `Polly` for .NET) rather than describing the concept abstractly — scale to what the system actually needs: a monolith with no external dependencies may only need timeout budgets, not a full circuit breaker.
 
 Every recommendation must cite a specific reason from stages 1–4. Present, discuss, adjust, confirm, then proceed.
 
@@ -101,9 +101,9 @@ Every recommendation must cite a specific reason from stages 1–4. Present, dis
 
 ### 6a. Database design (delegate to sub-agent)
 
-Spawn the `architecture-designer:database-designer` agent. Pass it the complete requirements summary (read from `docs/architecture-designer/session.json`, not from memory), the domain entities extracted from the functional requirements, and the access patterns from the business processes. Wait for it to return ERD, index plan, engine recommendation, and secure connection config.
+Spawn the `architecture-designer:database-designer` agent. Pass it the complete requirements summary (read from `docs/architecture-designer/session.json`, not from memory — every relevant top-level key, not stages alone, so its Web3 step can fire when applicable, per `references/web3-guide.md`), the domain entities extracted from the functional requirements, and the access patterns from the business processes. Wait for it to return ERD, index plan, engine recommendation, and secure connection config.
 
-Then spawn `architecture-designer:database-reviewer` with the full database-designer output and the requirements summary. If it returns `DATABASE REVIEW FAILED`, follow `references/session-schema.md` section "Reviewer–fixer cycle procedure" (binary verdict — cycle until `DATABASE REVIEW PASSED`): the fixer receives the review report, the database-designer output, the requirements summary, and the path to `docs/architecture-designer/diagrams.json`. It writes the corrected ERD and indexPlan directly into `diagrams.json` **and returns the corrected schema, ERD, index plan, and connection config as text** — replace the database-designer output held in context with this corrected text; it is what gets embedded in Step 11.
+Then spawn `architecture-designer:database-reviewer` with the full database-designer output and the requirements summary (same scope as above — every relevant top-level key, including `web3` when present). If it returns `DATABASE REVIEW FAILED`, follow `references/session-schema.md` section "Reviewer–fixer cycle procedure" (binary verdict — cycle until `DATABASE REVIEW PASSED`): spawn `architecture-designer:database-fixer`, which receives the review report, the database-designer output, the requirements summary (same scope), and the path to `docs/architecture-designer/diagrams.json`. It writes the corrected ERD and indexPlan directly into `diagrams.json` **and returns the corrected schema, ERD, index plan, and connection config as text** — replace the database-designer output held in context with this corrected text; it is what gets embedded in Step 11.
 
 **The database design embedded in the document (Step 11, section 7) and the diagram set must be the final approved version** — the fixer's corrected text if any cycle ran, otherwise the original output. Never fall back to the original after a fixer cycle has produced a correction; the two must never diverge.
 
@@ -144,13 +144,15 @@ Generate Mermaid diagrams relevant to the project. **All diagrams are optional**
 | Use case         | `flowchart LR`                        | 2+ user roles with distinct feature sets     |
 | Business process | `flowchart TD`                        | Complex workflow with 2+ decision branches   |
 | ERD              | `erDiagram`                           | Any SQL database — always                    |
-| Sequence         | `sequenceDiagram`                     | Always: auth flow + primary transaction      |
+| Sequence         | `sequenceDiagram`                     | Always: auth flow + one per core feature (see requirement below) |
 | Class            | `classDiagram`                        | Non-trivial domain model with business rules |
 | State            | `stateDiagram-v2`                     | Any entity with 3+ lifecycle states          |
 | C4 Context       | `C4Context`                           | Any external integration or 2+ user types    |
 | C4 Container     | `C4Container`                         | 2+ deployable components                     |
 | Deployment       | `flowchart TD` or `architecture-beta` | Cloud or multi-server deployment             |
 | CI/CD pipeline   | `flowchart TD`                        | 2+ deployment environments or staged release |
+
+**Core feature coverage requirement**: every functional requirement confirmed in Stage 2 that represents a distinct user-facing feature — not a minor CRUD sub-step of a feature already covered — must have its own dedicated sequence diagram showing that feature's primary flow, including its failure path (`alt` block). A single "primary transaction" diagram is not sufficient coverage once Stage 2 lists more than one distinct feature: cover them all, not just the most obvious one. Group trivial sub-actions of the same feature into that feature's one diagram rather than fragmenting into near-duplicate diagrams (e.g., "create order" and "cancel order" can share one diagram if both are simple branches of the same flow; "place order" and "process refund" cannot, since they are distinct features). `architecture-reviewer`'s requirements-traceability dimension raises a Major finding for any core feature with no dedicated diagram — see that agent's dimension 3.
 
 **Production-ready requirement**: for any system targeting production workloads, the deployment/infrastructure diagram must show at least one observability sink (from Stage 5) and one DR component (replica, backup target, or cross-region failover) — `architecture-reviewer` raises a Major finding if either is absent.
 
@@ -254,7 +256,7 @@ After saving, append `{ "path": "<absolute path of the saved file>", "createdAt"
 
 ## Step 12 — Document Review
 
-Spawn the `architecture-designer:document-reviewer` agent with the path to the saved document, the requirements summary (all confirmed stages from `session.json`, plus `agentTools`, `stage6b`, `stage6c`, and `web3` when present — every relevant top-level key, not stages alone), and the expected filename. Wait for the verdict.
+Spawn the `architecture-designer:document-reviewer` agent with the path to the saved document, the requirements summary (all confirmed stages from `session.json`, plus `agentTools`, `stage6b`, `stage6c`, and `web3` when present — every relevant top-level key, not stages alone), and the expected filename. Wait for the verdict. (`document-reviewer`/`document-fixer` read `references/document-review-checklist.md` directly for the exact F1–F7/C1–C9 criteria — no need to read it here.)
 
 **If DOCUMENT REVIEW FAILED**: spawn `architecture-designer:document-fixer` with the document path, the review report, the requirements summary, and the path to `docs/architecture-designer/diagrams.json`. After it overwrites the document, rename the file first if the fixer's log says it must be renamed (F6), then follow `references/session-schema.md` section "Reviewer–fixer cycle procedure" (binary verdict — cycle until DOCUMENT REVIEW PASSED) to re-spawn `document-reviewer` and verify.
 
@@ -278,14 +280,12 @@ If yes: scan the working directory for signs of an existing project, per `refere
 
 Before spawning, resolve the applicable remediation plan per `references/session-schema.md` section "Finding the applicable remediation plan", using the approved document's path. Then run `references/session-schema.md` section "Resumable-plan detection procedure" using the approved document's path as `{document}` to produce the **Previous plan path**, if the user chooses to resume.
 
-Spawn `architecture-designer:implementation-planner`. Pass it:
+Then follow `references/session-schema.md` section "Implementation-planner → architecture-implementer spawn sequence" to spawn `implementation-planner` and, once its plan is confirmed, `architecture-implementer`, passing these six inputs:
 - The path to the approved document
 - **Existing project summary** — translated into the agent's expected strategy label: `Fresh start (empty project)` if nothing was found; `Merge` if the user chose (a); `Fresh start (existing project)` if the user chose (b); `User-described layout` if the user chose (c)
 - The technology stack from stage 5
 - **Agent tools** (optional) — `session.json`'s `"agentTools"` array, if present and non-empty
 - **Remediation plan path** — resolved above, if it exists on disk and wasn't ruled out
 - **Previous plan path** — the resumed plan's `path`, if the user chose to continue (omit otherwise)
-
-Wait for it to report the plan was saved and confirmed. Then spawn `architecture-designer:architecture-implementer` with the implementation plan path from that report, plus the same document path, existing project summary, technology stack, agent tools, and remediation plan path. Do not spawn it if implementation-planner did not report a confirmed plan.
 
 If the user says no: let them know they can run `/architecture-designer:review` at any time to revisit and revise the architecture.

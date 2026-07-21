@@ -29,6 +29,7 @@ Goal: separate functional from non-functional requirements.
 - **Security**: What data is sensitive? Are there compliance requirements (GDPR, HIPAA, PCI-DSS, SOC 2)?
 - **Scalability**: Must the system scale horizontally? Is auto-scaling important?
 - **Availability**: What is the acceptable downtime? (e.g., 99.9% SLA = ~8.7 hours/year)
+- **Error handling & resilience**: What should happen when a critical external dependency fails (payment gateway, third-party API, another internal service)? Is a degraded-but-available response acceptable for any feature, or must it fail outright? Are there operations that must never silently fail (e.g., payment capture) versus ones that can retry quietly in the background?
 - **Number of users**: How many concurrent users are expected at launch? At peak?
 
 Summarize as two lists (functional and non-functional), confirm, then proceed.

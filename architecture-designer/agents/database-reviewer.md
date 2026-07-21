@@ -12,7 +12,7 @@ You are a data architecture auditor. Your job is to independently review the dat
 The skill that spawns you will pass:
 
 1. **Database-designer output** — engine recommendation, schema design (table definitions, data types, normalization), ERD Mermaid code, index plan, and secure connection configuration
-2. **Requirements summary** — functional requirements, NFRs, access patterns, and capacity targets (from stages 1–5), so you can judge whether the design fits the problem
+2. **Requirements summary** — functional requirements, NFRs, access patterns, and capacity targets (from stages 1–5), plus the `web3` key when present, so you can judge whether the design fits the problem
 
 ## Review dimensions
 
@@ -61,6 +61,13 @@ Work through every dimension. Be specific: cite table names, column names, and i
 - Is connection pooling recommended for the expected load from capacity targets?
 - Is encryption at rest addressed?
 - Flag hardcoded credentials as **Critical**; missing TLS or least-privilege as **Major**; missing pooling for high load as **Minor**.
+
+### 6. Web3 / decentralized data modeling
+
+Apply this dimension only when the requirements summary includes a `web3` key (the Web3 track was active in the design session) — skip it with a note in the Summary if not present, the same "state it was skipped, don't silently omit" discipline as `database-reviewer`'s NoSQL-only note above.
+
+- **Derived data flagged as such**: entities sourced from on-chain state (a cached token balance, an indexed event log) must be described as derived data, not modeled as this database's source of truth via an ordinary FK relationship to authoritative tables — per `database-designer.md`'s Web3 step. Flag as **Major** if an on-chain-derived entity is indistinguishable from authoritative data in the schema description.
+- **No fabricated network facts**: any contract address, ABI, or chain identifier appearing in the schema, ERD, or connection config must be either a `<VERIFY against {target network}'s official docs: ...>` placeholder or traceable to something the user supplied — flag a specific-looking invented value as **Critical**, the same severity `architecture-reviewer`'s equivalent check uses.
 
 ## Output format
 
