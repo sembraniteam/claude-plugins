@@ -20,9 +20,11 @@ Always use this skill for new architecture design, even if the user has already 
 
 > "I found an existing design session for **[project name from the file, or 'a previous project' if unnamed]** — [description from the file, or omit this clause if unset]. Would you like to continue where we left off, or start a new design from scratch?"
 
-If continuing: brief the user on where the previous session left off and resume from the first incomplete stage. If starting fresh: delete `docs/architecture-designer/session.json` (and `docs/architecture-designer/diagrams.json` if present) first.
+If continuing: brief the user on where the previous session left off and resume from the first incomplete stage. Once stage1–5 are confirmed (the "Session completeness gate" precondition — stage6b/6c are not required, since Stage 6a can already have progressed before either is confirmed), also apply `references/session-schema.md` section "Resuming Steps 6a–13 via `progress`" — a session that died anywhere from Stage 6a through Step 13 should resume there, not restart the whole pipeline, and any `pending` key found means the previous session died mid-stage within 1–6c (same section covers this). If starting fresh: delete `docs/architecture-designer/session.json` (and `docs/architecture-designer/diagrams.json` and `docs/architecture-designer/last-review.md` if present) first.
 
-**Legacy-session backfill check**: if resuming and `schemaVersion`, `project`, or `description` is missing, backfill it immediately here (don't wait for Step 11) — synthesize `description` from whatever `stage1` content is already present per `references/session-schema.md`'s backfill rule, and write it silently, **regardless of how many of stage1–5 are confirmed at this point** (even a session resumed after only stage1–2 was ever confirmed needs this now, since stages 3–6 never re-touch these top-level fields). Re-run this same check immediately before the Stage 6 gate below as a second pass, in case the session was resumed partway and only reached full stage1–5 confirmation after this point in the conversation. Skipping this will otherwise fail the Session completeness gate at Stage 6 with no way to recover, since Stage 1 won't run again.
+**Checkpoint partial answers as you go**: within any of Stages 1–6c, after each individual answer the user gives (not just at the stage's final confirmation), upsert `session.json`'s `pending` key per `references/session-schema.md` section "Mid-stage pending answers" — this is what lets a session resume mid-stage instead of only at stage boundaries. Delete `pending` in the same write that records the stage's real confirmed key.
+
+**Legacy-session backfill check**: run now, and again immediately before the Stage 6 gate below — see `references/session-schema.md` section "Legacy-session backfill check" for the exact trigger and procedure. Skipping this leaves the Stage 6 completeness gate permanently unpassable for that session.
 
 Work through Stages 1–6 in order, then Steps 7–13. At the end of each stage, summarize the user's answers and ask:
 > "Does this summary look correct? Shall we move to the next stage?"
@@ -89,9 +91,9 @@ Every recommendation must cite a specific reason from stages 1–4. Present, dis
 
 **Version grounding**: every technology needs a specific version number. If WebSearch is available, verify the current stable release before writing it down; if not, write **"latest stable — verify at implementation time"** rather than a version from memory that may be stale. The same discipline applies to cloud managed-service names and compliance-specific *vendor/service* claims (e.g., whether a specific service holds a certification like SOC 2 or ISO 27001) — verify with WebSearch or label **"⚠ verify before relying"**. This is a distinct claim from the Stage 2 compliance-grounding rule above (which *regulatory controls* a framework requires, tagged **"⚠ Needs legal/compliance validation"**): a vendor certification is a checkable fact, a regulatory control is a legal interpretation — keep the two tags visually distinct rather than merging them.
 
-**Optional — Web3 / decentralized track**: if Stage 1–2 flagged the application as decentralized/blockchain/on-chain, or a distributed-ledger platform is named as part of the stack above, read `references/web3-guide.md` in full before finalizing the stack. Work through its seven invariant dimensions (see `references/web3-guide.md` for the canonical list) as additional questions — ask about the *target network's* specifics rather than asserting them from memory; every network-specific fact becomes a `<VERIFY against {target network}'s official docs: ...>` placeholder until the user supplies or confirms it. Present the dimensions, discuss, confirm, then write the confirmed answers to `session.json`'s `"web3"` key (create it) at the same time as `"stage5"`. Skip this step entirely — do not create the key — for non-decentralized applications.
+**Optional — Web3 / decentralized track**: if Stage 1–2 flagged the application as decentralized/blockchain/on-chain, or a distributed-ledger platform is named as part of the stack above, read `references/web3-guide.md` in full before finalizing the stack — work through its seven invariant dimensions as additional questions, following its core rule on placeholders vs. asserted facts. Present the dimensions, discuss, confirm, then write the confirmed answers to `session.json`'s `"web3"` key (create it) at the same time as `"stage5"`. Skip this step entirely — do not create the key — for non-decentralized applications.
 
-**Optional — agent tools for implementation**: independent of the Web3 track above and always worth checking even for a decentralized stack (a matched blockchain MCP/skill in `agent-tools.md`'s category table answers "what tool is available," not "what has the user confirmed about the target network" — the two never substitute for each other). Once the stack above is confirmed, read `references/agent-tools.md` and check whether any MCP server or Skill actually available in this environment matches the confirmed stack (e.g. a Go language-server MCP for a Go backend, a Firebase MCP if Firebase was chosen, a Stellar-ecosystem plugin if a Stellar-based stack was chosen). Never invent a tool that isn't actually connected/installed. If any match, propose them to the user as the `agentTools` addendum to the Stage 5 summary and let them drop any entry; if none match, say so and move on — this step never blocks Stage 5 confirmation. Write the confirmed list (or omit the key entirely if empty) to `session.json`'s `"agentTools"` at the same time as `"stage5"`.
+**Optional — agent tools for implementation**: independent of the Web3 track above and always worth checking, even for a decentralized stack (a matched tool answers "what's available," not "what was confirmed about the network" — see `references/agent-tools.md`'s core rule). Once the stack above is confirmed, read `references/agent-tools.md` and follow its procedure to check for MCP servers/Skills actually available in this environment that match the confirmed stack; propose any matches to the user as the `agentTools` addendum to the Stage 5 summary and let them drop any entry — this step never blocks Stage 5 confirmation. Write the confirmed list (or omit the key entirely if empty) to `session.json`'s `"agentTools"` at the same time as `"stage5"`.
 
 ---
 
@@ -103,9 +105,11 @@ Every recommendation must cite a specific reason from stages 1–4. Present, dis
 
 Spawn the `architecture-designer:database-designer` agent. Pass it the complete requirements summary (read from `docs/architecture-designer/session.json`, not from memory — every relevant top-level key, not stages alone, so its Web3 step can fire when applicable, per `references/web3-guide.md`), the domain entities extracted from the functional requirements, and the access patterns from the business processes. Wait for it to return ERD, index plan, engine recommendation, and secure connection config.
 
-Then spawn `architecture-designer:database-reviewer` with the full database-designer output and the requirements summary (same scope as above — every relevant top-level key, including `web3` when present). If it returns `DATABASE REVIEW FAILED`, follow `references/session-schema.md` section "Reviewer–fixer cycle procedure" (binary verdict — cycle until `DATABASE REVIEW PASSED`): spawn `architecture-designer:database-fixer`, which receives the review report, the database-designer output, the requirements summary (same scope), and the path to `docs/architecture-designer/diagrams.json`. It writes the corrected ERD and indexPlan directly into `diagrams.json` **and returns the corrected schema, ERD, index plan, and connection config as text** — replace the database-designer output held in context with this corrected text; it is what gets embedded in Step 11.
+Then spawn `architecture-designer:database-reviewer` with the full database-designer output and the requirements summary (same scope as above — every relevant top-level key, including `web3` when present). **Regardless of verdict**, apply `references/session-schema.md` section "Reviewer–fixer cycle procedure" step 0 as soon as the report is received (records the verdict/cycle/approved output into `progress.reviewCycles.database` and `docs/architecture-designer/last-review.md`; this runs even on a clean first-try pass, not only on failure). If it returns `DATABASE REVIEW FAILED`, continue with that section's steps 1–4 (binary verdict — cycle until `DATABASE REVIEW PASSED`): spawn `architecture-designer:database-fixer`, which receives the review report, the database-designer output, the requirements summary (same scope), and the path to `docs/architecture-designer/diagrams.json`. It writes the corrected ERD and indexPlan directly into `diagrams.json` **and returns the corrected schema, ERD, index plan, and connection config as text** — replace the database-designer output held in context with this corrected text. Step 0 of the reviewer–fixer cycle procedure (triggered above) writes this same final text into `progress.reviewCycles.database.approvedOutput` — that key, not conversation memory, is the durable source Step 11 (section 7) and Stage 6d's ERD both read from.
 
 **The database design embedded in the document (Step 11, section 7) and the diagram set must be the final approved version** — the fixer's corrected text if any cycle ran, otherwise the original output. Never fall back to the original after a fixer cycle has produced a correction; the two must never diverge.
+
+The reviewer–fixer cycle procedure in `references/session-schema.md` records `progress.reviewCycles.database` and `docs/architecture-designer/last-review.md` unconditionally, on every report received — not only on a failing verdict; see that section's step 0. The first time this pass touches `progress` at all (i.e., before that first write), set `progress.owner = "design"` (overwrite in full — this is a new pipeline pass). Once `DATABASE REVIEW PASSED` is reached, record `progress.lastCompletedStep = "step6a"` per `references/session-schema.md` section "Recording `progress.lastCompletedStep`".
 
 ### 6b. Infrastructure as Code (IaC)
 
@@ -133,7 +137,11 @@ After confirmation, append the confirmed decisions to `docs/architecture-designe
 
 ### 6d. Diagram selection and generation
 
-Generate Mermaid diagrams relevant to the project. **All diagrams are optional** — select only those that add clarity for this specific project. After generating, tell the user which were created and why, and which were skipped and why (e.g., "State diagram skipped — no entities with complex status lifecycles identified").
+Select the Mermaid diagrams relevant to the project. **All diagrams are optional** — select only those that add clarity for this specific project.
+
+**Write `docs/architecture-designer/diagrams.json`'s skeleton now**, before generating any diagram's code — `{ title, topic, generatedAt, diagrams: [] }` per `references/diagrams-guide.md` section "`diagrams.json` Schema". Then, for each selected diagram in turn: generate its code, apply the Mermaid compatibility and anti-overlap rules from that same reference immediately to this one diagram (not deferred to a later pass — see 6e below), then append its finished entry to `diagrams.json` and write the file (read-fresh-modify-append-write-whole). This way a session that dies partway through a large diagram set still has every diagram completed so far on disk, not just whatever fits in conversation context.
+
+After generating, tell the user which were created and why, and which were skipped and why (e.g., "State diagram skipped — no entities with complex status lifecycles identified").
 
 **Read `references/diagrams-guide.md` before generating any diagram** — it has the exact attribute format for ERD, full templates per diagram type, common mistakes, and anti-overlap rules. Don't rely on memory for Mermaid syntax.
 
@@ -156,13 +164,11 @@ Generate Mermaid diagrams relevant to the project. **All diagrams are optional**
 
 **Production-ready requirement**: for any system targeting production workloads, the deployment/infrastructure diagram must show at least one observability sink (from Stage 5) and one DR component (replica, backup target, or cross-region failover) — `architecture-reviewer` raises a Major finding if either is absent.
 
-**ERD special requirement**: mark indexed columns via `"idx"` attribute comments and include the index list table (from database-designer) immediately after the ERD block — see `references/diagrams-guide.md` for the exact format.
+**ERD special requirement**: mark indexed columns via `"idx"` attribute comments and include the index list table (from database-designer) immediately after the ERD block — see `references/diagrams-guide.md` for the exact format. Build the ERD from `session.json`'s `progress.reviewCycles.database.approvedOutput` (the final approved schema/ERD/index plan — see `references/session-schema.md` section "Persisting the database design output"), not from conversation memory — this is what makes Stage 6a's output durable if 6d runs in a resumed session where Stage 6a's conversation turn is gone.
 
-### 6e. Mermaid compatibility and diagrams.json
+### 6e. Mermaid compatibility and diagrams.json integrity check
 
-Read `references/diagrams-guide.md` section "Mermaid v11.16 Compatibility Rules" and section "Preventing Node Overlap" before finalizing diagram code — they cover required syntax (e.g. `flowchart` not `graph`, `architecture-beta` icon slots) and anti-overlap rules (ELK layout, `align` directives, label length, C4 layout config).
-
-After applying those rules and finalizing all diagram code, **immediately write `docs/architecture-designer/diagrams.json`** following the schema in `references/diagrams-guide.md` section "`diagrams.json` Schema" (create `docs/architecture-designer/` if needed). This must happen before Step 7 — the architecture-fixer reads and updates the file in place during the review cycle and will fail if the file does not exist.
+`references/diagrams-guide.md` section "Mermaid v11.16 Compatibility Rules" and section "Preventing Node Overlap" (required syntax like `flowchart` not `graph`, `architecture-beta` icon slots, ELK layout, `align` directives, label length, C4 layout config) were already applied per-diagram in 6d as each one was generated and written. This step is a final integrity check, not a write: confirm every diagram selected in 6d has a corresponding entry in `docs/architecture-designer/diagrams.json` and that no entry is partial. This must be true before Step 7 — the architecture-fixer reads and updates the file in place during the review cycle and will fail if the file does not exist or is incomplete. Once confirmed, record `progress.lastCompletedStep = "step6d"` per `references/session-schema.md` section "Recording `progress.lastCompletedStep`".
 
 ---
 
@@ -172,19 +178,19 @@ Spawn the `architecture-designer:architecture-reviewer` agent. Pass it:
 - The full requirements summary — read from `docs/architecture-designer/session.json` (confirmed stages 1–5, the top-level `description`, and `agentTools`/`stage6b`/`stage6c`/`web3` when present — every relevant top-level key, not stages alone, so the reviewer's Web3 dimension can actually fire on this first pass, not only on a later `/architecture-designer:review`). Do not rely solely on conversation memory.
 - All generated Mermaid diagram code, labeled by type
 
-Wait for the review report.
+Wait for the review report. **Regardless of verdict**, apply `references/session-schema.md` section "Reviewer–fixer cycle procedure" step 0 as soon as the report is received (records the verdict/cycle/`diagramsHash` into `progress.reviewCycles.architecture` and `docs/architecture-designer/last-review.md`; this runs even on a clean first-try pass, not only on Critical/Major findings).
 
-**If the report contains CRITICAL or MAJOR items**: follow `references/session-schema.md` section "Reviewer–fixer cycle procedure" (three-tier verdict): spawn `architecture-designer:architecture-fixer` with the review report, the path to `docs/architecture-designer/diagrams.json`, and the requirements summary, then re-spawn `architecture-designer:architecture-reviewer` to verify per that section.
+**If the report contains CRITICAL or MAJOR items**: continue with that section's steps 1–4 (three-tier verdict): spawn `architecture-designer:architecture-fixer` with the review report, the path to `docs/architecture-designer/diagrams.json`, and the requirements summary, then re-spawn `architecture-designer:architecture-reviewer` to verify per that section.
 
 **If the report contains only MINOR items**: note them for the user and proceed.
 
-Do not open the browser preview until the exit condition in section "Reviewer–fixer cycle procedure" is met.
+Do not open the browser preview until the exit condition in section "Reviewer–fixer cycle procedure" is met. Once met, record `progress.lastCompletedStep = "step7"` per `references/session-schema.md` section "Recording `progress.lastCompletedStep`" (the reviewer–fixer cycle procedure already handles `progress.reviewCycles.architecture` and `last-review.md`).
 
 ---
 
 ## Step 8 — Browser Preview
 
-1. **Confirm `diagrams.json` is current** at `docs/architecture-designer/diagrams.json` — written at the end of Stage 6d, possibly updated by architecture-fixer in Step 7. Must follow the schema in `references/diagrams-guide.md` section "`diagrams.json` Schema"; re-write it if step 2 flags issues.
+1. **Confirm `diagrams.json` is current** at `docs/architecture-designer/diagrams.json` — written incrementally through Stage 6d, possibly updated by architecture-fixer in Step 7. Must follow the schema in `references/diagrams-guide.md` section "`diagrams.json` Schema"; re-write it if step 2 flags issues.
 
 2. **Validate diagrams**: run `node <scripts_dir>/validate-diagrams.mjs`. If it exits non-zero or prints `VALIDATION FAILED`, fix the flagged issues and re-write `diagrams.json` — do this regardless of `DEGRADED MODE`, which is not itself a pass/fail signal and can co-occur with a real failure. Do not proceed until it prints `VALIDATION PASSED`. If `DEGRADED MODE` still appears once passed, the real syntax parser was unavailable and some diagrams were only checked heuristically — proceed, but tell the user: "Diagram validation ran in degraded mode (parser dependencies not installed in `scripts/`) — some syntax errors may not have been caught. Run `npm install` in the plugin's `scripts/` directory for full validation coverage."
 
@@ -193,6 +199,8 @@ Do not open the browser preview until the exit condition in section "Reviewer–
 4. **Start the preview server** in the background: `node <scripts_dir>/preview-server.mjs <port>`. It opens the browser automatically — tell the user the URL (e.g., `http://localhost:3000`).
 
 5. **Do NOT create a stop-server script.** Leave the server running.
+
+6. Record `progress.lastCompletedStep = "step8"` per `references/session-schema.md` section "Recording `progress.lastCompletedStep`".
 
 ---
 
@@ -211,7 +219,7 @@ If the user requests revisions:
 - Re-run `node <scripts_dir>/validate-diagrams.mjs` — same gate as Step 8; fix flagged issues and re-validate before continuing. Do not tell the user to refresh until it passes.
 - Tell the user to refresh their browser, then ask the confirmation question again
 
-Repeat until the user confirms the design is correct.
+Repeat until the user confirms the design is correct. Once confirmed, record `progress.lastCompletedStep = "step9"` per `references/session-schema.md` section "Recording `progress.lastCompletedStep`".
 
 ---
 
@@ -221,9 +229,13 @@ Repeat until the user confirms the design is correct.
 
 Derive the LLD directly from the confirmed HLD diagrams — do not invent endpoints or rules that are not visible in the sequence, class, or business-process diagrams.
 
+**Resuming**: if `session.json`'s `lld` key already has a non-empty `confirmedGroups` list (a previous session died partway through this step), determine the applicable group list first — all five groups for microservices/event-driven architectures (per stage5's confirmed `architecturePattern`), or the four groups excluding `interServiceContracts` for a monolith/modular monolith, since that group is legitimately never confirmed (and never added to `confirmedGroups`) for those patterns. Then skip straight to the first *applicable* group not yet in `confirmedGroups`, in the fixed order below, rather than re-confirming groups already done. (Checking positional order 1–5 without this filter would wrongly treat a monolith's legitimately-skipped group 4 as "not yet reached" even when group 5 is already confirmed and the LLD is actually complete.)
+
 Work through the five artifact groups in order, presenting each to the user and confirming (or revising) before moving to the next: **(1) API contracts** — one entry per endpoint visible in the sequence diagrams; **(2) business rules** — one entry per non-trivial operation, skipping simple CRUD; **(3) DTOs** — only for complex or shared bodies used by multiple endpoints; **(4) inter-service contracts** — only for microservices/event-driven architectures, omitted entirely for monoliths; **(5) error catalog** — derived from errors already referenced above, never invented fresh.
 
-After the user confirms all groups, the complete LLD is ready to include in the architecture document.
+**Persist each group as soon as it's confirmed** — do not wait until all five are done. After each group is confirmed, write it into `session.json`'s `lld` key (create it if absent) and add that group's name to `lld.confirmedGroups` — read-fresh-modify-write-whole, same discipline as every other `session.json` write. For a monolith where group 4 is skipped entirely, do not add `interServiceContracts` to `confirmedGroups` and omit that field from `lld`.
+
+After the user confirms all applicable groups, record `progress.lastCompletedStep = "step10"` per `references/session-schema.md` section "Recording `progress.lastCompletedStep`" — the complete LLD is now in `session.json`'s `lld` key, ready to include in the architecture document.
 
 ---
 
@@ -250,21 +262,25 @@ After saving, append `{ "path": "<absolute path of the saved file>", "createdAt"
 
 - `dd-mmm-y` format: day is zero-padded (e.g., `05`), month is 3-letter capitalized abbreviation (`Jan`, `Feb`, `Mar`, `Apr`, `May`, `Jun`, `Jul`, `Aug`, `Sep`, `Oct`, `Nov`, `Dec`), year is 4 digits. Example: `05-Jul-2026`.
 
-**Document body sections (in order)**: follow `references/document-template.md` — ten fixed sections from Project Overview through Low-Level Design, each pulling from the corresponding stage or sub-agent output, plus an 11th conditional "Decentralized Architecture Considerations" section when the Web3 track was active.
+**Document body sections (in order)**: follow `references/document-template.md` — ten fixed sections from Project Overview through Low-Level Design, each pulling from the corresponding stage or sub-agent output (section 7 from `session.json`'s `progress.reviewCycles.database.approvedOutput`, section 10 from the `lld` key), plus an 11th conditional "Decentralized Architecture Considerations" section when the Web3 track was active.
+
+Record `progress.lastCompletedStep = "step11"` per `references/session-schema.md` section "Recording `progress.lastCompletedStep`".
 
 ---
 
 ## Step 12 — Document Review
 
-Spawn the `architecture-designer:document-reviewer` agent with the path to the saved document, the requirements summary (all confirmed stages from `session.json`, plus `agentTools`, `stage6b`, `stage6c`, and `web3` when present — every relevant top-level key, not stages alone), and the expected filename. Wait for the verdict. (`document-reviewer`/`document-fixer` read `references/document-review-checklist.md` directly for the exact F1–F7/C1–C9 criteria — no need to read it here.)
+Spawn the `architecture-designer:document-reviewer` agent with the path to the saved document, the requirements summary (all confirmed stages from `session.json`, plus `agentTools`, `stage6b`, `stage6c`, and `web3` when present — every relevant top-level key, not stages alone), and the expected filename. Wait for the verdict. (`document-reviewer`/`document-fixer` read `references/document-review-checklist.md` directly for the exact F1–F7/C1–C9 criteria — no need to read it here.) **Regardless of verdict**, apply `references/session-schema.md` section "Reviewer–fixer cycle procedure" step 0 as soon as the verdict is received (records the verdict/cycle/`documentHash` into `progress.reviewCycles.document` and `docs/architecture-designer/last-review.md`; this runs even on a clean first-try pass, not only on failure).
 
-**If DOCUMENT REVIEW FAILED**: spawn `architecture-designer:document-fixer` with the document path, the review report, the requirements summary, and the path to `docs/architecture-designer/diagrams.json`. After it overwrites the document, rename the file first if the fixer's log says it must be renamed (F6), then follow `references/session-schema.md` section "Reviewer–fixer cycle procedure" (binary verdict — cycle until DOCUMENT REVIEW PASSED) to re-spawn `document-reviewer` and verify.
+**If DOCUMENT REVIEW FAILED**: continue with that section's steps 1–4: spawn `architecture-designer:document-fixer` with the document path, the review report, the requirements summary, and the path to `docs/architecture-designer/diagrams.json`. After it overwrites the document, rename the file first if the fixer's log says it must be renamed (F6), then re-spawn `document-reviewer` and verify (binary verdict — cycle until DOCUMENT REVIEW PASSED).
 
 **Once it passes**: update the `Status` column in the metadata table from `Draft` to `Approved`. The table should now read:
 
 ```
 | {date} | 1.0 | Approved | - | - |
 ```
+
+Record `progress.lastCompletedStep = "step12"` per `references/session-schema.md` section "Recording `progress.lastCompletedStep`".
 
 ---
 
@@ -289,3 +305,5 @@ Then follow `references/session-schema.md` section "Implementation-planner → a
 - **Previous plan path** — the resumed plan's `path`, if the user chose to continue (omit otherwise)
 
 If the user says no: let them know they can run `/architecture-designer:review` at any time to revisit and revise the architecture.
+
+Either way, record `progress.lastCompletedStep = "step13"` per `references/session-schema.md` section "Recording `progress.lastCompletedStep`" — this pipeline pass is complete.

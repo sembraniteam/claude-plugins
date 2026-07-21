@@ -32,7 +32,11 @@ Read the implementation plan file at the received path in full.
 - Extract every `- [ ]` item, grouped by the section headings (Data models, API routes, Configuration, Infrastructure, Setup and run commands, Modifications to existing files, Test files). These are the files you will create or modify.
 - Items already marked `- [~]` (skipped, e.g. present in merge mode) are not re-processed — leave them as-is.
 
-Then read the architecture document in full to get the technical detail needed to actually write each file's contents — the plan tells you *what* to create, the document tells you *how*.
+**Detect an interrupted prior run**: for every plain `- [ ]` item under Data models, API routes, Configuration, Infrastructure, or Test files (not `[~]`, not `FAIL`, and not the "Modifications to existing files" or "Setup and run commands" sections — see why below), check whether its file already exists on disk. Under the write-through checkpointing regime (see Step 2), a checkbox flips to `[x]` in the same operation as the file write, so a plain `[ ]` should never have a file behind it in these sections. A `[ ]` item whose file exists anyway is the fingerprint of a crash in the narrow window between writing that file and flipping its checkbox. Treat every such item as an **auto-overwrite candidate**: rewrite it in Step 2 without asking the user, and append "— leftover from interrupted run, rewritten" to its entry in the final summary's "Files created" list. Do not route these through any per-file overwrite/skip prompt — that confirmation is for genuine foreign collisions (files the user or another process created), which implementation-planner already resolved before this plan was saved; this is this agent's own unfinished output.
+
+Two sections are excluded from this check because a `[ ]` item there having an existing file is normal, not a crash signal: "Modifications to existing files" targets files that are supposed to already exist — that's what makes them modifications, not new files — on every run, crashed or not. "Setup and run commands" entries are npm script names, not filesystem paths, so `test -f` against them is meaningless.
+
+Read the architecture document's metadata and its Requirements Summary / Technology Decisions sections now — enough to understand overall scope and constraints. Defer reading the document's detailed per-group sections (ERD field lists, sequence diagram messages, connection config, etc.) until Step 2 reaches the matching file group. For a short document, reading it in full here is harmless; for a large one, reading it cover-to-cover before writing a single file burns context up front and pushes this sub-agent session toward compaction sooner than necessary.
 
 **Locate the pre-created tasks**: implementation-planner already created one task per file group via TaskCreate, per `references/session-schema.md` section "Implementation task-group table". Use TaskList to find them by that same title list — do not create duplicate tasks. If implementation-planner's report says TaskCreate was unavailable (or TaskList itself errors here), skip task tracking entirely for this run — proceed straight to Step 2 and implement from the plan file's own checklist, which is authoritative regardless of task-tool availability.
 
@@ -43,6 +47,12 @@ Proceed immediately to Step 2 — no additional user input needed.
 Implement every `- [ ]` item from the plan completely. Do not skip "obvious" ones.
 
 **Task lifecycle rule** (skip entirely if task tracking was unavailable per Step 1 above): Before starting each file group, use TaskUpdate to mark the corresponding task (located in Step 1) `in_progress`. After writing all files in that group (verified with a quick `ls`), check whether that section's heading in the plan is immediately followed by a `> _Continues in ...— do not mark ... completed...` note (implementation-planner's "Edge case — a section split across parts" marker). If present, leave the task `in_progress` — this part only covers the section's first slice, and the part named in the note is responsible for closing it out. Otherwise use TaskUpdate to mark it `completed`. Do this for every group in sequence.
+
+**Write-through checkpointing rule**: immediately after writing a file and confirming it with `test -f <path> && echo EXISTS || echo MISSING`, flip that item's checkbox from `[ ]` to `[x]` in the plan file with a targeted edit — do not wait until the final verification pass to do this in bulk. `Status` stays `In progress` until every group is done and the final verification pass (see "Verification and output") runs; only that pass flips `Status` to `Complete`. This makes the plan file a write-ahead log: if the run is interrupted at any point, resuming means continuing from the first remaining `[ ]` — not re-deriving progress from a disk scan. The added cost is one small repeated edit to a single markdown file, far cheaper than regenerating files whose completion was lost. If a file fails to write or fails the `test -f` check, leave the item as `[ ]` (or mark `[ ] FAIL: {reason}` immediately if the failure is terminal for that file) — never flip to `[x]` on an unconfirmed write.
+
+**Resume-marker row**: in the same edit as each checkbox flip, also update the plan's metadata table — set `Last updated` to the current ISO timestamp and `Last verified item` to the file path just confirmed. This lets a human opening the plan after an interruption see immediately how far the run got, and distinguishes a plan a crash interrupted from one that was never started.
+
+**Per-group document reads**: when starting a file group whose detailed document section wasn't already read in Step 1 (ERD for Data models, sequence diagrams for API routes, connection config for Configuration, etc.), read that section now, before writing the group's files.
 
 ### What to implement
 
@@ -84,7 +94,7 @@ Implement every `- [ ]` item from the plan completely. Do not skip "obvious" one
 
 **Modifications to existing files** (only when a remediation plan is provided):
 - For each `[ ]` item in the *implementation plan's* "Modifications to existing files" section (which corresponds to a `[x]` finding in the remediation plan): read the current file, apply the targeted change to align the code with the corrected diagrams, verify it was written.
-- Mark `[x]` in the implementation plan. In the remediation plan file, the checkbox is already `[x]` — update only the suffix: replace `*(addressed in revision — code pending)*` with `*(code aligned)*`. This makes it possible to tell at a glance which findings are fully complete (diagram + code) versus only diagram-fixed.
+- Mark `[x]` in the implementation plan immediately after verifying the change — the same write-through timing as new files (see the Write-through checkpointing rule in Step 2), not deferred to the final verification pass. In the remediation plan file, the checkbox is already `[x]` — update only the suffix, in that same edit: replace `*(addressed in revision — code pending)*` with `*(code aligned)*`. This makes it possible to tell at a glance which findings are fully complete (diagram + code) versus only diagram-fixed, and — combined with the immediate timing — ensures that status is never stale after an interruption.
 - If a modification cannot be applied cleanly (e.g., the file structure has diverged too far): mark `[ ] FAIL: {reason}` in the implementation plan and leave the remediation plan suffix as `*(addressed in revision — code pending)*` — do not flip it to `*(code aligned)*`. List the failure under "Files that failed" in the final summary. Do not silently skip it.
 - Never rewrite an entire file to apply a remediation change — make the minimal targeted edit that closes the finding.
 
@@ -111,16 +121,17 @@ This does not replace the plan: still create every file the plan lists regardles
 
 ## Verification and output
 
-Before writing the final summary, run a verification pass, then update the plan file:
-- Change `Status` to `Complete`
-- Mark each successfully created file as `- [x]`
-- Leave skipped/already-present files as `- [~]`
-- Leave any file not created (FAIL) as `- [ ] FAIL: {reason}`
+Before writing the final summary, run a verification pass over the plan file. Most items should already be `[x]` from Step 2's write-through checkpointing — this pass double-checks rather than performs the primary marking, and catches anything Step 2 missed (e.g. a checkpoint edit that itself failed to apply):
 
-**New files** — for every file path from the plan's `- [ ]` items *except the "Setup and run commands" section* (whose entries are npm script names, not filesystem paths — verify those instead by confirming `package.json` exists and its `scripts` field contains the expected keys, marking `[x]` or `[ ] FAIL` on that basis), check whether it exists on disk using `test -f <path> && echo EXISTS || echo MISSING` (or `ls <path>`). The result is binary — there is no middle ground:
+- Re-confirm every `[x]` item's file still exists. If one is somehow missing despite being marked (should not happen under the write-through regime, but is a real signal if it does), demote it to `[ ] FAIL: {reason}`.
+- Leave skipped/already-present files as `- [~]`.
+- Leave any file not created as `- [ ] FAIL: {reason}` (Step 2 should already have set this for a confirmed failure; this pass catches anything missed).
+- Once every item is accounted for, change `Status` to `Complete`.
 
-- **EXISTS** → include in the files-created list; mark `[x]` in the plan.
-- **MISSING** → this is a **FAIL**, not a skip. It means a file that was supposed to be created is absent. List it under "Files that failed" with the reason. Mark it `[ ] FAIL: {reason}` in the plan. Do not label a failed file as "skipped" — "skipped" (`[~]`) is only for files already present on disk in merge mode that were intentionally left untouched.
+**New files** — re-verify every file path the plan lists as created *except the "Setup and run commands" section* (whose entries are npm script names, not filesystem paths — verify those instead by confirming `package.json` exists and its `scripts` field contains the expected keys, marking `[x]` or `[ ] FAIL` on that basis), by checking whether it exists on disk using `test -f <path> && echo EXISTS || echo MISSING` (or `ls <path>`). The result is binary — there is no middle ground:
+
+- **EXISTS** → include in the files-created list; confirm `[x]` in the plan (it should already be set from Step 2 — set it now if it somehow isn't).
+- **MISSING** → this is a **FAIL**, not a skip. It means a file that was supposed to be created is absent. List it under "Files that failed" with the reason. Mark it `[ ] FAIL: {reason}` in the plan (demoting from `[x]` if Step 2 had marked it, since the file no longer confirms on disk). Do not label a failed file as "skipped" — "skipped" (`[~]`) is only for files already present on disk in merge mode that were intentionally left untouched.
 
 **Requirements and document conformance re-check** — file existence alone does not confirm the skeleton matches what was designed; re-check content against the architecture document before writing the summary:
 - For every entity in the document's ERD, confirm the corresponding model/schema file actually declares the same fields, types, and relationships — not just that a file with a plausible name exists.
@@ -129,10 +140,10 @@ Before writing the final summary, run a verification pass, then update the plan 
 - Where the document specifies a particular technology, engine, or library (e.g., "PostgreSQL", "Redis for sessions"), confirm the generated configuration files (`package.json` dependencies, `docker-compose.yml` services, connection strings) name that exact technology — flag any substitution as a deviation in the summary rather than letting it pass silently.
 - Where the document's Technology Decisions name an error-handling/resilience strategy (retry policy, circuit breaker, timeouts), confirm the named library actually appears in `package.json`/dependencies and is actually wired into the calls it was chosen for — not just present in a dependency list while the call site still has a bare TODO. A named-but-unused resilience library is a gap for "Requirements not yet reflected in code", same as an uncovered functional requirement.
 
-**Modifications** (when a remediation plan was provided) — for each item in "Modifications to existing files":
+**Modifications** (when a remediation plan was provided) — for each item in "Modifications to existing files", most of which should already be `[x]`/`*(code aligned)*` from Step 2's immediate marking; this pass re-confirms rather than performs the primary update:
 - Re-read the relevant section of the file and confirm the change is present.
-- **MODIFIED** → mark `[x]` in the implementation plan; in the remediation plan update the suffix from `*(addressed in revision — code pending)*` to `*(code aligned)*`.
-- **NOT MODIFIED** → mark `[ ] FAIL: {reason}` in the implementation plan; leave the remediation plan suffix as `*(addressed in revision — code pending)*`. List under "Files that failed".
+- **MODIFIED** → confirm `[x]` in the implementation plan and `*(code aligned)*` in the remediation plan (set now if Step 2 somehow missed it).
+- **NOT MODIFIED** → mark `[ ] FAIL: {reason}` in the implementation plan; leave (or revert) the remediation plan suffix as `*(addressed in revision — code pending)*`. List under "Files that failed".
 
 **Agent-tools usage log** (only when `agentTools` was passed and non-empty) — the tools recorded in `session.json` were selected so you would use them while implementing, not merely be aware of them. For the log to be verifiable, report actual interaction, not intention. For **every** entry in the passed `agentTools` array, record one of exactly three outcomes — the result is not a free-form summary:
 

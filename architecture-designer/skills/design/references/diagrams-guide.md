@@ -36,30 +36,31 @@ See "Preventing Node Overlap" below for layout-specific anti-overlap rules (ELK 
 
 ## `diagrams.json` Schema
 
-After applying layout rules and finalizing all diagram code, write `docs/architecture-designer/diagrams.json` (create `docs/architecture-designer/` if needed) following this schema:
+**Write incrementally, not as one batch at the end.** Diagram generation for a large project can run long, and a session that dies mid-generation should not lose every diagram produced so far. As soon as the set of diagram types to generate is finalized (before generating any diagram's code), write `docs/architecture-designer/diagrams.json` (create `docs/architecture-designer/` if needed) with just the top-level fields and an empty `diagrams` array:
+
+```json
+{ "title": "<Project Title>", "topic": "<project-topic-kebab>", "generatedAt": "<ISO 8601 timestamp>", "diagrams": [] }
+```
+
+Then, for each diagram in turn: generate its code, apply the compatibility rules above and the anti-overlap rules below to that diagram immediately (not deferred to a later batch pass), then read the file fresh, append that diagram's completed entry to the `diagrams` array, and write the whole file back (same read-fresh-modify-write-whole discipline `session.json` uses — see `references/session-schema.md`). By the time the last diagram is generated, the file already holds everything; there is no separate final "write it all" step, only a final integrity check that every planned diagram made it in before proceeding to Step 7.
+
+Each entry appended to the `diagrams` array follows this schema:
 
 ```json
 {
-  "title": "<Project Title>",
-  "topic": "<project-topic-kebab>",
-  "generatedAt": "<ISO 8601 timestamp from JavaScript Date — never the shell date command>",
-  "diagrams": [
-    {
-      "id": "<kebab-id>",
-      "title": "<Human-readable title>",
-      "description": "<One sentence describing what this diagram shows>",
-      "details": "<Multi-paragraph explanation — see field guide below>",
-      "rationale": "<Why this diagram was created — see field guide below>",
-      "indexPlan": [
-        { "name": "<index name>", "table": "<table name>", "columns": "<column(s)>", "type": "<index type>", "reason": "<justification>" }
-      ],
-      "code": "<Raw Mermaid syntax — newlines as \\n>"
-    }
-  ]
+  "id": "<kebab-id>",
+  "title": "<Human-readable title>",
+  "description": "<One sentence describing what this diagram shows>",
+  "details": "<Multi-paragraph explanation — see field guide below>",
+  "rationale": "<Why this diagram was created — see field guide below>",
+  "indexPlan": [
+    { "name": "<index name>", "table": "<table name>", "columns": "<column(s)>", "type": "<index type>", "reason": "<justification>" }
+  ],
+  "code": "<Raw Mermaid syntax — newlines as \\n>"
 }
 ```
 
-`generatedAt`: use the JavaScript `new Date().toISOString()` equivalent — format as `YYYY-MM-DDTHH:MM:SS.mmmZ`. Never use shell commands.
+`generatedAt` (top-level, written once when the skeleton is created): use the JavaScript `new Date().toISOString()` equivalent — format as `YYYY-MM-DDTHH:MM:SS.mmmZ`. Never use shell commands.
 
 **Field guide for `details`, `rationale`, and `indexPlan`** — all three are rendered in the browser preview directly below the diagram:
 

@@ -1,0 +1,16 @@
+{
+  "description": "Reminds Claude to persist architecture-designer workflow state before context compaction discards conversation-only progress",
+  "hooks": {
+    "PreCompact": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "If the architecture-designer:design or architecture-designer:review skill is currently mid-workflow (anywhere from Stage 6a through Step 13, or its review-skill equivalent step 4b through 4h), persist its state to disk right now, before compaction discards conversation-only context: update docs/architecture-designer/session.json's `progress`, `lld`, and `pending` keys per the architecture-designer plugin's skills/design/references/session-schema.md, and write the current unresolved reviewer report to docs/architecture-designer/last-review.md if a reviewer-fixer cycle is in progress. If neither skill is currently active, take no action."
+          }
+        ]
+      }
+    ]
+  }
+}

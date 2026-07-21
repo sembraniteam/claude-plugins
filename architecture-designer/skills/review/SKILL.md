@@ -18,20 +18,11 @@ Check for `docs/architecture-designer/session.json`:
 
 - **If the file exists**: read it in full, then run `python3 <scripts_dir>/validate-session.py` and show its output — this is a hard gate; do not proceed to Step 1 until it reports `SESSION CHECK PASSED`. See `design/references/session-schema.md` section "Session completeness gate" for what the script checks and how to resolve a failure (e.g. running `/architecture-designer:design` to fill the gaps). The session contents serve as the original requirements baseline for the architecture-reviewer and any revision agents — reviewing against a known-incomplete baseline risks misjudging drift.
 
+- **Also check for an interrupted revision in progress**: if `session.json` contains a `progress` key whose `lastCompletedStep` is anything before `step11` (a document save) **and** its `owner` is `"review"`, a previous *revision* session died mid-pipeline. Apply `design/references/session-schema.md` section "Resuming Steps 6a–13 via `progress`" to resume Step 4's revision flow from where it left off instead of restarting Step 4a — including validating any recorded `reviewCycles` verdicts' hashes and checking `docs/architecture-designer/last-review.md` for an unresolved fixer cycle. If `progress.owner` is instead `"design"` (or absent) with `lastCompletedStep` before `step11`, this is an *original* design pipeline that never finished — not a review revision — since `review` never touches `progress` before step 4b and no revision document was ever produced to revise. Do not attempt to resume Step 4 from this state (there is no revision scope, no document to list in Step 2a). Instead tell the user: "It looks like a previous `/architecture-designer:design` session didn't finish (no architecture document was ever saved). Run `/architecture-designer:design` to complete it before reviewing." and stop here rather than proceeding to Step 1.
+
 - **If the file does not exist**: this gate only applies when `session.json` exists — proceed without session context. Inform the user: "No session.json found — I won't have the original confirmed requirements on hand. The review will rely on the document and/or codebase alone. Sharing the original requirements now will improve the review quality."
 
-**Check for an existing remediation plan**: if `session.json` contains a `"remediationPlans"` array, scan **every** entry (not just the last one — entries are objects, or legacy bare-string paths in older files; see the schema and tolerant-read rule in `design/references/session-schema.md`), skipping any whose `path` no longer exists on disk and any whose on-disk `Status` already reads `Superseded by ...` (already closed out per `design/references/session-schema.md` section "Superseding a remediation plan", so not re-offered). Checking only the latest entry would miss an older plan whose deferred items the user previously declined to carry forward — that plan is left un-superseded on purpose (see the "if the user says no" branch below) and must keep surfacing on every future scan, per `design/references/session-schema.md`'s "left untouched... re-offered on the next review session's pre-Step-1 check" guarantee. This mirrors how "Orphaned plans from a prior document revision" in that same file scans all matching entries rather than assuming the latest is the only one relevant. For each remaining entry:
-
-- **Cross-check against the implementation plan first**: apply `design/references/session-schema.md` section "Checking whether a remediation plan is fully resolved". If resolved, treat this entry as fully complete (see below) without re-parsing its own checkboxes. Otherwise, fall through to inspecting the remediation plan file directly, as below.
-- **If an entry has `[ ]` (deferred) items**: surface it before Step 1 (one prompt per entry with deferred items, if more than one). **At most one entry can be carried forward and superseded per review session** — `session.json`'s `remediationPlans` schema gives each new entry a single `supersedes` path, so only the one plan named there actually gets closed out when step 4e saves; a second "yes" in the same session would have no `supersedes` slot to record it in, and that plan would incorrectly keep surfacing as un-superseded forever despite its items having been addressed. So: prompt about the most recent entry with deferred items first:
-  > "I found a previous remediation plan at `{path}` with **{N} deferred item(s)** not yet addressed. Here they are:
-  > {list of [ ] items}
-  > Would you like to include these in this review session?"
-  If the user says yes, carry the deferred items forward into step 4a (revision scope) so they can be addressed or remain deferred, and remember this plan's path as the one step 4e's new plan will supersede. **If the user says no**: proceed without carrying this plan's items forward — do not mark it `Superseded`; its deferred items remain outstanding and this same scan surfaces it again on the next review session. **If any other, older entries also have deferred items**: note them to the user for awareness (path and count only) but do not offer to carry them forward in this same session — each can only be picked up as the single carried-forward plan in a future review session, one at a time.
-- **If zero entries remain after filtering** (nothing matched, or every match was already superseded/missing from disk): proceed to Step 1 without comment.
-- **If every remaining entry is either fully resolved or has every item `[x] *(code aligned)*`** (nothing deferred anywhere): note it briefly to the user:
-  > "Previous remediation plan(s) are fully complete — all findings have been code-aligned. Starting fresh review."
-  Then continue to Step 1.
+**Check for an existing remediation plan**: if `session.json` contains a `"remediationPlans"` array, run `design/references/session-schema.md` section "Pre-review remediation-plan carry-forward check" — it scans every entry (not just the latest), may prompt to carry one plan's deferred items into this session's revision scope (step 4a), and reports back one of: nothing to carry forward, everything already resolved, or a specific plan's deferred items to fold in.
 
 ---
 
@@ -114,6 +105,8 @@ If the user agrees to revise (or, for option (b) alone, agrees to formalize):
 
 ### 4a. Gather revision scope
 
+**Checkpoint partial answers as you go**: after each individual answer the user gives below (not just once this step is fully confirmed), upsert `session.json`'s `pending` key per `design/references/session-schema.md` section "Mid-stage pending answers", using `"review-4a"` as the stage id. Delete `pending` once this step's scope is confirmed and 4b begins.
+
 Ask:
 - Which findings should be addressed in this revision? (Include any deferred items carried forward from the pre-Step-1 remediation-plan check, if the user opted in.) For option (b) alone, there are no findings yet — skip this question; the Reconstructed Architecture Summary from Step 2b is the starting point for 4b to diagram, not a set of findings to address.
 - Are there new requirements that should be incorporated?
@@ -123,11 +116,15 @@ Ask:
 
 ### 4b. Update diagrams
 
+**First touch of `progress` this revision pass**: if this is the first time this revision touches `session.json`'s `progress` key, set `progress.owner = "review"` (overwrite in full — this is a new pipeline pass, distinct from whatever `design` last left there) per `design/references/session-schema.md`'s `progress` paragraph and "Resuming Steps 6a–13 via `progress`".
+
+**Write each updated diagram to `diagrams.json` as soon as it's finished, not batched at 4d** — read the file fresh, update or append that one diagram's entry, and write the whole file back (same incremental, read-fresh-modify-write-whole discipline `design/SKILL.md` Stage 6d uses — see `design/references/diagrams-guide.md` section "`diagrams.json` Schema"). A session that dies partway through a multi-diagram revision should not lose diagrams already finished.
+
 **For option (b) alone** (formalizing a Reconstructed Architecture Summary into a first document, nothing to "update" yet): generate a fresh diagram set from that summary instead of editing an existing one — apply `design/SKILL.md` Stage 6d's diagram-type selection table and Stage 6a-6e's generation steps (database design, diagram rules, `diagrams.json` schema) as if this were a first design session, using the reconstructed architecture pattern, tech stack, and components as the input in place of stages 1–5. Then continue to 4c as normal.
 
 Otherwise, based on the revision scope:
 - For architecture changes: update the affected Mermaid diagrams (C4, sequence, deployment)
-- For database changes: re-spawn the `architecture-designer:database-designer` agent with the same three inputs `design/SKILL.md` Stage 6a passes on first use — the updated requirements summary (every relevant top-level key, not stages alone, including `web3` when present — same scope and fallback as 4c below), the domain entities extracted from the (now updated) functional requirements, and the access patterns from the business processes — then validate with `architecture-designer:database-reviewer` (same requirements-summary scope). If the reviewer returns `DATABASE REVIEW FAILED`, follow `design/references/session-schema.md` section "Reviewer–fixer cycle procedure" (binary verdict — cycle until `DATABASE REVIEW PASSED`): the fixer receives the review report, the database-designer output, the requirements summary (same scope), and the path to `docs/architecture-designer/diagrams.json`. It writes the corrected ERD and indexPlan directly into `diagrams.json` **and returns the corrected schema, ERD, index plan, and connection config as text — replace the database-designer output held in context with this corrected text; it is what gets embedded in the revised document (step 4f), not the original.**
+- For database changes: re-spawn the `architecture-designer:database-designer` agent with the same three inputs `design/SKILL.md` Stage 6a passes on first use — the updated requirements summary (every relevant top-level key, not stages alone, including `web3` when present — same scope and fallback as 4c below), the domain entities extracted from the (now updated) functional requirements, and the access patterns from the business processes — then validate with `architecture-designer:database-reviewer` (same requirements-summary scope). **Regardless of verdict**, apply `design/references/session-schema.md` section "Reviewer–fixer cycle procedure" step 0 as soon as the report is received (records the verdict/cycle/approved output into `progress.reviewCycles.database` and `docs/architecture-designer/last-review.md`; this runs even on a clean first-try pass, not only on failure). If the reviewer returns `DATABASE REVIEW FAILED`, continue with that section's steps 1–4 (binary verdict — cycle until `DATABASE REVIEW PASSED`): the fixer receives the review report, the database-designer output, the requirements summary (same scope), and the path to `docs/architecture-designer/diagrams.json`. It writes the corrected ERD and indexPlan directly into `diagrams.json` **and returns the corrected schema, ERD, index plan, and connection config as text — replace the database-designer output held in context with this corrected text; it is what gets embedded in the revised document (step 4f), not the original.**
 - For new features: add new diagram elements as needed
 - For removed components: remove the relevant elements
 - If 4a flagged a change in decentralization status: read `design/references/web3-guide.md`, work through its seven dimensions against the revised stack, and update `session.json`'s `web3` key accordingly — create it if the revision newly added a decentralized component, overwrite it in full if an existing dimension's answer changed, or delete it entirely if the decentralized component was removed. Update the architecture diagram's on-chain/off-chain boundary to match (dimension 3).
@@ -140,14 +137,18 @@ Spawn the `architecture-designer:architecture-reviewer` agent with:
 - The user's current context/goals and any new requirements or constraints gathered in step 4a — kept as its own item, separate from the requirements summary above, so the agent can tell it received current-intent context (its Dimension 6 input) rather than folding it into the original baseline.
 - All updated diagrams
 
-If Critical or Major findings are returned: follow `design/references/session-schema.md` section "Reviewer–fixer cycle procedure" (three-tier verdict): spawn `architecture-designer:architecture-fixer` with the review report, `docs/architecture-designer/diagrams.json`, and the requirements summary, then re-spawn the reviewer to verify per that section.
+**Regardless of verdict**, apply `design/references/session-schema.md` section "Reviewer–fixer cycle procedure" step 0 as soon as the report is received (records the verdict/cycle/`diagramsHash` into `progress.reviewCycles.architecture` and `docs/architecture-designer/last-review.md`; this runs even on a clean first-try pass, not only on Critical/Major findings).
+
+If Critical or Major findings are returned: continue with that section's steps 1–4 (three-tier verdict): spawn `architecture-designer:architecture-fixer` with the review report, `docs/architecture-designer/diagrams.json`, and the requirements summary, then re-spawn the reviewer to verify per that section.
+
+Once passed, record `progress.lastCompletedStep = "step7"` per `design/references/session-schema.md` section "Recording `progress.lastCompletedStep`".
 
 ### 4d. Browser preview
 
-1. Update `docs/architecture-designer/diagrams.json` with the revised diagrams (same JSON format as the design workflow, including `details`, `rationale`, and — for ERD diagrams — `indexPlan` rows). Skip any diagram the database-fixer or architecture-fixer already wrote directly in 4b/4c — re-writing it here would overwrite their fix with stale content.
+1. **Confirm `diagrams.json` is current** — every diagram touched in 4b/4c was already written incrementally (per 4b's note and the reviewer–fixer cycle), so this is a final integrity check, not a write: confirm every diagram in the revision scope has a corresponding entry and no entry is partial, same as `design/SKILL.md` Stage 6e.
 2. **Validate diagrams**: run `node <scripts_dir>/validate-diagrams.mjs`. If it exits non-zero or prints `VALIDATION FAILED`, fix the flagged issues in `diagrams.json` before opening or refreshing the preview — revised diagrams are at least as likely to contain syntax errors as freshly generated ones. If `DEGRADED MODE` also appears, tell the user validation ran without the real syntax parser (some errors may not have been caught) and that `npm install` in the plugin's `scripts/` directory enables full coverage — proceed anyway, since the script still passed everything it could check.
-3. If a preview server from a previous run is already running, tell the user to refresh their browser. Otherwise run `node <scripts_dir>/find-port.mjs`, then `node <scripts_dir>/preview-server.mjs <port>` in the background. Do NOT create a stop-server script — leave the server running.
-4. Ask: **"Does this revised architecture look correct to you?"**
+3. If a preview server from a previous run is already running, tell the user to refresh their browser. Otherwise run `node <scripts_dir>/find-port.mjs`, then `node <scripts_dir>/preview-server.mjs <port>` in the background. Do NOT create a stop-server script — leave the server running. Record `progress.lastCompletedStep = "step8"` per `design/references/session-schema.md` section "Recording `progress.lastCompletedStep`".
+4. Ask: **"Does this revised architecture look correct to you?"** Once confirmed, record `progress.lastCompletedStep = "step9"`.
 
 If further revisions are needed, repeat from step 4b.
 
@@ -201,13 +202,15 @@ After saving, append `{ "path": "<absolute path of the saved file>", "createdAt"
 
 The document body follows the same structure as the design workflow (all sections, all diagrams). This is a standalone document, not a diff — someone reading it without the previous version should have complete context.
 
+Record `progress.lastCompletedStep = "step11"` per `design/references/session-schema.md` section "Recording `progress.lastCompletedStep`".
+
 ### 4g. Document review
 
-Spawn the `architecture-designer:document-reviewer` agent with the path to the new document, the requirements summary (same scope as 4c — every relevant `session.json` top-level key, including `web3` when present), and the expected filename.
+Spawn the `architecture-designer:document-reviewer` agent with the path to the new document, the requirements summary (same scope as 4c — every relevant `session.json` top-level key, including `web3` when present), and the expected filename. **Regardless of verdict**, apply `design/references/session-schema.md` section "Reviewer–fixer cycle procedure" step 0 as soon as the verdict is received (records the verdict/cycle/`documentHash` into `progress.reviewCycles.document` and `docs/architecture-designer/last-review.md`; this runs even on a clean first-try pass, not only on failure).
 
-If DOCUMENT REVIEW FAILED: spawn `architecture-designer:document-fixer` with the document path, the review report, the requirements summary, and the path to `docs/architecture-designer/diagrams.json`. Rename the file first if the fixer's log says it must be renamed (F6), then follow `design/references/session-schema.md` section "Reviewer–fixer cycle procedure" (binary verdict — cycle until DOCUMENT REVIEW PASSED) to re-spawn `document-reviewer` and verify.
+If DOCUMENT REVIEW FAILED: continue with that section's steps 1–4: spawn `architecture-designer:document-fixer` with the document path, the review report, the requirements summary, and the path to `docs/architecture-designer/diagrams.json`. Rename the file first if the fixer's log says it must be renamed (F6), then re-spawn `document-reviewer` and verify (binary verdict — cycle until DOCUMENT REVIEW PASSED).
 
-Then update `Status` to `Approved`.
+Then update `Status` to `Approved`. Record `progress.lastCompletedStep = "step12"` per `design/references/session-schema.md` section "Recording `progress.lastCompletedStep`".
 
 ### 4h. Implementation offer
 
@@ -228,6 +231,8 @@ Then follow `design/references/session-schema.md` section "Implementation-planne
 - **Previous plan path** — the resumed plan's `path`, if the user chose to continue (omit otherwise)
 
 If the user says no: let them know they can run `/architecture-designer:implement` at any time to generate the skeleton from this approved document later.
+
+Either way, record `progress.lastCompletedStep = "step13"` per `design/references/session-schema.md` section "Recording `progress.lastCompletedStep`" — this revision pipeline pass is complete.
 
 ---
 

@@ -38,7 +38,7 @@ Turns an approved architecture document into a working project skeleton. Can be 
 2. Scans the working directory for an existing project structure
 3. Asks how to proceed: merge into existing code, fresh start, or work around a described layout
 4. Spawns `implementation-planner` to propose a folder structure, wait for confirmation, and save an implementation plan to `docs/architecture-designer/plan/{yyyymmdd}-{topic}.md` — a markdown checklist of every file to be created, grouped by category (models, routes, config, infrastructure, scripts, tests). For large projects (more than 40 checklist items), the plan is split into a `{yyyymmdd}-{topic}-part{n}-of-{N}.md` sequence instead, each part linked to its neighbor via `Previous plan`/`Next plan` metadata rows
-5. Spawns `architecture-implementer`, which reads the confirmed plan and generates all files; updates the plan checkboxes to `[x]` / `[~]` / `[ ] FAIL` when done
+5. Spawns `architecture-implementer`, which reads the confirmed plan and generates all files, flipping each checkbox to `[x]` / `[~]` / `[ ] FAIL` immediately as that file is written and verified (write-through checkpointing, so the plan file stays an accurate resume point if the run is interrupted), then marks `Status: Complete` after a final verification pass
 
 ## Design workflow
 
@@ -78,17 +78,17 @@ The `/architecture-designer:review` skill follows the same reviewer → fixer lo
 
 Each reviewer has a paired fixer agent. When a reviewer returns findings, the skill spawns the fixer to apply targeted corrections, then re-runs the reviewer. This loop runs until the reviewer passes — no manual editing required. Implementation follows a similar two-step split: `implementation-planner` produces and confirms the plan, then `architecture-implementer` executes it — the implementer never runs without a plan the planner has already saved.
 
-| Agent                                            | Role                                                                                                                                                                                                                                                                    |
-|--------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `architecture-designer:architecture-reviewer`    | Validates diagrams for technical correctness, cross-diagram consistency, requirements traceability, risks, observability, and DR; returns Critical / Major / Minor findings with REVIEW PASSED / CONDITIONALLY PASSED / FAILED verdict                                  |
-| `architecture-designer:architecture-fixer`       | Applies targeted fixes to Mermaid diagrams based on reviewer findings; updates `diagrams.json` in place and returns a fix log                                                                                                                                           |
-| `architecture-designer:database-designer`        | Designs schema, ERD, index plan, engine selection, and secure connection config for SQL and NoSQL                                                                                                                                                                       |
-| `architecture-designer:database-reviewer`        | Audits database design: engine fit, schema/3NF, ERD accuracy, index completeness, security config; returns DATABASE REVIEW PASSED / FAILED                                                                                                                              |
-| `architecture-designer:database-fixer`           | Corrects schema, ERD, index plan, and connection config; writes the corrected ERD and `indexPlan` directly into `diagrams.json` (same pattern as `architecture-fixer`), and returns the corrected schema, ERD, index plan, and connection config for document embedding |
-| `architecture-designer:document-reviewer`        | Audits saved documents for format compliance (F1–F7) and content completeness (C1–C9, including IaC, CI/CD, and decentralized-architecture sections); returns DOCUMENT REVIEW PASSED / FAILED                                                                           |
-| `architecture-designer:document-fixer`           | Fixes specific format and content failures in the document based on reviewer findings; overwrites the draft in place                                                                                                                                                    |
-| `architecture-designer:implementation-planner`   | Resolves implementation ambiguities, proposes a folder structure, waits for confirmation, and saves the implementation plan; does not write application code                                                                                                            |
-| `architecture-designer:architecture-implementer` | Reads the confirmed implementation plan and the approved document, then implements project skeleton, data models, routes, and infrastructure files; refuses to run without a confirmed plan                                                                             |
+| Agent                                            | Role                                                                                                                                                                                                                                                                                                                                                           |
+|--------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `architecture-designer:architecture-reviewer`    | Validates diagrams for technical correctness, cross-diagram consistency, requirements traceability, risks, observability, and DR; returns Critical / Major / Minor findings with REVIEW PASSED / CONDITIONALLY PASSED / FAILED verdict                                                                                                                         |
+| `architecture-designer:architecture-fixer`       | Applies targeted fixes to Mermaid diagrams based on reviewer findings; updates `diagrams.json` in place and returns a fix log                                                                                                                                                                                                                                  |
+| `architecture-designer:database-designer`        | Designs schema, ERD, index plan, engine selection, and secure connection config for SQL and NoSQL                                                                                                                                                                                                                                                              |
+| `architecture-designer:database-reviewer`        | Audits database design: engine fit, schema/3NF, ERD accuracy, index completeness, security config; returns DATABASE REVIEW PASSED / FAILED                                                                                                                                                                                                                     |
+| `architecture-designer:database-fixer`           | Corrects schema, ERD, index plan, and connection config; writes the corrected ERD and `indexPlan` directly into `diagrams.json` (same pattern as `architecture-fixer`), and returns the corrected schema, ERD, index plan, and connection config for document embedding                                                                                        |
+| `architecture-designer:document-reviewer`        | Audits saved documents for format compliance (F1–F7) and content completeness (C1–C9, including IaC, CI/CD, and decentralized-architecture sections); returns DOCUMENT REVIEW PASSED / FAILED                                                                                                                                                                  |
+| `architecture-designer:document-fixer`           | Fixes specific format and content failures in the document based on reviewer findings; overwrites the draft in place                                                                                                                                                                                                                                           |
+| `architecture-designer:implementation-planner`   | Resolves implementation ambiguities, proposes a folder structure, waits for confirmation, and saves the implementation plan; does not write application code                                                                                                                                                                                                   |
+| `architecture-designer:architecture-implementer` | Reads the confirmed implementation plan and the approved document, then implements project skeleton, data models, routes, and infrastructure files; checkpoints each file's checkbox in the plan immediately as it's written (write-through), and auto-detects/rewrites files left behind by an interrupted prior run; refuses to run without a confirmed plan |
 
 ## Scripts
 
@@ -112,6 +112,9 @@ node scripts/find-port.mjs
 
 # Start the preview server (opens browser automatically)
 node scripts/preview-server.mjs <port>
+
+# Print the sha256 hex digest of a file (used to detect a stale reviewer verdict on resume)
+node scripts/hash-file.mjs docs/architecture-designer/diagrams.json
 ```
 
 The preview server reads `docs/architecture-designer/diagrams.json` on every request — reload the page to see diagram updates without restarting the server.
@@ -149,7 +152,23 @@ The preview server reads `docs/architecture-designer/diagrams.json` on every req
 
 `agentTools` is optional and, unlike the history arrays above, is overwritten in full at each Stage 5 confirmation rather than appended to. It records MCP servers or Skills actually available in the current environment that match the confirmed stack — e.g. a Go language-server MCP for a Go backend — as `{ name, type, purpose }` entries, so `implementation-planner` and `architecture-implementer` can use them later instead of a generic `Read`/`Bash` approach. Selection rules and the category-to-tool mapping live in `skills/design/references/agent-tools.md`. An absent or empty list is the normal case and never blocks any step.
 
-Full schema, the single-writer-per-key rule (each key has exactly one skill/agent that may mutate it — `documents` is the sole append-only exception, legitimately appended to by both `design` and `review` since neither ever touches the other's entries), and the no-CAS read-fresh-modify-write-whole discipline are documented in `skills/design/references/session-schema.md`.
+`pending`, `progress`, and `lld` checkpoint everything between Stage 1 and Step 13 so a session that dies or gets compacted mid-workflow doesn't lose the expensive parts — see "Mid-workflow persistence" below.
+
+Full schema, the single-writer-per-key rule (each key has exactly one skill/agent that may mutate it, with five exceptions: `documents` is append-only, legitimately appended to by both `design` and `review` since neither ever touches the other's entries; `web3`, `stage6b`, `stage6c`, `progress`, and `pending` each have one authorized second writer — `review` overwrites them (in full, or field-by-field for `progress`) on a revision that changes decentralization status, infrastructure provider, IaC tool, CI/CD platform, or that resumes/gathers a mid-pipeline step — safe because `design` and `review` never run concurrently within one conversation, not because they're append-only), and the no-CAS read-fresh-modify-write-whole discipline are documented in `skills/design/references/session-schema.md`.
+
+## Mid-workflow persistence
+
+Stage 1–6c answers were always checkpointed to `session.json` after each stage's confirmation, but everything from Stage 6a (database review) through Step 13 (implementation offer) used to live only in conversation context until the document was saved — a session that died anywhere in that window lost reviewer verdicts, the reviewer–fixer cycle count, and the entire five-group Low-Level Design. Three additions close that gap:
+
+- **`session.json`'s `progress` key** tracks an `owner` (`design` or `review` — whichever skill's pipeline pass this snapshot belongs to, so a resuming skill doesn't mistake the other skill's in-flight state for its own), `lastCompletedStep` (one shared vocabulary across `design` and `review`, from `step6a` through `step13`), and, per reviewer type (`database`/`architecture`/`document`), the last verdict and cycle count. For `architecture`/`document`, it also stores a hash of the artifact that verdict was recorded against — on resume, the hash is recomputed (`node scripts/hash-file.mjs <path>`) and compared, and a mismatch means the artifact changed since, treating that verdict as stale rather than trusted. `database` is the exception: since neither `diagrams.json` nor the document exists yet when Stage 6a runs, its entry holds the actual approved schema/ERD/index plan/connection-config text directly (`approvedOutput`) instead of a hash of an external file — durable and unambiguous rather than resting on a moving target.
+- **`session.json`'s `lld` key** persists each of Step 10's five Low-Level Design artifact groups as soon as it's confirmed, not batched until the document is saved — a `confirmedGroups` list lets a resumed session skip straight to the next unconfirmed group.
+- **`session.json`'s `pending` key** checkpoints partial answers within whatever stage/step is currently being gathered, deleted once that stage's real key is confirmed — so a session that dies mid-question doesn't lose everything answered so far in that stage.
+- **`docs/architecture-designer/last-review.md`** holds the most recent unresolved reviewer report (whichever reviewer–fixer cycle hasn't yet passed), overwritten each cycle iteration, so a fixer cycle can resume across a dead session without re-spawning the reviewer from scratch.
+- **`diagrams.json`** is now written incrementally — one diagram at a time as each is generated/updated — rather than as a single batch write at the end of diagram generation.
+
+Full mechanics (the `lastCompletedStep` label table, hash-invalidation rule, and resume procedure) are in `skills/design/references/session-schema.md` sections "Recording `progress.lastCompletedStep`" and "Resuming Steps 6a–13 via `progress`".
+
+**Best-effort backstop**: `hooks/hooks.json` registers a prompt-based `PreCompact` hook that reminds Claude to write these checkpoints before compaction discards conversation-only context. This is a backstop, not the primary mechanism — the checkpoints above are already written incrementally throughout the workflow regardless of the hook, and prompt-based hooks are not confirmed fully reliable on the `PreCompact` event specifically (unlike `Stop`/`SubagentStop`/`UserPromptSubmit`/`PreToolUse`).
 
 ## Resuming implementation plans
 
@@ -157,9 +176,13 @@ Implementation plans are checklists, not one-shot scripts — a run can be inter
 
 Resuming carries the old plan's state forward: completed files become `[~]` (skip, already built — verified against disk before trusting it), pending files stay `[ ]`, and failed files stay `[ ]` with the failure reason embedded so the retry has context. The new plan supersedes the old one — the old plan file's `Status` is updated to `Superseded by {new plan path}` so it's never offered again. If the underlying architecture document itself gets revised in the meantime, any plan still tied to the prior revision is surfaced separately as an orphaned plan you can mark superseded manually, rather than being silently forgotten.
 
+**Write-through checkpointing**: `architecture-implementer` flips a file's checkbox to `[x]` (or `[ ] FAIL: {reason}`) in the plan immediately after writing and verifying it, rather than batching all updates until the run finishes — the plan file is a write-ahead log, accurate at every point in the run, not just at the end. Each checkbox flip also updates two metadata-table rows, `Last updated` and `Last verified item`, so opening the plan mid-run shows exactly how far it got and how recently. `Status` itself still only flips to `Complete` at the very end, after a final verification pass re-confirms everything.
+
+**Interrupted-run detection**: because a checkbox and its file are written together, a plain `[ ]` item whose file already exists on disk is a specific, narrow signal — a crash between the file write and the checkbox flip, not a real collision. `architecture-implementer`'s own Step 1 detects this and rewrites the file automatically, no confirmation prompt. When resuming through `implementation-planner` instead, its Step 2 carry-over tags the same case with `— interrupted run left this file partially written, will be rewritten` and excludes it from Step 3's overwrite/skip/decide-one-by-one collision prompt — so a crashed implementer run is never mistaken for a foreign file the user needs to arbitrate.
+
 A remediation plan (`docs/architecture-designer/plan/{yyyymmdd}-{topic}-remediation.md`, produced by `/architecture-designer:review` step 4e — format documented in `skills/design/references/remediation-plan-guide.md`) can be resumed the same way, and can be in play at the same time as a resumed implementation plan; `implementation-planner` reconciles the two if they both touch the same file.
 
-**Split plans for large projects**: once a plan's checklist exceeds 40 items (files plus setup/run commands), `implementation-planner` saves it as a sequence of parts instead of one file (`{yyyymmdd}-{topic}-part1-of-3.md`, `-part2-of-3.md`, ...), each with `Split` / `Previous plan` / `Next plan` metadata-table rows. The calling skill spawns `architecture-implementer` once per part, in order, using each part's `Next plan` row to find the next file until the final part reports `None — final part`.
+**Split plans for large projects**: once a plan's checklist exceeds 40 items (files plus setup/run commands), `implementation-planner` saves it as a sequence of parts instead of one file (`{yyyymmdd}-{topic}-part1-of-3.md`, `-part2-of-3.md`, ...), each with `Split` / `Previous plan` / `Next plan` metadata-table rows, targeting 25 items per part. For stacks with heavier per-file boilerplate (e.g. Java/Spring, NestJS), `implementation-planner` may lower both thresholds — e.g. 25/15 — so each part, and thus each crash's worst-case loss, stays smaller. The calling skill spawns `architecture-implementer` once per part, in order, using each part's `Next plan` row to find the next file until the final part reports `None — final part`.
 
 ## Document format
 
@@ -180,18 +203,18 @@ Revisions create new files (never overwrite), with `Version` incremented, `Reaso
 
 ## Diagram types
 
-| Diagram          | Mermaid type                       | When created                     |
-|------------------|------------------------------------|----------------------------------|
-| Use case         | `flowchart LR`                     | Multiple user roles              |
-| Business process | `flowchart TD`                     | Complex multi-step workflows     |
-| ERD              | `erDiagram`                        | SQL databases                    |
-| Sequence         | `sequenceDiagram`                  | Auth flow + one per core feature |
-| Class            | `classDiagram`                     | Rich domain model                |
-| State            | `stateDiagram-v2`                  | Entities with status lifecycles  |
-| C4 Context       | `C4Context`                        | External actors and integrations |
-| C4 Container     | `C4Container`                      | Multiple deployable components   |
-| Deployment       | `flowchart` or `architecture-beta` | Cloud/infrastructure layout      |
-| CI/CD pipeline   | `flowchart TD`                     | 2+ deployment environments       |
+| Diagram          | Mermaid type                       | When created                                 |
+|------------------|------------------------------------|----------------------------------------------|
+| Use case         | `flowchart LR`                     | Multiple user roles                          |
+| Business process | `flowchart TD`                     | Complex multi-step workflows                 |
+| ERD              | `erDiagram`                        | SQL databases                                |
+| Sequence         | `sequenceDiagram`                  | Auth flow + one per core feature             |
+| Class            | `classDiagram`                     | Rich domain model                            |
+| State            | `stateDiagram-v2`                  | Entities with status lifecycles              |
+| C4 Context       | `C4Context`                        | External actors and integrations             |
+| C4 Container     | `C4Container`                      | Multiple deployable components               |
+| Deployment       | `flowchart` or `architecture-beta` | Cloud/infrastructure layout                  |
+| CI/CD pipeline   | `flowchart TD`                     | 2+ deployment environments or staged release |
 
 All diagrams support zoom in/out/reset (mouse wheel, pinch, buttons) and 2× resolution PNG download.
 
