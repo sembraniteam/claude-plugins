@@ -90,7 +90,7 @@ Per `references/document-template.md` section 9, the document must include a "CI
 FAIL if the section is missing, or present only as a placeholder/stub with no actual platform, stage, or strategy named.
 
 **C9 — Decentralized Architecture Considerations section present**
-Per `references/document-template.md` section 11, only applies when the requirements summary includes a `session.json` `web3` key — same trigger condition `document-fixer` can act on, so this check never FAILs into an unfixable state. The document must include a "Decentralized Architecture Considerations" section covering all seven invariant dimensions defined in `references/web3-guide.md`.
+Per `references/document-template.md` section 11, only applies when the requirements summary includes a `session.json` `web3` key — same trigger condition `document-fixer` can act on, so this check never FAILs into an unfixable state. The document must include a "Decentralized Architecture Considerations" section covering all eight invariant dimensions defined in `references/web3-guide.md`.
 FAIL if the section is missing, or a dimension is stated as a specific network fact from memory rather than either a user-confirmed value or a `<VERIFY>` placeholder.
 
 ## Output format

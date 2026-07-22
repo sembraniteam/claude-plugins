@@ -22,8 +22,9 @@ Guided architecture and infrastructure design workflow — from requirements gat
 | `document-fixer` agent             | Fixes specific F1–F7 format and C1–C9 content failures in the architecture document based on document-reviewer findings; overwrites the draft in place                                                                                                                                                                                                                                  |
 | `implementation-planner` agent     | Resolves implementation ambiguities, proposes a folder structure, waits for confirmation, and saves the implementation plan (split into parts for large projects); does not write application code                                                                                                                                                                                      |
 | `architecture-implementer` agent   | Reads the confirmed implementation plan and the approved document, then scaffolds project code (models from ERD, handlers from sequence diagrams) and infrastructure files, checkpointing each file's checkbox in the plan immediately as it's written (write-through) so an interrupted run resumes without redoing completed work; refuses to run without a confirmed plan            |
+| Hooks (6)                          | Mechanical enforcement layered on top of the skill/agent prompts: `PreToolUse` blocks spawning `architecture-implementer` without an on-disk plan `Status: In progress`; `PostToolUse` runs `validate-diagrams.mjs`/`validate-session.py` on every write to `diagrams.json`/`session.json`; `SubagentStop` re-verifies `architecture-implementer`'s self-reported `Status: Complete` against the files actually on disk before letting it stop; `SessionStart` (on resume) and `UserPromptSubmit` surface and keep checkpointing an unfinished mid-pipeline session; `PreCompact` remains as a secondary reminder — see the plugin's own README for the full table                                                       |
 
-**Prerequisites:** Node.js and Python 3. Run `npm install` in `architecture-designer/scripts/` once to enable full Mermaid diagram syntax validation and the browser preview — the session-completeness/port-finding/hashing scripts are stdlib-only Python and need no install step
+**Prerequisites:** Node.js, Python 3, and `jq`. Run `npm install` in `architecture-designer/scripts/` once to enable full Mermaid diagram syntax validation and the browser preview — the session-completeness/port-finding/hashing scripts are stdlib-only Python and need no install step. `jq` is required by the plugin's command hooks (see "Hooks" above); every hook degrades to a silent no-op if it's missing, rather than failing
 
 ---
 
@@ -275,7 +276,12 @@ Regenerates and saves `SECURITY-AUDIT.md` from the current session's findings; `
 │   │   └── implement/
 │   │       └── SKILL.md                # Standalone implementation: find doc → assess project → save plan → scaffold
 │   ├── hooks/
-│   │   └── hooks.json                  # PreCompact hook — reminds Claude to persist checkpoints before compaction
+│   │   ├── hooks.json                        # 6 hooks: SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, SubagentStop, PreCompact
+│   │   ├── resume-context.sh                 # SessionStart (resume) — surfaces an unfinished pipeline via additionalContext
+│   │   ├── checkpoint-reminder.sh            # UserPromptSubmit — reliable backstop reminder to keep checkpointing session.json
+│   │   ├── check-implementer-plan.sh         # PreToolUse (Task) — blocks architecture-implementer spawn without a confirmed plan
+│   │   ├── validate-on-write.sh              # PostToolUse (Write|Edit) — runs validate-diagrams.mjs/validate-session.py on write
+│   │   └── verify-implementer-completion.sh  # SubagentStop — re-verifies Status: Complete against files actually on disk
 │   └── scripts/
 │       ├── find-port.py                # Finds available port 3000–9000 via socket.bind() — stdlib only
 │       ├── hash-file.py                # sha256 digest of a file — stdlib only, detects stale reviewer verdicts

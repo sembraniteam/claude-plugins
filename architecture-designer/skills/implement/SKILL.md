@@ -75,6 +75,8 @@ For reference, `implementation-planner` in turn: reads the document and surfaces
 
 `architecture-implementer` (spawned per the shared sequence above) reads the confirmed plan and the architecture document, then: implements every file — models from the ERD, route stubs from sequence diagrams, configuration files, Docker setup, infrastructure as code — checkpointing each file's checkbox to `[x]` (or `[ ] FAIL: {reason}`) immediately as it's written and verified, rather than batching updates until the end, so an interrupted run leaves the plan file an accurate resume point; once every group is done, a final verification pass re-checks the result against the document — confirming generated models/routes actually match the ERD/sequence diagrams and that named technologies weren't substituted, flagging any functional requirement with no corresponding file under "Requirements not yet reflected in code" — and sets `Status` to `Complete`; it also offers an optional smoke test that installs dependencies and verifies the project compiles or starts (requires the user's confirmation since it modifies the project directory).
 
+**Decentralized/Web3 projects** (the document has a "Decentralized Architecture Considerations" section): `architecture-implementer` has its own Web3 rules for this case — see that agent's "Rules for implementation" section for the full detail; this skill does not repeat it here. Step 5 below still surfaces the outcome to the user, since a scaffold that's silently unaudited is a decision the user needs to see, not just the agent.
+
 No further guidance is needed once it's spawned — it has complete instructions. If it refuses to proceed (e.g. reports "No confirmed implementation plan found") or reports a mid-run blocker it cannot resolve on its own (something the plan doesn't cover), do not treat this as a normal completion — resolve the blocker with the user (which may mean re-spawning `implementation-planner` to update the plan) and re-spawn `architecture-implementer` once resolved, the same as Step 3's contingency for `implementation-planner`.
 
 Proceed to Step 5 once the final part (or the only part, if the plan was not split) reports `Status: Complete`.
@@ -93,6 +95,7 @@ Once the agent reports completion, remind the user:
 4. Start the dev server and verify the app boots without errors
 5. Test the primary endpoint from the sequence diagram manually
 6. Commit the skeleton as a clean baseline before adding business logic
+7. **Decentralized/Web3 projects only**: every file marked `UNAUDITED` is scaffold code, not deployment-ready code — get an independent audit sized to value at risk (`design/references/web3-guide.md` dimension 7) before any deployment holding real value, and stage the rollout through testnet and a capped-value mainnet deployment before committing full value. This skill never runs a deploy step itself; that decision and its execution are entirely the user's.
 
 Let the user know they can run `/architecture-designer:review` at any time to revise the architecture and re-run this skill to update the implementation.
 
