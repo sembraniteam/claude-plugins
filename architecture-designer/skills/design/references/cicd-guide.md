@@ -1,6 +1,7 @@
 # CI/CD Pipeline Design Guide
 
-Use this guide when executing Stage 6c — CI/CD Pipeline Design. It defines how to select a platform, structure pipeline stages, choose a branching strategy, and document the result.
+Use this guide when executing Stage 6c — CI/CD Pipeline Design. It defines how to select a platform, structure pipeline
+stages, choose a branching strategy, and document the result.
 
 ---
 
@@ -30,22 +31,37 @@ Use this guide when executing Stage 6c — CI/CD Pipeline Design. It defines how
 
 ## 2. Standard Pipeline Stages
 
-Template for a backend API service. Adapt to the actual tech stack — omit stages that don't apply (e.g., no integration test stage for a stateless function-only service).
+Template for a backend API service. Adapt to the actual tech stack — omit stages that don't apply (e.g., no integration
+test stage for a stateless function-only service).
 
-| Stage                | Trigger                             | Tool examples                                                    | Gate / fail condition                             |
-|----------------------|-------------------------------------|------------------------------------------------------------------|---------------------------------------------------|
-| Lint & format        | Every push / PR                     | ESLint, Ruff, golangci-lint, Prettier                            | Any lint error                                    |
-| Unit tests           | Every push / PR                     | Jest, pytest, go test, JUnit                                     | Any test failure or coverage drop below threshold |
-| Build artifact       | Every push to main; every tag       | Docker build, `go build`, Maven                                  | Build error                                       |
-| Integration tests    | After build, on PR and main         | Docker Compose test environment, Testcontainers                  | Any test failure                                  |
-| Security scan        | After build                         | Trivy (images), Semgrep / Snyk (SAST), OWASP ZAP (DAST for APIs) | Critical CVE or high-severity SAST finding        |
-| Push artifact        | After security scan passes, on main | ECR, GCR, GHCR, Docker Hub                                       | Registry push error                               |
-| Deploy → dev         | Auto on main merge                  | ECS deploy, Helm upgrade, Terraform apply                        | Health check fails                                |
-| Smoke test (dev)     | After deploy → dev                  | `curl` / Playwright / k6 smoke                                   | Key endpoint unreachable                          |
-| Deploy → staging     | Auto after dev smoke passes         | Same as dev                                                      | Health check fails                                |
-| Smoke test (staging) | After deploy → staging              | Same as dev                                                      | Key endpoint unreachable                          |
-| Deploy → prod        | Manual approval gate or version tag | Same as dev                                                      | Health check fails                                |
-| Smoke test (prod)    | After deploy → prod                 | Same as dev                                                      | Key endpoint unreachable                          |
+| Stage                | Trigger                                                                                                                                 | Tool examples                                                    | Gate / fail condition                             |
+|----------------------|-----------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------|---------------------------------------------------|
+| Lint & format        | Every push / PR                                                                                                                         | ESLint, Ruff, golangci-lint, Prettier                            | Any lint error                                    |
+| Unit tests           | Every push / PR                                                                                                                         | Jest, pytest, go test, JUnit                                     | Any test failure or coverage drop below threshold |
+| Build artifact       | Every push to main; every tag                                                                                                           | Docker build, `go build`, Maven                                  | Build error                                       |
+| Integration tests    | After build, on PR and main                                                                                                             | Docker Compose test environment, Testcontainers                  | Any test failure                                  |
+| Security scan        | After build                                                                                                                             | Trivy (images), Semgrep / Snyk (SAST), OWASP ZAP (DAST for APIs) | Critical CVE or high-severity SAST finding        |
+| Push artifact        | After security scan passes, on main                                                                                                     | ECR, GCR, GHCR, Docker Hub                                       | Registry push error                               |
+| Deploy → dev         | Auto on main merge                                                                                                                      | ECS deploy, Helm upgrade, Terraform apply                        | Health check fails                                |
+| Smoke test (dev)     | After deploy → dev                                                                                                                      | `curl` / Playwright / k6 smoke                                   | Key endpoint unreachable                          |
+| Deploy → staging     | Auto after dev smoke passes                                                                                                             | Same as dev                                                      | Health check fails                                |
+| Smoke test (staging) | After deploy → staging                                                                                                                  | Same as dev                                                      | Key endpoint unreachable                          |
+| Deploy → prod        | Manual approval gate (or a version-tag push, if the team uses tag-triggered releases instead of an approval click — pick one, not both) | Same as dev                                                      | Health check fails                                |
+| Smoke test (prod)    | After deploy → prod                                                                                                                     | Same as dev                                                      | Key endpoint unreachable                          |
+
+**Mobile app (native or Flutter/React Native) variant** — replace the build/deploy legs above with:
+
+| Stage                  | Trigger                         | Tool examples                                                                               | Gate / fail condition                                       |
+|------------------------|---------------------------------|---------------------------------------------------------------------------------------------|-------------------------------------------------------------|
+| Lint & unit tests      | Every push / PR                 | ESLint/Detox (RN), `flutter analyze`/`flutter test`, XCTest, JUnit/Espresso                 | Any lint error or test failure                              |
+| Code signing           | On build, main/release branches | Fastlane `match` (iOS certs/profiles), Android keystore via CI secret store                 | Signing failure                                             |
+| Build artifact         | On build, main/release branches | Fastlane `gym`/`gradlew assembleRelease`, EAS Build (Expo/RN), `flutter build`              | Build error                                                 |
+| Internal distribution  | After build                     | TestFlight (internal group), Play Console internal testing track, Firebase App Distribution | Upload/processing failure                                   |
+| E2E smoke (device/sim) | After internal distribution     | Detox, Maestro, Appium                                                                      | Critical flow failure                                       |
+| Store submission       | Manual approval gate            | App Store Connect API, Play Console production track                                        | Store review rejection (external, non-blocking to pipeline) |
+
+Store review time (hours to days) is outside CI/CD's control — document it as a release-timeline constraint, not a
+pipeline stage to optimize.
 
 ---
 
@@ -63,13 +79,14 @@ Template for a backend API service. Adapt to the actual tech stack — omit stag
 
 ## 4. Environment Promotion
 
-| Environment | Trigger                               | Gate                                 | Rollback                                                               |
-|-------------|---------------------------------------|--------------------------------------|------------------------------------------------------------------------|
-| dev         | Auto on every merge to main           | None                                 | Re-deploy previous image tag                                           |
-| staging     | Auto after dev smoke tests pass       | Automated smoke tests must pass      | Re-deploy previous image tag                                           |
-| prod        | Manual approval (or version tag `v*`) | Manual gate + post-deploy smoke test | Re-deploy previous image tag; use blue/green if zero-downtime required |
+| Environment | Trigger                                                                                                    | Gate                                 | Rollback                                                               |
+|-------------|------------------------------------------------------------------------------------------------------------|--------------------------------------|------------------------------------------------------------------------|
+| dev         | Auto on every merge to main                                                                                | None                                 | Re-deploy previous image tag                                           |
+| staging     | Auto after dev smoke tests pass                                                                            | Automated smoke tests must pass      | Re-deploy previous image tag                                           |
+| prod        | Manual approval (or a version-tag push `v*`, if using tag-triggered releases instead — pick one, not both) | Manual gate + post-deploy smoke test | Re-deploy previous image tag; use blue/green if zero-downtime required |
 
-For blue/green or canary deployments in prod: document the traffic-shift percentage and observation window before full cutover.
+For blue/green or canary deployments in prod: document the traffic-shift percentage and observation window before full
+cutover.
 
 ---
 
@@ -86,7 +103,8 @@ Never commit secrets to version control. Standard injection patterns:
 | AWS CodePipeline       | AWS Secrets Manager / Parameter Store           | IAM role for CodeBuild, `aws ssm get-parameter`       |
 | Kubernetes / Argo CD   | External Secrets Operator                       | Syncs from AWS SM / GCP SM / Vault into K8s Secrets   |
 
-**Prefer OIDC over long-lived credentials** wherever supported (GitHub Actions ↔ AWS, GCP, Azure). OIDC issues short-lived tokens — no key rotation required.
+**Prefer OIDC over long-lived credentials** wherever supported (GitHub Actions ↔ AWS, GCP, Azure). OIDC issues
+short-lived tokens — no key rotation required.
 
 ---
 
@@ -98,7 +116,8 @@ Never commit secrets to version control. Standard injection patterns:
 | Binary / JAR  | S3 / GCS / Azure Blob / Artifactory | `<version>-<git-sha>`                                 | Keep last 20 releases                             |
 | Test reports  | CI platform artifact store          | Per run                                               | 90 days                                           |
 
-Tag images with the full git SHA (`git rev-parse --short HEAD`) so any deployed container can be traced back to an exact commit.
+Tag images with the full git SHA (`git rev-parse --short HEAD`) so any deployed container can be traced back to an exact
+commit.
 
 ---
 
@@ -106,9 +125,11 @@ Tag images with the full git SHA (`git rev-parse --short HEAD`) so any deployed 
 
 CI/CD section (section 9) should contain:
 
-1. **Platform selection** — CI platform + CD platform (if separate), with justification citing constraints from stages 3–5
+1. **Platform selection** — CI platform + CD platform (if separate), with justification citing constraints from stages
+   3–5
 2. **Pipeline stages table** — adapted from the standard template above; one row per stage, with tool, trigger, and gate
 3. **Branching strategy** — strategy name and why it fits the team size and release cadence
 4. **Environment promotion rules** — trigger and gate per environment; rollback procedure
-5. **Secret injection approach** — what secrets are needed, where they are stored, how they reach the pipeline; confirm no long-lived credentials in code or CI config
+5. **Secret injection approach** — what secrets are needed, where they are stored, how they reach the pipeline; confirm
+   no long-lived credentials in code or CI config
 6. **Artifact management** — registry choice, tag scheme, retention policy

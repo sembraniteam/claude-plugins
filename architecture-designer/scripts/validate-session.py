@@ -10,25 +10,39 @@ Three layers, in order:
    whose only field is an empty string (e.g. {"backend": ""}) is treated as
    empty, not as a passing non-empty dict.
 2. Structural schema — every other key present in the file (agentTools,
-   pending, progress, lld, documents, remediationPlans, implementationPlans)
-   is checked against session-schema.json, a JSON Schema sitting alongside
-   this script. That file is the single source of truth for the fixed-shape
-   parts of session.json (array-of-objects-or-legacy-string entries, the
-   split object, enums); this script applies it with a small purpose-built
-   subset of JSON Schema keywords (type/properties/required/items/oneOf/
-   enum/minimum) rather than a third-party validator, to stay stdlib-only.
-3. Referential integrity (advisory, non-blocking) — link fields between
-   documents/remediationPlans/implementationPlans (document, remediationPlan,
-   supersedes, split.previousPlan/nextPlan) are checked for whether they
-   resolve to a path present elsewhere in the file. A mismatch is printed as
-   a warning, not a failure: some links (e.g. a fresh remediationPlans
-   entry's `document` field) legitimately point at a document not yet
-   appended to `documents[]`, since review/SKILL.md step 4e saves the
-   remediation plan before step 4f saves the document it targets. Warnings
-   surface possible drift for a human to investigate without risking a false
-   hard-block on a legitimate in-flight state.
+   pending, progress, lld, documents, remediationPlans, implementationPlans,
+   architecturalDrivers, riskRegister, domainModel) is checked against
+   session-schema.json, a JSON Schema sitting alongside this script. That
+   file is the single source of truth for the fixed-shape parts of
+   session.json (array-of-objects-or-legacy-string entries, the split
+   object, enums, and the required id/description/category/etc. fields on
+   architecturalDrivers/riskRegister/domainModel entries); this script
+   applies it with a small purpose-built subset of JSON Schema keywords
+   (type/properties/required/items/oneOf/enum/minimum) rather than a
+   third-party validator, to stay stdlib-only.
+3. Referential integrity (advisory, non-blocking) — two independent checks:
+   (a) link fields between documents/remediationPlans/implementationPlans
+   (document, remediationPlan, supersedes, split.previousPlan/nextPlan) are
+   checked for whether they resolve to a path present elsewhere in the file;
+   (b) cross-references between the ADD/ATAM/DDD keys (stage5.tradeoffAnalysis
+   .driversInTension/.relatedRisks, riskRegister[].relatedDriver,
+   architecturalDrivers[].source, domainModel.relationships[].from/.to) are
+   checked for whether the id/name they cite actually exists in
+   architecturalDrivers[]/riskRegister[]/stage2.qualityAttributeScenarios[]/
+   domainModel.boundedContexts[]; duplicate ids within any one of those four
+   arrays are also flagged. A mismatch is printed as a warning, not a
+   failure: some links (e.g. a fresh remediationPlans entry's `document`
+   field) legitimately point at a document not yet appended to `documents[]`,
+   since review/SKILL.md step 4e saves the remediation plan before step 4f
+   saves the document it targets. Warnings surface possible drift for a
+   human to investigate without risking a false hard-block on a legitimate
+   in-flight state.
 
 Only layers 1 and 2 affect the exit code — layer 3 is always advisory.
+
+A leading UTF-8 BOM in session.json is stripped before parsing (some editors,
+notably on Windows, save one) — mirrors the same normalization
+scripts/validate-diagrams.mjs already does for each diagram's `code` field.
 
 Usage: python3 scripts/validate-session.py
 
@@ -209,6 +223,98 @@ def check_links(session):
     return warnings
 
 
+def _ids_of(entries):
+    """Extracts the 'id' field from a list of dict entries, ignoring
+    non-dict items or entries with no 'id' -- the schema check above already
+    reports those shape violations and fails the gate."""
+    return [e["id"] for e in entries if isinstance(e, dict) and "id" in e]
+
+
+def check_duplicate_ids(session):
+    """Advisory: a repeated id within one of the ADD/DDD arrays means one
+    entry silently shadows another for any reader resolving references by
+    id (e.g. a tradeoffAnalysis entry's driversInTension) -- report every
+    array's duplicates, not just the first one found."""
+    warnings = []
+    id_sources = [
+        ("architecturalDrivers", session.get("architecturalDrivers")),
+        ("riskRegister", session.get("riskRegister")),
+        ("stage5.tradeoffAnalysis", (session.get("stage5") or {}).get("tradeoffAnalysis")),
+        ("stage2.qualityAttributeScenarios", (session.get("stage2") or {}).get("qualityAttributeScenarios")),
+    ]
+    for label, raw in id_sources:
+        ids = _ids_of(raw if isinstance(raw, list) else [])
+        seen = set()
+        dupes = set()
+        for i in ids:
+            if i in seen:
+                dupes.add(i)
+            seen.add(i)
+        for d in sorted(dupes):
+            warnings.append(f"{label}: id '{d}' appears more than once")
+    return warnings
+
+
+def check_add_ddd_links(session):
+    """Advisory: dangling references between the ADD/ATAM/DDD keys --
+    a tradeoffAnalysis entry citing a driver/risk id that doesn't exist,
+    a riskRegister entry's relatedDriver pointing nowhere, or a
+    domainModel.relationships entry naming a bounded context that was
+    never declared. Mirrors check_links() above for the same class of
+    problem, just for the newer key set."""
+    warnings = []
+
+    driver_ids = set(_ids_of(session.get("architecturalDrivers") or []))
+    risk_ids = set(_ids_of(session.get("riskRegister") or []))
+    qas_ids = set(_ids_of((session.get("stage2") or {}).get("qualityAttributeScenarios") or []))
+    context_names = {
+        c["name"] for c in ((session.get("domainModel") or {}).get("boundedContexts") or [])
+        if isinstance(c, dict) and "name" in c
+    }
+
+    tradeoffs = (session.get("stage5") or {}).get("tradeoffAnalysis")
+    for t in tradeoffs if isinstance(tradeoffs, list) else []:
+        if not isinstance(t, dict):
+            continue
+        label = t.get("id") or "(entry missing \"id\")"
+        for d in t.get("driversInTension") or []:
+            if d not in driver_ids:
+                warnings.append(f"stage5.tradeoffAnalysis[{label}]: driversInTension references '{d}', which is not in architecturalDrivers[]")
+        for r in t.get("relatedRisks") or []:
+            if r not in risk_ids:
+                warnings.append(f"stage5.tradeoffAnalysis[{label}]: relatedRisks references '{r}', which is not in riskRegister[]")
+
+    risks = session.get("riskRegister")
+    for r in risks if isinstance(risks, list) else []:
+        if not isinstance(r, dict):
+            continue
+        label = r.get("id") or "(entry missing \"id\")"
+        related = r.get("relatedDriver")
+        if related and related not in driver_ids:
+            warnings.append(f"riskRegister[{label}]: relatedDriver references '{related}', which is not in architecturalDrivers[]")
+
+    drivers = session.get("architecturalDrivers")
+    for a in drivers if isinstance(drivers, list) else []:
+        if not isinstance(a, dict):
+            continue
+        label = a.get("id") or "(entry missing \"id\")"
+        source = a.get("source")
+        if isinstance(source, str) and source.startswith("QAS-") and source not in qas_ids:
+            warnings.append(f"architecturalDrivers[{label}]: source references '{source}', which is not in stage2.qualityAttributeScenarios[]")
+
+    relationships = (session.get("domainModel") or {}).get("relationships")
+    for rel in relationships if isinstance(relationships, list) else []:
+        if not isinstance(rel, dict):
+            continue
+        label = f"{rel.get('from')}->{rel.get('to')}"
+        for endpoint_key in ("from", "to"):
+            endpoint = rel.get(endpoint_key)
+            if endpoint and context_names and endpoint not in context_names:
+                warnings.append(f"domainModel.relationships[{label}]: {endpoint_key} '{endpoint}' is not a name in domainModel.boundedContexts[]")
+
+    return warnings
+
+
 def main():
     # Force UTF-8 output regardless of the console's active code page --
     # without this, the box-drawing/status glyphs below can raise
@@ -228,6 +334,19 @@ def main():
         sys.stderr.write(f"\nERROR: Cannot read {SESSION_PATH}\n  {err}\n")
         sys.stderr.write("Complete stages 1-5 of the design workflow first.\n\n")
         sys.exit(1)
+    except UnicodeDecodeError as err:
+        # Not an OSError -- a file that exists but isn't valid UTF-8 (or opens
+        # with a non-UTF-8 BOM such as UTF-16) must fail cleanly here rather
+        # than crash with an unhandled traceback.
+        sys.stderr.write(f"\nERROR: {SESSION_PATH} is not valid UTF-8\n  {err}\n\n")
+        sys.exit(1)
+
+    # Strip a leading BOM -- some editors (notably on Windows) save UTF-8
+    # files with one, and json.loads() rejects a string starting with
+    # U+FEFF as invalid JSON. Mirrors normalizeCode()'s BOM-stripping in
+    # scripts/validate-diagrams.mjs, applied here to the whole file.
+    if raw.startswith("\ufeff"):
+        raw = raw[1:]
 
     try:
         session = json.loads(raw)
@@ -278,7 +397,7 @@ def main():
     else:
         sys.stdout.write("  ✓  all present keys match session-schema.json\n")
 
-    link_warnings = check_links(session)
+    link_warnings = check_links(session) + check_add_ddd_links(session) + check_duplicate_ids(session)
     if link_warnings:
         sys.stdout.write(f"{line}\n")
         sys.stdout.write("Referential Integrity (advisory — does not fail the gate)\n")

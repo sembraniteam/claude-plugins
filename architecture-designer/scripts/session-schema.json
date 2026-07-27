@@ -2,49 +2,280 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://architecture-designer.local/schemas/session.schema.json",
   "title": "docs/architecture-designer/session.json",
-  "description": "Structural schema for the fixed-shape parts of session.json. stage1-stage5, web3, stage6b, stage6c, pending.answers, and progress.reviewCycles are intentionally left as free-form objects here -- their inner field names are the user's own confirmed answers or agent-recorded text and vary by project. The full narrative contract (single-writer rules, when each key is written, how array links resolve) lives in skills/design/references/session-schema.md; this file only covers what can be checked mechanically: presence, type, and the array-of-objects-or-legacy-string shape. Read and applied by scripts/validate-session.py, which implements a small purpose-built subset of JSON Schema (type/properties/required/items/oneOf/enum/minimum) rather than depending on a third-party validator, to keep the script stdlib-only.",
+  "description": "Structural schema for the fixed-shape parts of session.json. stage1-stage5 (including stage2.qualityAttributeScenarios and stage5.tradeoffAnalysis), web3, offlineFirst, stage6b, stage6c, pending.answers, progress.reviewCycles, and domainModel.boundedContexts[].ubiquitousLanguage are intentionally left as free-form objects here -- their inner field names are the user's own confirmed answers or agent-recorded text and vary by project. architecturalDrivers, riskRegister, and domainModel, by contrast, ARE structurally typed below (required fields, enums) since their shape is agent-recorded and fixed rather than user-varying. The full narrative contract (single-writer rules, when each key is written, how array links resolve) lives in skills/design/references/session-schema.md; this file only covers what can be checked mechanically: presence, type, and the array-of-objects-or-legacy-string shape. Read and applied by scripts/validate-session.py, which implements a small purpose-built subset of JSON Schema (type/properties/required/items/oneOf/enum/minimum) rather than depending on a third-party validator, to keep the script stdlib-only.",
   "type": "object",
   "properties": {
-    "schemaVersion": { "type": "integer" },
-    "project": { "type": "string" },
-    "description": { "type": "string" },
-    "updatedAt": { "type": "string" },
-    "stage1": { "type": "object" },
-    "stage2": { "type": "object" },
-    "stage3": { "type": "object" },
-    "stage4": { "type": "object" },
-    "stage5": { "type": "object" },
-    "stage6b": { "type": "object" },
-    "stage6c": { "type": "object" },
-    "web3": { "type": "object" },
+    "schemaVersion": {
+      "type": "integer"
+    },
+    "project": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "updatedAt": {
+      "type": "string"
+    },
+    "stage1": {
+      "type": "object"
+    },
+    "stage2": {
+      "type": "object"
+    },
+    "stage3": {
+      "type": "object"
+    },
+    "stage4": {
+      "type": "object"
+    },
+    "stage5": {
+      "type": "object"
+    },
+    "stage6b": {
+      "type": "object"
+    },
+    "stage6c": {
+      "type": "object"
+    },
+    "web3": {
+      "type": "object"
+    },
+    "offlineFirst": {
+      "type": "object"
+    },
+    "architecturalDrivers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "description"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "rationale": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "riskRegister": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "category",
+          "description",
+          "likelihood",
+          "impact",
+          "mitigation",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "category": {
+            "enum": [
+              "Technical",
+              "Schedule",
+              "Cost",
+              "Security",
+              "Operational"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "likelihood": {
+            "enum": [
+              "Low",
+              "Medium",
+              "High"
+            ]
+          },
+          "impact": {
+            "enum": [
+              "Low",
+              "Medium",
+              "High"
+            ]
+          },
+          "mitigation": {
+            "type": "string"
+          },
+          "relatedDriver": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "Open",
+              "Mitigated",
+              "Accepted"
+            ]
+          }
+        }
+      }
+    },
+    "domainModel": {
+      "type": "object",
+      "properties": {
+        "boundedContexts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "aggregates": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "name",
+                    "rootEntity"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "rootEntity": {
+                      "type": "string"
+                    },
+                    "entities": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "invariants": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              },
+              "ubiquitousLanguage": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "relationships": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "from",
+              "to",
+              "pattern"
+            ],
+            "properties": {
+              "from": {
+                "type": "string"
+              },
+              "to": {
+                "type": "string"
+              },
+              "pattern": {
+                "enum": [
+                  "Partnership",
+                  "Shared Kernel",
+                  "Customer/Supplier",
+                  "Conformist",
+                  "Anticorruption Layer",
+                  "Open Host Service",
+                  "Published Language",
+                  "Separate Ways"
+                ]
+              },
+              "description": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
     "agentTools": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["name", "type", "purpose"],
+        "required": [
+          "name",
+          "type",
+          "purpose"
+        ],
         "properties": {
-          "name": { "type": "string" },
-          "type": { "enum": ["mcp", "skill", "plugin"] },
-          "purpose": { "type": "string" }
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "mcp",
+              "skill"
+            ]
+          },
+          "purpose": {
+            "type": "string"
+          }
         }
       }
     },
     "pending": {
       "type": "object",
-      "required": ["stage"],
+      "required": [
+        "stage"
+      ],
       "properties": {
-        "stage": { "type": "string" },
-        "answers": { "type": "object" },
-        "updatedAt": { "type": "string" }
+        "stage": {
+          "type": "string"
+        },
+        "answers": {
+          "type": "object"
+        },
+        "updatedAt": {
+          "type": "string"
+        }
       }
     },
     "progress": {
       "type": "object",
       "properties": {
-        "owner": { "enum": ["design", "review"] },
-        "lastCompletedStep": { "type": "string" },
-        "reviewCycles": { "type": "object" },
-        "updatedAt": { "type": "string" }
+        "owner": {
+          "enum": [
+            "design",
+            "review"
+          ]
+        },
+        "lastCompletedStep": {
+          "type": "string"
+        },
+        "reviewCycles": {
+          "type": "object"
+        },
+        "updatedAt": {
+          "type": "string"
+        }
       }
     },
     "lld": {
@@ -52,22 +283,43 @@
       "properties": {
         "confirmedGroups": {
           "type": "array",
-          "items": { "enum": ["apiContracts", "businessRules", "dtos", "interServiceContracts", "errorCatalog"] }
+          "items": {
+            "enum": [
+              "apiContracts",
+              "businessRules",
+              "dtos",
+              "interServiceContracts",
+              "errorCatalog"
+            ]
+          }
         },
-        "updatedAt": { "type": "string" }
+        "updatedAt": {
+          "type": "string"
+        }
       }
     },
     "documents": {
       "type": "array",
       "items": {
         "oneOf": [
-          { "type": "string" },
+          {
+            "type": "string"
+          },
           {
             "type": "object",
-            "required": ["path"],
+            "required": [
+              "path"
+            ],
             "properties": {
-              "path": { "type": "string" },
-              "createdAt": { "type": ["string", "null"] }
+              "path": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
             }
           }
         ]
@@ -77,15 +329,36 @@
       "type": "array",
       "items": {
         "oneOf": [
-          { "type": "string" },
+          {
+            "type": "string"
+          },
           {
             "type": "object",
-            "required": ["path"],
+            "required": [
+              "path"
+            ],
             "properties": {
-              "path": { "type": "string" },
-              "document": { "type": ["string", "null"] },
-              "supersedes": { "type": ["string", "null"] },
-              "createdAt": { "type": ["string", "null"] }
+              "path": {
+                "type": "string"
+              },
+              "document": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "supersedes": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "createdAt": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
             }
           }
         ]
@@ -95,24 +368,71 @@
       "type": "array",
       "items": {
         "oneOf": [
-          { "type": "string" },
+          {
+            "type": "string"
+          },
           {
             "type": "object",
-            "required": ["path"],
+            "required": [
+              "path"
+            ],
             "properties": {
-              "path": { "type": "string" },
-              "document": { "type": ["string", "null"] },
-              "remediationPlan": { "type": ["string", "null"] },
-              "supersedes": { "type": ["string", "null"] },
-              "createdAt": { "type": ["string", "null"] },
+              "path": {
+                "type": "string"
+              },
+              "document": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "remediationPlan": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "supersedes": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "createdAt": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
               "split": {
                 "type": "object",
-                "required": ["part", "total", "previousPlan", "nextPlan"],
+                "required": [
+                  "part",
+                  "total",
+                  "previousPlan",
+                  "nextPlan"
+                ],
                 "properties": {
-                  "part": { "type": "integer", "minimum": 1 },
-                  "total": { "type": "integer", "minimum": 1 },
-                  "previousPlan": { "type": ["string", "null"] },
-                  "nextPlan": { "type": ["string", "null"] }
+                  "part": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "total": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "previousPlan": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "nextPlan": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
                 }
               }
             }

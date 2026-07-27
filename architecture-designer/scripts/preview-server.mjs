@@ -33,40 +33,40 @@
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
-import { spawn } from 'child_process';
+import {spawn} from 'child_process';
 
 const port = parseInt(process.argv[2], 10);
 if (!port || isNaN(port) || port < 1 || port > 65535) {
-  process.stderr.write('Usage: node preview-server.mjs <port>\n');
-  process.exit(1);
+    process.stderr.write('Usage: node preview-server.mjs <port>\n');
+    process.exit(1);
 }
 
 const DIAGRAMS_PATH = path.resolve(process.cwd(), 'docs', 'architecture-designer', 'diagrams.json');
 
 function esc(str) {
-  return String(str ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+    return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 function buildTocItem(d) {
-  return `<li><a href="#diagram-${esc(d.id)}">${esc(d.title)}</a></li>`;
+    return `<li><a href="#diagram-${esc(d.id)}">${esc(d.title)}</a></li>`;
 }
 
 function renderParagraphs(text) {
-  return String(text ?? '').split(/\n\n+/)
-    .filter(p => p.trim())
-    .map(p => `<p>${esc(p.trim())}</p>`)
-    .join('');
+    return String(text ?? '').split(/\n\n+/)
+        .filter(p => p.trim())
+        .map(p => `<p>${esc(p.trim())}</p>`)
+        .join('');
 }
 
 const INDEX_PLAN_KEYS = ['name', 'table', 'columns', 'type', 'reason'];
 
 function isBlankIndexPlanValue(value) {
-  return value === undefined || value === null || String(value).trim() === '';
+    return value === undefined || value === null || String(value).trim() === '';
 }
 
 // Rows that don't carry all five keys — or carry one as an empty/blank string — are not
@@ -74,48 +74,48 @@ function isBlankIndexPlanValue(value) {
 // instead of an index plan, or leaving a placeholder. Surface that loudly rather than
 // silently rendering an empty or partial grid.
 function buildIndexPlanTable(rows) {
-  if (rows === undefined || rows === null) return '';
-  if (!Array.isArray(rows) || rows.length === 0) return '';
+    if (rows === undefined || rows === null) return '';
+    if (!Array.isArray(rows) || rows.length === 0) return '';
 
-  const malformed = rows.filter(r => !r || typeof r !== 'object' || INDEX_PLAN_KEYS.some(k => !(k in r) || isBlankIndexPlanValue(r[k])));
-  if (malformed.length > 0) {
-    return `<div class="index-plan-table-wrapper index-plan-table-warning">
+    const malformed = rows.filter(r => !r || typeof r !== 'object' || INDEX_PLAN_KEYS.some(k => !(k in r) || isBlankIndexPlanValue(r[k])));
+    if (malformed.length > 0) {
+        return `<div class="index-plan-table-wrapper index-plan-table-warning">
       <div class="index-plan-table-title">⚠ Index plan malformed</div>
       <p>${malformed.length} of ${rows.length} row(s) are missing one of the required keys or have an empty value (${INDEX_PLAN_KEYS.join(', ')}).
       This usually means the field was filled with entity descriptions or other ERD notes instead of index rows, or left as a placeholder.
       Fix <code>indexPlan</code> in diagrams.json and re-run validate-diagrams.mjs.</p>
     </div>`;
-  }
+    }
 
-  const header = '<tr><th>Index Name</th><th>Table</th><th>Column(s)</th><th>Type</th><th>Reason</th></tr>';
-  const body = rows.map(r => `<tr>
+    const header = '<tr><th>Index Name</th><th>Table</th><th>Column(s)</th><th>Type</th><th>Reason</th></tr>';
+    const body = rows.map(r => `<tr>
       <td>${esc(String(r.name ?? ''))}</td>
       <td>${esc(String(r.table ?? ''))}</td>
       <td>${esc(String(r.columns ?? ''))}</td>
       <td>${esc(String(r.type ?? ''))}</td>
       <td>${esc(String(r.reason ?? ''))}</td>
     </tr>`).join('');
-  return `<div class="index-plan-table-wrapper">
+    return `<div class="index-plan-table-wrapper">
       <div class="index-plan-table-title">Index plan</div>
       <table class="index-plan-table"><thead>${header}</thead><tbody>${body}</tbody></table>
     </div>`;
 }
 
 function buildSection(d) {
-  const indexPlanBlock = buildIndexPlanTable(d.indexPlan ?? d.companionTable);
-  const detailsBlock = d.details
-    ? `<details class="diagram-meta">
+    const indexPlanBlock = buildIndexPlanTable(d.indexPlan ?? d.companionTable);
+    const detailsBlock = d.details
+        ? `<details class="diagram-meta">
         <summary>Details</summary>
         <div class="meta-body">${renderParagraphs(d.details)}</div>
       </details>`
-    : '';
-  const rationaleBlock = d.rationale
-    ? `<details class="diagram-meta">
+        : '';
+    const rationaleBlock = d.rationale
+        ? `<details class="diagram-meta">
         <summary>Design rationale</summary>
         <div class="meta-body">${renderParagraphs(d.rationale)}</div>
       </details>`
-    : '';
-  return `
+        : '';
+    return `
     <section class="diagram-section" id="diagram-${esc(d.id)}" data-id="${esc(d.id)}" data-title="${esc(d.title)}">
       <h2>${esc(d.title)}</h2>
       ${d.description ? `<p class="desc">${esc(d.description)}</p>` : ''}
@@ -136,20 +136,20 @@ function buildSection(d) {
 }
 
 function buildHtml(data) {
-  const title = data.title ?? 'Architecture Design';
-  const generatedAt = data.generatedAt
-    ? new Date(data.generatedAt).toLocaleString(undefined, {
-        dateStyle: 'medium', timeStyle: 'short',
-      })
-    : new Date().toLocaleString();
-  const diagrams = Array.isArray(data.diagrams) ? data.diagrams : [];
+    const title = data.title ?? 'Architecture Design';
+    const generatedAt = data.generatedAt
+        ? new Date(data.generatedAt).toLocaleString(undefined, {
+            dateStyle: 'medium', timeStyle: 'short',
+        })
+        : new Date().toLocaleString();
+    const diagrams = Array.isArray(data.diagrams) ? data.diagrams : [];
 
-  const tocItems = diagrams.map(buildTocItem).join('\n        ');
-  const sections = diagrams.map(buildSection).join('\n');
+    const tocItems = diagrams.map(buildTocItem).join('\n        ');
+    const sections = diagrams.map(buildSection).join('\n');
 
-  // NOTE: backticks and ${...} inside the <script> block are escaped as \` and \${...}
-  // because they live inside an outer JS template literal.
-  return `<!DOCTYPE html>
+    // NOTE: backticks and ${...} inside the <script> block are escaped as \` and \${...}
+    // because they live inside an outer JS template literal.
+    return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -480,64 +480,64 @@ function buildHtml(data) {
 // ── HTTP server ──────────────────────────────────────────────────────────────
 
 const server = http.createServer((req, res) => {
-  const url = new URL(req.url, `http://localhost:${port}`);
-  if (url.pathname !== '/' && url.pathname !== '/index.html') {
-    res.writeHead(404, { 'Content-Type': 'text/plain' });
-    res.end('Not found');
-    return;
-  }
+    const url = new URL(req.url, `http://localhost:${port}`);
+    if (url.pathname !== '/' && url.pathname !== '/index.html') {
+        res.writeHead(404, {'Content-Type': 'text/plain'});
+        res.end('Not found');
+        return;
+    }
 
-  try {
-    const raw = fs.readFileSync(DIAGRAMS_PATH, 'utf8');
-    const data = JSON.parse(raw);
-    const html = buildHtml(data);
-    res.writeHead(200, {
-      'Content-Type': 'text/html; charset=utf-8',
-      'Cache-Control': 'no-store',
-    });
-    res.end(html);
-  } catch (err) {
-    res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
-    res.end(
-      `Failed to load diagrams.json.\n\n` +
-      `Expected file: ${DIAGRAMS_PATH}\n\n` +
-      `Error: ${err.message}\n\n` +
-      `Make sure the architecture-designer skill has written diagrams.json before starting the server.`
-    );
-  }
+    try {
+        const raw = fs.readFileSync(DIAGRAMS_PATH, 'utf8');
+        const data = JSON.parse(raw);
+        const html = buildHtml(data);
+        res.writeHead(200, {
+            'Content-Type': 'text/html; charset=utf-8',
+            'Cache-Control': 'no-store',
+        });
+        res.end(html);
+    } catch (err) {
+        res.writeHead(500, {'Content-Type': 'text/plain; charset=utf-8'});
+        res.end(
+            `Failed to load diagrams.json.\n\n` +
+            `Expected file: ${DIAGRAMS_PATH}\n\n` +
+            `Error: ${err.message}\n\n` +
+            `Make sure the architecture-designer skill has written diagrams.json before starting the server.`
+        );
+    }
 });
 
 server.on('error', (err) => {
-  process.stderr.write(`Server error: ${err.message}\n`);
-  process.exit(1);
+    process.stderr.write(`Server error: ${err.message}\n`);
+    process.exit(1);
 });
 
 server.listen(port, '127.0.0.1', () => {
-  const url = `http://localhost:${port}`;
-  process.stdout.write(`\nArchitecture preview server running at ${url}\n`);
-  process.stdout.write(`Diagrams source: ${DIAGRAMS_PATH}\n`);
-  process.stdout.write(`Reload the browser page to reflect any diagram updates.\n`);
-  process.stdout.write(`Leave this server running — there is no stop script.\n\n`);
+    const url = `http://localhost:${port}`;
+    process.stdout.write(`\nArchitecture preview server running at ${url}\n`);
+    process.stdout.write(`Diagrams source: ${DIAGRAMS_PATH}\n`);
+    process.stdout.write(`Reload the browser page to reflect any diagram updates.\n`);
+    process.stdout.write(`Leave this server running — there is no stop script.\n\n`);
 
-  // Open browser cross-platform
-  let cmd, args;
-  switch (process.platform) {
-    case 'win32':
-      cmd = 'cmd';
-      args = ['/c', 'start', '', url];
-      break;
-    case 'darwin':
-      cmd = 'open';
-      args = [url];
-      break;
-    default:
-      cmd = 'xdg-open';
-      args = [url];
-  }
-  const child = spawn(cmd, args, { detached: true, stdio: 'ignore' });
-  child.on('error', () => {
-    process.stderr.write(`Warning: could not open browser automatically.\n`);
-    process.stderr.write(`Please open ${url} manually in your browser.\n`);
-  });
-  child.unref();
+    // Open browser cross-platform
+    let cmd, args;
+    switch (process.platform) {
+        case 'win32':
+            cmd = 'cmd';
+            args = ['/c', 'start', '', url];
+            break;
+        case 'darwin':
+            cmd = 'open';
+            args = [url];
+            break;
+        default:
+            cmd = 'xdg-open';
+            args = [url];
+    }
+    const child = spawn(cmd, args, {detached: true, stdio: 'ignore'});
+    child.on('error', () => {
+        process.stderr.write(`Warning: could not open browser automatically.\n`);
+        process.stderr.write(`Please open ${url} manually in your browser.\n`);
+    });
+    child.unref();
 });

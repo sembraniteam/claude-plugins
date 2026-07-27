@@ -19,8 +19,10 @@ input=$(cat)
 subagent_type=$(printf '%s' "$input" | jq -r '.tool_input.subagent_type // empty')
 
 # Only gate calls that target architecture-implementer (with or without the
-# "architecture-designer:" plugin-scope prefix). Everything else passes through.
-case "$subagent_type" in
+# "architecture-designer:" plugin-scope prefix). Matched case-insensitively so a
+# differently-cased subagent_type doesn't silently skip this gate. Everything
+# else passes through.
+case "$(printf '%s' "$subagent_type" | tr '[:upper:]' '[:lower:]')" in
   *architecture-implementer) ;;
   *) exit 0 ;;
 esac

@@ -1,6 +1,7 @@
 # Infrastructure as Code Guide
 
-Use this guide when executing Stage 6b — IaC Design. It defines how to select a tool, structure the codebase, manage state, and decide what to document in the architecture document.
+Use this guide when executing Stage 6b — IaC Design. It defines how to select a tool, structure the codebase, manage
+state, and decide what to document in the architecture document.
 
 ---
 
@@ -8,7 +9,7 @@ Use this guide when executing Stage 6b — IaC Design. It defines how to select 
 
 | Tool                            | Best for                                                                                                                                    | Language                     | State backend                                                                                                                   |
 |---------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------|------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
-| Terraform                       | Multi-cloud, largest ecosystem, most examples                                                                                               | HCL                          | S3 + DynamoDB (AWS), GCS (GCP), Azure Blob (Azure), Terraform Cloud                                                             |
+| Terraform                       | Multi-cloud, largest ecosystem, most examples                                                                                               | HCL                          | S3 with native locking (AWS), GCS (GCP), Azure Blob (Azure), Terraform Cloud                                                    |
 | OpenTofu                        | Terraform OSS fork — BSL-free, drop-in replacement                                                                                          | HCL                          | Same as Terraform                                                                                                               |
 | Pulumi                          | Developer-centric teams who prefer code over config                                                                                         | TypeScript, Python, Go, .NET | Pulumi Cloud, S3, GCS, Azure Blob                                                                                               |
 | AWS CDK                         | AWS-only projects with TypeScript or Python teams                                                                                           | TypeScript, Python, Java, Go | CloudFormation (managed by AWS)                                                                                                 |
@@ -18,7 +19,10 @@ Use this guide when executing Stage 6b — IaC Design. It defines how to select 
 
 **Decision rules — apply in order:**
 
-1. If Stage 3's infrastructure constraint is on-premise, bare metal, or self-hosted with no cloud component → **Ansible** (configuration management, not provisioning — there's no cloud API to provision against). If a portion is hybrid-cloud, add Terraform for that portion only per rule 6 below.
+1. If Stage 3's infrastructure constraint is on-premise, bare metal, or self-hosted with no cloud component →
+   **Ansible** (configuration management, not provisioning — there's no cloud API to provision against). If a portion is
+   hybrid-cloud, add Terraform for that portion only per rule 7 below (the default Terraform case), or rule 6 if that
+   portion is specifically Azure-only.
 2. If the requirements include multi-cloud or cloud-agnostic as a constraint → **Terraform / OpenTofu**
 3. If the team is developer-first and dislikes HCL syntax → **Pulumi**
 4. If AWS-only and the team has strong TypeScript or Python → **AWS CDK**
@@ -32,20 +36,23 @@ Use this guide when executing Stage 6b — IaC Design. It defines how to select 
 
 Always use a remote state backend. Never commit state files to version control.
 
-| Tool                            | Recommended backend                               | Locking                    |
-|---------------------------------|---------------------------------------------------|----------------------------|
-| Terraform / OpenTofu (AWS)      | S3 bucket + DynamoDB table                        | DynamoDB conditional write |
-| Terraform / OpenTofu (GCP)      | GCS bucket                                        | GCS object locking         |
-| Terraform / OpenTofu (Azure)    | Azure Blob Storage + Azure Table Storage          | Blob lease                 |
-| Terraform Cloud / HCP Terraform | Built-in                                          | Built-in                   |
-| Pulumi                          | Pulumi Cloud (default) or S3/GCS/Azure Blob       | Platform-managed           |
-| AWS CDK                         | CloudFormation (managed by AWS, no config needed) | CloudFormation stack lock  |
+| Tool                            | Recommended backend                               | Locking                                                                                                                                                                                                                                         |
+|---------------------------------|---------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Terraform / OpenTofu (AWS)      | S3 bucket, `use_lockfile = true`                  | Native S3 conditional-write locking (GA since Terraform 1.11) — prefer this over a DynamoDB table; the DynamoDB locking arguments are deprecated and slated for removal, keep DynamoDB only when migrating an existing state that still uses it |
+| Terraform / OpenTofu (GCP)      | GCS bucket                                        | GCS object locking                                                                                                                                                                                                                              |
+| Terraform / OpenTofu (Azure)    | Azure Blob Storage                                | Blob lease (native — no separate Table Storage resource is needed for locking)                                                                                                                                                                  |
+| Terraform Cloud / HCP Terraform | Built-in                                          | Built-in                                                                                                                                                                                                                                        |
+| Pulumi                          | Pulumi Cloud (default) or S3/GCS/Azure Blob       | Platform-managed                                                                                                                                                                                                                                |
+| AWS CDK                         | CloudFormation (managed by AWS, no config needed) | CloudFormation stack lock                                                                                                                                                                                                                       |
 
 ---
 
 ## 3. Module / Stack Structure
 
-**This structure is for cloud deployments.** For an Ansible-based on-premise/self-hosted setup (tool selection rule 1 above), organize by `roles/` (one per service — e.g. `roles/database/`, `roles/app-server/`) and `inventory/` (per-environment host lists) instead of the `modules/`/`environments/` split below; state/locking concerns don't apply since there's no remote backend to manage.
+**This structure is for cloud deployments.** For an Ansible-based on-premise/self-hosted setup (tool selection rule 1
+above), organize by `roles/` (one per service — e.g. `roles/database/`, `roles/app-server/`) and `inventory/`
+(per-environment host lists) instead of the `modules/`/`environments/` split below; state/locking concerns don't apply
+since there's no remote backend to manage.
 
 Organize by infrastructure concern, not by resource type. Standard layer split:
 
@@ -66,7 +73,8 @@ infra/
 └── backend.tf          remote state config (Terraform) or Pulumi.<stack>.yaml
 ```
 
-Tailor this to the actual infrastructure from Stage 5 — omit modules for services not in scope (e.g., no `messaging/` for a monolith with no async).
+Tailor this to the actual infrastructure from Stage 5 — omit modules for services not in scope (e.g., no `messaging/`
+for a monolith with no async).
 
 ---
 
@@ -78,7 +86,8 @@ Tailor this to the actual infrastructure from Stage 5 — omit modules for servi
 | Directory-per-environment | Different infra sizing per env (prod is HA, dev is single-node) | Explicit, safe for destructive ops, easy to diff — **recommended default** |
 | Separate repos            | Strict access control, separate blast radius per env            | Maximum isolation; highest maintenance overhead                            |
 
-**Default recommendation:** directory-per-environment. It makes env differences explicit and prevents accidental `terraform destroy` on prod when targeting dev.
+**Default recommendation:** directory-per-environment. It makes env differences explicit and prevents accidental
+`terraform destroy` on prod when targeting dev.
 
 ---
 
@@ -86,7 +95,8 @@ Tailor this to the actual infrastructure from Stage 5 — omit modules for servi
 
 Infrastructure drifts when someone changes a resource manually (console, CLI) outside IaC. Detect it:
 
-- **CI plan runs**: on every PR, run `terraform plan` (or equivalent) against the current state. A non-empty plan on a no-change branch means drift.
+- **CI plan runs**: on every PR, run `terraform plan` (or equivalent) against the current state. A non-empty plan on a
+  no-change branch means drift.
 - **Scheduled scans**: run `terraform plan` on a cron (nightly) in CI and alert on unexpected diffs.
 - **Terraform Cloud / HCP Terraform**: built-in drift detection dashboard.
 - **Pulumi Drift**: `pulumi refresh` followed by `pulumi preview`; automate in CI.
@@ -102,10 +112,10 @@ IaC section (section 8) should contain:
 3. **Module breakdown table** — one row per module:
 
    | Module   | Provisions                                       | Dev variation           | Prod variation               |
-   |----------|--------------------------------------------------|-------------------------|------------------------------|
+               |----------|--------------------------------------------------|-------------------------|------------------------------|
    | network  | VPC, 2 public + 2 private subnets, NAT gateway   | Single AZ               | Multi-AZ                     |
    | compute  | ECS Fargate cluster, ALB, target group           | 1 task, no autoscaling  | 2–10 tasks, autoscaling      |
-   | database | RDS PostgreSQL 16, subnet group, parameter group | db.t3.micro, no replica | db.r7g.large, 1 read replica |
+   | database | RDS PostgreSQL 17, subnet group, parameter group | db.t3.micro, no replica | db.r7g.large, 1 read replica |
 
 4. **Environment strategy** — which approach and why
 5. **Drift detection** — how and how often
