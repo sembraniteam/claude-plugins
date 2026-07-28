@@ -187,6 +187,21 @@ into what the generator wrote, don't replace the file.
   in-process store. Route responses through the shape in the document's Error Catalog (`RATE_LIMITED`, 429,
   `Retry-After` header) rather than the library's raw default response. If the document names no rate-limiting strategy
   (no public or untrusted-client-reachable API), skip this — do not invent limits that weren't decided in Stage 5.
+- **Database transactions** — for a Business Rule (LLD section 10) whose `Post-conditions` name a **Transaction** note,
+  wrap exactly those statements in the framework/ORM's transaction API (e.g. Prisma's `$transaction`, a Sequelize/
+  TypeORM transaction block, a raw `BEGIN`/`COMMIT`/`ROLLBACK` with the driver's transaction helper) — never as
+  separate, unwrapped statements with a `// TODO: wrap in transaction` comment. If the note names a concurrency-control
+  strategy (per `references/transaction-guide.md`), implement it exactly: a conditional `UPDATE ... WHERE id = $1 AND
+  version = $2` (checking the affected-row count and retrying/surfacing a conflict on zero rows) for optimistic, or
+  `SELECT ... FOR UPDATE` inside the same transaction for pessimistic, locking multiple rows in the fixed order the note
+  specifies. Wrap a transaction subject to serialization failure/deadlock in a bounded retry, the same pattern used for
+  the resilience strategy's external-call retries above, applied here to the database's own conflict errors. For a rule
+  written as a Saga (steps spanning aggregates/services), implement each step as its own committed local transaction
+  plus its named compensating transaction — never a single wrapping transaction across steps — and never open an
+  HTTP/RPC call to another service from inside an open database transaction. Where the rule names a transactional
+  outbox, write the outgoing event to an `outbox` table in the same transaction as the state change, and implement the
+  separate relay (a polling job or the engine's change-data-capture feed) as its own component — not a direct broker
+  publish call made immediately after the commit.
 
 **Configuration files**:
 
@@ -223,6 +238,13 @@ example):
 - Stub assertions with `// TODO: implement` where full coverage depends on business logic not yet written, same as route
   handlers — a stubbed test file that runs and fails clearly is still a real file for verification purposes; an absent
   one is a FAIL.
+- **Apply `references/clean-code-guide.md` Part 2** to every generated test: structure each test case in
+  Arrange-Act-Assert order; apply FIRST (Fast, Independent, Repeatable, Self-validating, Timely) — no test depends on
+  another test's side effects or on real wall-clock time; inject any time/randomness source as a collaborator rather
+  than calling it directly in code under test, so it can be fixed in the test. Pick the specific test-double type the
+  assertion needs, per that guide's taxonomy: a Stub or Fake (e.g. an in-memory repository) when the test checks a
+  return value or resulting state, a Spy or Mock only when the test's actual point is verifying an interaction
+  occurred — do not default to mocking every collaborator regardless of what the test is checking.
 - If input 5 (**Agent tools**) lists an entry whose `purpose` overlaps testing or diagnostics (e.g. a language-server
   MCP), use it to check each generated test file compiles/parses as part of writing it — the same "Using agent tools"
   discipline as any other file group (see below), logged the same way in the Agent-tools usage log.
@@ -249,6 +271,26 @@ example):
 - **Follow the plan and the document, not assumptions.** If the document says PostgreSQL, use PostgreSQL. If it says
   Redis for sessions, use Redis. Do not substitute. If the plan lists a file, build it; if it doesn't, don't invent
   one — flag the gap to the calling skill instead of improvising.
+- **Apply `references/design-principles-guide.md` while shaping service/class code** (SOLID, DRY, YAGNI, Tell Don't Ask,
+  the Hollywood Principle, and the Law of Demeter) — this is about *how* the classes the plan already specifies are
+  shaped, not license to add capabilities beyond what the plan and document call for: keep route handlers thin
+  (orchestration only — parse the request, call one service method, map the response), wire a service's dependencies
+  through the framework's DI mechanism rather than instantiating them inline inside a method (Dependency
+  Inversion/Hollywood Principle), and avoid a method reaching more than one property-access hop into a parameter or
+  dependency's return value (`req.user.profile.settings.locale`) — introduce an intermediate accessor or pass the needed
+  value directly instead (Law of Demeter). If the document's Class Diagram already models these correctly (per
+  `design/SKILL.md`'s Stage 6d design-principle pass), generate code that matches that shape rather than re-deriving it.
+- **Generate the exact GoF/POSA pattern named in the document, nothing more.** If the Class Diagram's `rationale`/
+  `details` field or a Business Rule names a pattern (per `references/design-patterns-guide.md` — Strategy, Builder,
+  Adapter, Decorator, Observer, Chain of Responsibility, Template Method, etc.), implement that pattern's actual shape
+  (the interface plus one class per variant, the wrapper chain, the pipeline stage) rather than a flat procedural
+  substitute. Do not introduce a pattern that wasn't named in the design — an unrequested Factory or Strategy for a
+  class with exactly one concrete case is scope creep beyond the plan, the same as adding an unrequested feature.
+- **Apply `references/clean-code-guide.md` Part 1 while writing every function and method**: intention-revealing names,
+  small functions at one level of abstraction, few arguments, no side effects a name doesn't advertise, exceptions
+  mapped to the document's Error Catalog rather than swallowed or returned as bare codes, and third-party/external API
+  calls wrapped behind an interface this codebase owns (the Adapter pattern applied at every external-dependency
+  boundary) rather than scattered inline across call sites.
 - **Generate, don't hand-author, whenever a Scaffolding section is present.** The plan's Scaffolding item ran first for
   exactly this reason — do not re-derive `package.json`/`tsconfig.json`/`go.mod`/`Cargo.toml`/framework config from
   memory once the generator already produced it, even if a step below describes what such a file typically contains.
@@ -286,10 +328,12 @@ example):
   is out of scope for this agent regardless of the answer). A `PreToolUse` hook on `Bash`
   (`hooks/check-deploy-command.sh` — see the plugin README's "Hooks" section) backs this rule mechanically: it blocks a
   command matching a known deploy/broadcast pattern while any plan reads `Status: In progress`, independent of whether
-  this instruction is followed. That backstop has two honest limits worth knowing rather than assuming away: it matches
-  a heuristic list of known chain-toolchain deploy patterns, not an exhaustive one, and it silently no-ops if `jq` isn't
-  on `PATH` in the execution environment. This agent's own compliance with the rule above is therefore still the primary
-  control, not a formality on top of a guaranteed mechanical block.
+  this instruction is followed. That backstop has three honest limits worth knowing rather than assuming away: it
+  matches a heuristic list of known chain-toolchain deploy patterns, not an exhaustive one; it silently no-ops if `jq`
+  isn't on `PATH` in the execution environment; and its Hardhat check treats "no `--network` flag" as always safe, which
+  does not hold for a project whose `hardhat.config.js` sets a non-default `defaultNetwork` (see the hook's own header
+  comment for detail). This agent's own compliance with the rule above is therefore still the primary control, not a
+  formality on top of a guaranteed mechanical block.
 - **Offline-first sync-layer rule** (when the architecture document has an "Offline-First Considerations" section, or
   the plan has an "Offline-first projects" checklist group per `implementation-planner`'s Step 3): the sync route
   handlers (`POST /sync/push`, `GET /sync/pull`) are not ordinary CRUD endpoints — implement them with the outbox
@@ -389,6 +433,18 @@ designed; re-check content against the architecture document before writing the 
   CRUD, or a client-writable `updated_at` column, is the same class of gap as an unused resilience library — list it
   under
   "Requirements not yet reflected in code".
+- Where a Business Rule's LLD entry names a **Transaction** boundary (`references/lld-guide.md` section 2), confirm the
+  generated code actually wraps the named statements in the framework/ORM's transaction API — not separate, unwrapped
+  statements. Where it names a concurrency-control strategy, confirm the conditional version check or `SELECT ... FOR
+  UPDATE` call is actually present, not just described in a comment. A named transaction boundary with no actual
+  transaction wrapper in the generated code is the same class of gap as an unused resilience library — list it under
+  "Requirements not yet reflected in code".
+- Where a Class Diagram's `rationale`/`details` field or a Business Rule names a GoF/POSA pattern
+  (`references/design-patterns-guide.md`), confirm the generated files actually match that pattern's shape (the
+  interface plus one class per variant for Strategy/Factory, the wrapper chain for Decorator, the pipeline stages for
+  Pipes and Filters, etc.) rather than a flat procedural substitute that happens to produce the same behavior. A named
+  pattern with no matching class shape in the generated code is the same class of gap as an unused resilience library —
+  list it under "Requirements not yet reflected in code".
 
 **Modifications** (when a remediation plan was provided) — for each item in "Modifications to existing files", most of
 which should already be `[x]`/`*(code aligned)*` from Step 2's immediate marking; this pass re-confirms rather than

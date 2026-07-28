@@ -123,7 +123,7 @@ commit.
 
 ## 7. What to include in the architecture document
 
-CI/CD section (section 9) should contain:
+CI/CD section (section 10) should contain:
 
 1. **Platform selection** — CI platform + CD platform (if separate), with justification citing constraints from stages
    3–5

@@ -831,7 +831,7 @@ two containers.
 **Conventions**:
 
 - Container labels should match the names used in sequence and deployment diagrams
-- Technology field is important: "Node.js 24 / Express", "PostgreSQL 17", "Redis 8"
+- Technology field is important: "Node.js 24 / Express", "PostgreSQL 18", "Redis 8"
 - Every container should have at most 2–3 incoming relationships shown — more indicates a God component that should be
   split
 
@@ -848,7 +848,7 @@ C4Container
     Container(spa, "Web Application", "React 19 / TypeScript", "Single-page app — product catalogue, cart, checkout")
     Container(api, "API Server", "Node.js 24 / Fastify", "REST API — orders, auth, products, users")
     Container(worker, "Background Worker", "Node.js 24 / BullMQ", "Processes async jobs: emails, inventory sync, webhooks")
-    ContainerDb(db, "Primary Database", "PostgreSQL 17", "User accounts, orders, products, inventory")
+    ContainerDb(db, "Primary Database", "PostgreSQL 18", "User accounts, orders, products, inventory")
     ContainerDb(cache, "Cache / Session Store", "Redis 8", "Sessions, rate limiting, product cache")
     ContainerQueue(queue, "Job Queue", "Redis Streams / BullMQ", "Async job dispatch: email, ERP sync, notifications")
   }
@@ -918,7 +918,7 @@ Edge syntax — direction letters are `T` (top), `B` (bottom), `L` (left), `R` (
 {id}:B --> T:{id}          right-pointing arrow, bottom-of-A to top-of-B
 {id}:R <-- L:{id}          left-pointing arrow
 {id}:R -- L:{id}           line with no arrowhead
-{id}{group}:B --> T:{id}   cross-group edge (append {group} to the source id)
+{id}{group}:B --> T:{id}{group}   cross-group edge (append {group} to every endpoint that sits inside a group)
 ```
 
 **Note**: edge labels are not supported in `architecture-beta`. Use the `description` field in `diagrams.json` to
@@ -987,17 +987,17 @@ architecture-beta
   align row db_p db_r cache
 
   %% Traffic flow (no labels — describe flow in diagram description field)
-  cdn:B --> T:alb
-  alb:B --> T:api1
-  alb:B --> T:api2
-  api1:B --> T:db_p{group}
-  api2:B --> T:db_p{group}
-  api1:R --> L:db_r{group}
-  api1:B --> T:cache{group}
-  api2:B --> T:cache{group}
-  worker:B --> T:cache{group}
-  worker:R --> L:sendgrid
-  api1:R --> L:stripe
+  cdn:B --> T:alb{group}
+  alb{group}:B --> T:api1{group}
+  alb{group}:B --> T:api2{group}
+  api1{group}:B --> T:db_p{group}
+  api2{group}:B --> T:db_p{group}
+  api1{group}:R --> L:db_r{group}
+  api1{group}:B --> T:cache{group}
+  api2{group}:B --> T:cache{group}
+  worker{group}:B --> T:cache{group}
+  worker{group}:R --> L:sendgrid
+  api1{group}:R --> L:stripe
 ```
 
 **Template** (`flowchart TD`) — use when edge labels (HTTPS, TLS, etc.) are required or when the team prefers a more

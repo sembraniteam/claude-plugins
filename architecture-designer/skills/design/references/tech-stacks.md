@@ -78,7 +78,7 @@ Auth:        jose (JWT) or paseto (PASETO — see "Token format: JWT vs PASETO" 
              full-featured — Lucia was deprecated by its maintainer in March 2025 and reframed as a
              learning resource, not an installable library as of this writing; confirm current status
              before committing, don't recommend it for a new project on memory alone)
-Primary DB:  PostgreSQL 17 (default relational choice — see "Database Selection Guide" below for
+Primary DB:  PostgreSQL 18 (default relational choice — see "Database Selection Guide" below for
              when another engine fits better; managed: RDS, Cloud SQL, Supabase, Neon)
 Cache:       Redis 8, or Valkey/DragonflyDB/Garnet (Redis-compatible alternatives) — sessions, rate
              limiting, and hot-data caching all need the same fast key-value store, so one instance
@@ -127,7 +127,7 @@ Auth:        FastAPI-Users (session + JWT — in maintenance mode as of this wri
              before committing) or django-allauth (Django's de facto standard, integrates with its
              admin and permission system), or hand-rolled with PyJWT / pyseto (PASETO) +
              argon2-cffi (Argon2id password hashing)
-Primary DB:  PostgreSQL 17 (default relational choice, same reasoning as the Node.js stack above —
+Primary DB:  PostgreSQL 18 (default relational choice, same reasoning as the Node.js stack above —
              see "Database Selection Guide" below for when another engine fits better)
 Cache:       Redis 8, or Valkey/DragonflyDB/Garnet (Redis-compatible alternatives) — redis-py with
              connection pooling; same one-store-for-sessions/rate-limiting/hot-data reasoning as the
@@ -168,7 +168,7 @@ ORM:         sqlc (type-safe SQL codegen — preferred: generates Go structs/fun
 Auth:        golang-jwt/jwt or aidanwoods.dev/go-paseto (PASETO) + golang.org/x/crypto/argon2
              (Argon2id password hashing) — both from the official x/crypto extended package, not
              the core stdlib despite the common shorthand
-Primary DB:  PostgreSQL 17 — pgx/v5 driver + pgxpool (connection pooling — pgx is faster and more
+Primary DB:  PostgreSQL 18 — pgx/v5 driver + pgxpool (connection pooling — pgx is faster and more
              feature-complete than database/sql's generic driver interface for Postgres specifically)
 Cache:       Redis 8, or Valkey/DragonflyDB/Garnet (Redis-compatible alternatives) — go-redis/v9
              (the actively maintained client, full command coverage and cluster support)
@@ -207,7 +207,7 @@ Validation:  validator crate (derive-macro based, simplest for common cases) or 
              compose conditionally)
 Auth:        jsonwebtoken crate (JWT) or rusty_paseto (PASETO) + argon2 crate (Argon2id password
              hashing)
-Primary DB:  PostgreSQL 17 — deadpool-postgres (when using SQLx/raw queries directly) or the ORM's
+Primary DB:  PostgreSQL 18 — deadpool-postgres (when using SQLx/raw queries directly) or the ORM's
              own connection pool (when using Diesel/SeaORM, which already manage pooling internally)
 Cache:       Redis 8, or Valkey/DragonflyDB/Garnet (Redis-compatible alternatives) — deadpool-redis
              (async connection pooling, the standard pairing alongside deadpool-postgres above)
@@ -251,8 +251,10 @@ broad as Node/Python/Java's.
 ### Java / JVM Stack
 
 ```
-Backend:     Java 21 (virtual threads / Loom — high-concurrency I/O-bound workloads without the
-             reactive-programming complexity Project Reactor requires) + Spring Boot 4.1.0
+Backend:     Java 21 or Java 25 (both LTS — 21 has the longer production track record; 25 is the newer
+             LTS, current since September 2025 — virtual threads / Loom on either gives high-concurrency
+             I/O-bound workloads without the reactive-programming complexity Project Reactor requires)
+             + Spring Boot 4.1.0
              (the default: largest ecosystem and hiring pool, batteries-included auto-config)
              or Quarkus 3.37 (faster startup, native compilation — pick this over Spring Boot for
              serverless/container workloads where cold-start time and memory footprint matter more
@@ -268,7 +270,7 @@ Auth:        Spring Security 7.1 + OAuth2 Resource Server (see "For fine-grained
              control" below for authorization-library options, including Java's jCasbin), or
              paseto4j / jpaseto for PASETO — password hashing via Spring Security's built-in
              Argon2PasswordEncoder (requires the BouncyCastle dependency)
-Primary DB:  PostgreSQL 17 — HikariCP connection pool (Spring Boot's own default pool — the fastest
+Primary DB:  PostgreSQL 18 — HikariCP connection pool (Spring Boot's own default pool — the fastest
              JVM connection pool in independent benchmarks, no extra configuration needed)
 Cache:       Redis 8, or Valkey/DragonflyDB/Garnet (Redis-compatible alternatives) — Lettuce client
              (Spring Cache abstraction — async, thread-safe connections shareable across requests,
@@ -454,13 +456,13 @@ IaC:          Terraform (Kubernetes provider) or plain Helm charts
 
 ### Primary relational store
 
-| Requirement                       | Recommendation                                                     |
-|-----------------------------------|--------------------------------------------------------------------|
-| Default OLTP, complex queries     | **PostgreSQL 17** (preferred)                                      |
-| Simple OLTP, wide hosting support | **MySQL 9.7** / MariaDB                                            |
-| Embedded, single-file, local dev  | **SQLite 3.53**                                                    |
-| Global distributed OLTP           | **CockroachDB** (PostgreSQL-compatible) or **PlanetScale** (MySQL) |
-| Analytical queries (OLAP)         | **ClickHouse** or **DuckDB** (embedded analytics)                  |
+| Requirement                       | Recommendation                                                                                                                                                          |
+|-----------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Default OLTP, complex queries     | **PostgreSQL 18** (preferred) — major version current as of this writing; PostgreSQL 19 is in beta targeting Sept/Oct 2026 GA, confirm current stable before committing |
+| Simple OLTP, wide hosting support | **MySQL 9.7** / MariaDB                                                                                                                                                 |
+| Embedded, single-file, local dev  | **SQLite 3.53**                                                                                                                                                         |
+| Global distributed OLTP           | **CockroachDB** (PostgreSQL-compatible) or **PlanetScale** (MySQL)                                                                                                      |
+| Analytical queries (OLAP)         | **ClickHouse** or **DuckDB** (embedded analytics)                                                                                                                       |
 
 **CockroachDB license note**: as of November 2024, Cockroach Labs retired the open-source CockroachDB Core offering and
 relicensed under the proprietary, source-available CockroachDB Software License (mandatory license keys, enforced
@@ -708,7 +710,7 @@ second store just for this.
 
 Every technology choice must cite at least one requirement from stages 1–4. Use this pattern:
 
-> **PostgreSQL 17** was chosen as the primary database because:
+> **PostgreSQL 18** was chosen as the primary database because:
 > - The team has 3 years of PostgreSQL experience [Stage 3 — team competencies]
 > - The data model is relational with complex joins and ACID transaction
     requirements [Stage 2 — NFR: strong consistency]

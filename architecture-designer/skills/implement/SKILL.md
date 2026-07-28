@@ -89,14 +89,14 @@ three canonical call sites) using the document confirmed in Step 1 as `{document
 path**, if the user chooses to resume.
 
 Then follow `design/references/session-schema.md` section "Implementation-planner → architecture-implementer spawn
-sequence" to spawn `implementation-planner` and, once its plan is confirmed, `architecture-implementer` (Step 4 below),
-passing these six inputs:
+sequence" to spawn `architecture-designer:implementation-planner` and, once its plan is confirmed,
+`architecture-designer:architecture-implementer` (Step 4 below), passing these six inputs:
 
 - **Architecture document path** — the file confirmed in Step 1
 - **Existing project summary** — what was found in Step 2, translated into the agent's expected strategy label:
   `Fresh start (empty project)` if the project looked empty; `Merge` if the user chose (a);
   `Fresh start (existing project)` if the user chose (b); `User-described layout` if the user chose (c)
-- **Technology stack** — read from the approved architecture document's Technology Decisions section (section 5); this
+- **Technology stack** — read from the approved architecture document's Technology Decisions section (section 6); this
   is the current, authoritative stack regardless of whether a review revision changed it after `session.json`'s `stage5`
   was last written — only `design/SKILL.md` writes `stage5`, and a stack-changing revision doesn't update it (see
   `design/references/session-schema.md` section "Single writer per key"), so `stage5` can go stale relative to the

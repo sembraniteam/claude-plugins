@@ -35,15 +35,24 @@ The skill that spawns you will pass:
   because the schema itself is wrong, that's a database-cycle finding, not one to fix here; note it in **Skipped —
   require human decision** instead of silently diverging the diagram from the schema text already embedded in the
   document.
-- Entities or participants declared in relationships but not defined
+- Entities, participants, or classes declared in a relationship/message/association but not defined elsewhere in the
+  same diagram (covers ERD entities, sequence-diagram participants, and class-diagram phantom classes alike) — add the
+  missing declaration with the minimal shape implied by how it's referenced
+- A flowchart/use-case/business-process decision branch with no resolution (a path with no terminal or continuation) —
+  close it the same way an unclosed `alt`/`opt`/`loop` block is closed below
 - Unclosed `alt`/`opt`/`loop` blocks in sequence diagrams
 - Naming inconsistencies across diagrams — pick the most-used canonical name and apply it everywhere
 - Missing failure paths (`alt` block) in critical sequence flows: auth, primary transaction, payment
-- Missing components implied by NFRs (e.g., load balancer for high availability, log sink for observability): **do not
-  add these directly**. Adding a component is a design decision, even when the NFR implies it. Instead, list each in the
-  **Proposed Additions** section of your fix log with: which NFR implies it, which diagram it would appear in, and a
-  one-line description of the proposed change. The calling skill will present these to the user for confirmation before
-  any insertion happens.
+- Missing components implied by an NFR, **or any other Dimension-4 gap/SPOF/bottleneck/security-gap finding with no
+  explicit `RISK-n` citation** (e.g., a single point of failure or missing safeguard the reviewer identified by direct
+  inspection rather than from a stated NFR or a confirmed `riskRegister` entry) — e.g., a load balancer for high
+  availability, a log sink for observability, a read replica flagged only by inspection: **do not add these directly**.
+  Adding a component is a design decision even when a finding clearly implies it. Instead, list each in the **Proposed
+  Additions** section of your fix log with: what implies it (the NFR, or "identified by inspection, no riskRegister/NFR
+  citation"), which diagram it would appear in, and a one-line description of the proposed change. The calling skill
+  will present these to the user for confirmation before any insertion happens. This is the same routing the
+  risk-register-cross-check bullet below falls back to for any Dimension-4 finding that lacks an explicit `RISK-n`
+  citation — nothing from Dimension 4 is ever silently dropped or invented past this point.
 - **Missing dedicated diagram for a core feature** (dimension 3's "Core feature coverage" finding — a distinct
   user-facing functional requirement from stage 2 has zero dedicated sequence diagram anywhere in the set): fix this
   directly, do not route it through Proposed Additions — unlike an NFR-implied component, the feature itself is already

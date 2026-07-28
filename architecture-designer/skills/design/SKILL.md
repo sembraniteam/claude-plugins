@@ -1,6 +1,6 @@
 ---
 name: design
-description: This skill should be used when the user wants to design a new application's architecture or infrastructure — says "design my architecture", "help me plan the architecture", "create architecture diagrams", "I need to plan a new system", or is starting a new project and needs a structured design process. Also trigger when the user mentions HLD, LLD, API contracts, or system design for a system with no existing architecture document yet. Not for adding/changing an API contract, endpoint, or LLD artifact on an already-documented system, or for generating code from an approved document — see the review and implement skills for those.
+description: This skill should be used when the user wants to design a new application's architecture or infrastructure — says "design my architecture", "help me plan the architecture", "create architecture diagrams", "I need to plan a new system", or is starting a new project and needs a structured design process. Also trigger when the user mentions HLD, LLD, API contracts, or system design for a system with no existing codebase and no existing architecture document yet. Not for adding/changing an API contract, endpoint, or LLD artifact on an already-documented system, or for generating code from an approved document — see the review and implement skills for those. Not for producing a first architecture document from a codebase that already exists — even if undocumented, that's the review skill's codebase-reconstruction path.
 allowed-tools: ["Read", "Write", "Edit", "Bash", "Glob", "Agent", "WebSearch"]
 ---
 
@@ -165,7 +165,11 @@ document") — use it to ground suggestions in real technology names rather than
 
 Based on everything gathered in stages 1–4, propose and justify, in order: **(1) architecture pattern**
 (monolith/modular monolith/microservices/serverless/event-driven — a modular monolith is almost always right for small,
-early-stage teams); **(2) backend language and framework**, named specifically (e.g. "Fastify 5", not "Node.js"); **(3)
+early-stage teams). Once item (1) is chosen, read `references/design-patterns-guide.md` Part 1 and name the applicable
+POSA architectural pattern (s) for the internal structure of each deployable unit and for inter-service communication —
+Layers applies to nearly every system regardless of deployment topology; Broker, Pipes and Filters, MVC, and Microkernel
+apply only when that pattern's specific signal is present in the requirements; **(2) backend language and framework**,
+named specifically (e.g. "Fastify 5", not "Node.js"); **(3)
 frontend** framework and version, if applicable; **(4) database engine (s)** — a high-level call; the database-designer
 agent designs the full schema in Stage 6, applying `references/timezone-guide.md`'s UTC-storage rule to every datetime
 column and to any scheduled/recurring feature (digests, reminders, cron jobs) surfaced in stages 1–4; **(5)
@@ -175,22 +179,24 @@ them; **(7) authentication approach**, justified by user roles, security require
 observability strategy** — logging aggregator (e.g. ELK, Grafana Loki, Datadog, CloudWatch), metrics/dashboards, and
 distributed tracing (OpenTelemetry + Jaeger/Tempo) if multiple services or async flows are involved, scaled to what the
 system's actual operational maturity requires — a small monolith may need only structured logging and one dashboard; **(
+
 9) disaster recovery** — RPO/RTO derived from the Stage 2 availability NFR, backup strategy, failover approach; **(10)
-error handling and resilience strategy** — derived from the Stage 2 error-handling NFR. Read
-`references/resilience-guide.md` before finalizing this and name, per its pattern table and library table: the backoff
-strategy and max attempts for retries against external dependencies named in stages 1–4, a circuit breaker or equivalent
-for any dependency the NFR marked as must-not-fail-silently, timeout budgets for synchronous calls, and the
-graceful-degradation behavior (if any) for non-critical features when a dependency is down. Name the specific library
-its "Library per stack" table gives for the confirmed language, rather than describing the concept abstractly — scale to
-what the system actually needs: a monolith with no external dependencies may only need timeout budgets, not a full
-circuit breaker; **(11) rate limiting strategy** — derived from the Stage 2 rate-limiting/abuse-prevention NFR. Read
-`references/rate-limiting-guide.md`
-before finalizing this and name, per its tradeoff table and library table: the algorithm, the specific middleware
-library for the confirmed backend language, and which layer enforces it (API gateway, application middleware, or both) —
-plus the shared store (Redis) the limiter counters live in if the infrastructure decision above is horizontally scaled,
-rather than an in-process store that would silently multiply the real limit by instance count. Skip this only for a
-system with no public-facing or untrusted-client-reachable API, the same way item 10 is skipped for a monolith with no
-external dependencies — state that explicitly rather than omitting it silently.
+   error handling and resilience strategy** — derived from the Stage 2 error-handling NFR. Read
+   `references/resilience-guide.md` before finalizing this and name, per its pattern table and library table: the
+   backoff strategy and max attempts for retries against external dependencies named in stages 1–4, a circuit breaker or
+   equivalent for any dependency the NFR marked as must-not-fail-silently, timeout budgets for synchronous calls, and
+   the graceful-degradation behavior (if any) for non-critical features when a dependency is down. Name the specific
+   library its "Library per stack" table gives for the confirmed language, rather than describing the concept
+   abstractly — scale to what the system actually needs: a monolith with no external dependencies may only need timeout
+   budgets, not a full circuit breaker; **(11) rate limiting strategy** — derived from the Stage 2
+   rate-limiting/abuse-prevention NFR. Read
+   `references/rate-limiting-guide.md`
+   before finalizing this and name, per its tradeoff table and library table: the algorithm, the specific middleware
+   library for the confirmed backend language, and which layer enforces it (API gateway, application middleware, or
+   both) — plus the shared store (Redis) the limiter counters live in if the infrastructure decision above is
+   horizontally scaled, rather than an in-process store that would silently multiply the real limit by instance count.
+   Skip this only for a system with no public-facing or untrusted-client-reachable API, the same way item 10 is skipped
+   for a monolith with no external dependencies — state that explicitly rather than omitting it silently.
 
 Every recommendation must cite a specific reason from stages 1–4, plus the architectural driver ID (s) it satisfies from
 `architecturalDrivers` above when one applies (e.g. "PostgreSQL with synchronous replication, satisfying AD-2 (99.9%
@@ -275,13 +281,13 @@ integrates (Partnership, Shared Kernel, Customer/Supplier, Conformist, Anticorru
 Published Language, or Separate Ways) per that guide's Step 4 — this feeds the Context Map diagram in Stage 6d. Present
 it, confirm, then write to `session.json`'s top-level `domainModel` (including `relationships` when applicable).
 
-Spawn the `architecture-designer:database-designer` agent. Pass it the complete requirements summary (read from
-`docs/architecture-designer/session.json`, not from memory — per `references/session-schema.md` section
+Spawn the `architecture-designer:database-designer` agent. Pass it three inputs: the complete requirements summary (read
+from `docs/architecture-designer/session.json`, not from memory — per `references/session-schema.md` section
 "Requirements-summary scope for sub-agent spawns", so its Web3 and offline-first steps can fire when applicable, per
-`references/web3-guide.md` and `references/offline-first-guide.md`), the `domainModel` just confirmed (so schema/table
-grouping respects aggregate boundaries per `references/ddd-guide.md`), the domain entities extracted from the functional
-requirements, and the access patterns from the business processes. Wait for it to return ERD, index plan, engine
-recommendation, secure connection config, and migration strategy.
+`references/web3-guide.md` and `references/offline-first-guide.md` — this scope already includes the `domainModel` just
+confirmed, so schema/table grouping respects aggregate boundaries per `references/ddd-guide.md`), the domain entities
+extracted from the functional requirements, and the access patterns from the business processes. Wait for it to return
+ERD, index plan, engine recommendation, secure connection config, and migration strategy.
 
 Then spawn `architecture-designer:database-reviewer` with the full database-designer output and the requirements summary
 (same scope as above). **Regardless of verdict**, apply `references/session-schema.md` section "Reviewer–fixer cycle
@@ -291,12 +297,13 @@ pass, not only on failure). If it returns `DATABASE REVIEW FAILED`, continue wit
 verdict — cycle until `DATABASE REVIEW PASSED`): spawn `architecture-designer:database-fixer`, which receives the review
 report, the database-designer output, the requirements summary (same scope), and the path to
 `docs/architecture-designer/diagrams.json`. It writes the corrected ERD and indexPlan directly into `diagrams.json`
-**and returns the corrected schema, ERD, index plan, and connection config as text** — replace the database-designer
-output held in context with this corrected text. Step 0 of the reviewer–fixer cycle procedure (triggered above) writes
-this same final text into `progress.reviewCycles.database.approvedOutput` — that key, not conversation memory, is the
-durable source Step 11 (section 7) and Stage 6d's ERD both read from.
+**and returns the corrected schema, ERD, index plan, transaction and concurrency strategy (when present), and connection
+config as text** — replace the database-designer output held in context with this corrected text. Step 0 of the
+reviewer–fixer cycle procedure (triggered above) writes this same final text into
+`progress.reviewCycles.database.approvedOutput` — that key, not conversation memory, is the durable source Step 11
+(section 8) and Stage 6d's ERD both read from.
 
-**The database design embedded in the document (Step 11, section 7) and the diagram set must be the final approved
+**The database design embedded in the document (Step 11, section 8) and the diagram set must be the final approved
 version** — the fixer's corrected text if any cycle ran, otherwise the original output. Never fall back to the original
 after a fixer cycle has produced a correction; the two must never diverge.
 
@@ -410,6 +417,20 @@ ERD from `session.json`'s `progress.reviewCycles.database.approvedOutput` (the f
 see `references/session-schema.md` section "Persisting the database design output"), not from conversation memory — this
 is what makes Stage 6a's output durable if 6d runs in a resumed session where Stage 6a's conversation turn is gone.
 
+**Class diagram design-principle pass**: after drafting a Class Diagram, before appending it to `diagrams.json`, read
+`references/design-principles-guide.md` and pass the draft once against its Quick Reference section (SOLID, DRY, YAGNI,
+Tell Don't Ask, Hollywood Principle, Law of Demeter) — does each service have one responsibility, are variant-heavy
+services modeled with an interface rather than a growing branch, are dependencies interface-typed rather than concrete,
+and does any association chain reach more than one hop deep. Adjust the diagram in place; this is a lightweight pass on
+the diagram already being built, not a separate confirmation round-trip.
+
+**Class diagram GoF pattern pass**: in the same pass, read `references/design-patterns-guide.md` Part 2 and check the
+draft against its signal column — a growing conditional chain (Strategy or Chain of Responsibility), a multi-step
+optional-heavy construction (Builder), a third-party integration with no owned interface around it (Adapter), or
+cross-cutting wrapped behavior (Decorator) are the most common matches. Name any pattern applied in the diagram's
+`rationale`/`details` field (`references/diagrams-guide.md`) rather than leaving an unlabeled structure — do not force a
+pattern onto a class where no signal is present.
+
 ### 6e. Mermaid compatibility and diagrams.json integrity check
 
 `references/diagrams-guide.md` section "Mermaid v11.16 Compatibility Rules" and section "Preventing Node Overlap"
@@ -484,9 +505,12 @@ and `last-review.md`).
 ## Step 9 — User Confirmation
 
 **Maintenance note**: `review/SKILL.md` steps 4a/4b mirror this step's "if X changed, re-run Y" logic for the revision
-case (same drivers, NFRs, Web3/offline-first tracks, IaC/CI-CD, domain model, and now Low-Level Design). The two are
-maintained as parallel prose rather than one shared procedure — if a rule below changes (a new re-run trigger, a new
-track), apply the same change to `review/SKILL.md` steps 4a/4b, and vice versa.
+case (same drivers, NFRs, Web3/offline-first tracks, IaC/CI-CD, domain model) — `review/SKILL.md` step 4d.5 covers the
+equivalent Low-Level Design re-run separately, since LLD (Step 10 below) hasn't happened yet at this point in the
+first-time design flow and so has nothing to mirror here. The two are maintained as parallel prose rather than one
+shared procedure — if a rule below changes (a new re-run trigger, a new track), apply the same change to
+`review/SKILL.md`
+steps 4a/4b, and vice versa.
 
 After opening the browser, ask:
 
@@ -516,6 +540,11 @@ If the user requests revisions:
 - **If Stage 6a's domain modeling is affected** (new bounded contexts, changed aggregate boundaries): re-run the
   domain-modeling step per `references/ddd-guide.md` and overwrite `domainModel` in full, then re-spawn
   `database-designer` so the schema reflects the updated aggregate boundaries.
+- **If the cloud/infrastructure provider, IaC tool, or CI/CD platform changes** (whether directly requested or as a
+  consequence of a Stage 5 stack revision): read `references/iac-guide.md` and/or `references/cicd-guide.md` as
+  applicable and overwrite `session.json`'s `stage6b`/`stage6c` in full to match — the same "overwrite, don't merge"
+  rule as `agentTools`/`web3`/`offlineFirst` above. Regenerate the deployment/infrastructure and CI/CD pipeline diagrams
+  to match.
 - Regenerate the affected diagrams and re-run the architecture reviewer (step 7) — this may spawn architecture-fixer,
   which writes `diagrams.json` directly
 - Update `diagrams.json` with the revised diagrams (skip if the fixer already wrote it during the reviewer re-run)
@@ -550,6 +579,33 @@ to the next: **(1) API contracts** — one entry per endpoint visible in the seq
 one entry per non-trivial operation, skipping simple CRUD; **(3) DTOs** — only for complex or shared bodies used by
 multiple endpoints; **(4) inter-service contracts** — only for microservices/event-driven architectures, omitted
 entirely for monoliths; **(5) error catalog** — derived from errors already referenced above, never invented fresh.
+
+**Business rules design-principle check**: while writing group (2), read `references/design-principles-guide.md`'s DRY,
+YAGNI, and Tell-Don't-Ask sections — a rule whose `Logic` duplicates steps already written for another rule should
+extract a shared, named sub-rule instead of restating them (DRY); a rule that reads another object's state to make a
+decision externally should delegate that decision to the owning object instead (Tell, Don't Ask); a rule that introduces
+a configuration axis with no second confirmed variant behind it should model the concrete case directly (YAGNI).
+
+**Business rules clean-code check**: in the same pass, read `references/clean-code-guide.md`'s "Functional core,
+imperative shell" section — phrase each rule's `Logic` as pure, ordered steps with no persistence or I/O concern folded
+in (persistence belongs in `Post-conditions`, already a separate section per `references/lld-guide.md`); a rule whose
+steps read at inconsistent levels of abstraction, or that names more than a handful of steps, is a candidate to extract
+a named sub-rule, mirroring group (2)'s DRY check above.
+
+**Business rules GoF-pattern check**: also in the same pass, read `references/design-patterns-guide.md` Part 2 — a rule
+whose `Logic` describes several related operations sharing the same overall sequence but differing in one step (Template
+Method), or an action that must be queued, logged, or undone as a discrete unit (Command), or an ordered sequence of
+independent handlers each deciding whether to act (Chain of Responsibility), should name the pattern explicitly in the
+rule's description so `architecture-implementer` generates the matching class shape rather than a flat procedural
+function. Most rules match no pattern at all — name one only when the signal is actually present, per that guide's
+Why-this-matters section on misuse.
+
+**Business rules transaction-boundary check**: also in the same pass, apply `references/lld-guide.md` section 2's
+"Transaction boundary" rule — for a rule whose `Post-conditions` list two or more writes, read
+`references/transaction-guide.md` and state whether they commit as one database transaction (naming the
+concurrency-control strategy if `database-designer` flagged the entity high-contention) or, if the writes legitimately
+span two aggregates/services, rewrite the rule as an explicit Saga (ordered steps, each with its own local transaction
+and compensating transaction) per that guide's section 4.
 
 **Persist each group as soon as it's confirmed** — do not wait until all five are done. After each group is confirmed,
 write it into `session.json`'s `lld` key (create it if absent) and add that group's name to `lld.confirmedGroups` —
@@ -593,12 +649,14 @@ the same time if the file predates them, per the tolerant-read rule in `referenc
   `Mar`,
   `Apr`, `May`, `Jun`, `Jul`, `Aug`, `Sep`, `Oct`, `Nov`, `Dec`), year is 4 digits. Example: `05-Jul-2026`.
 
-**Document body sections (in order)**: follow `references/document-template.md` — ten fixed sections from Project
-Overview through Low-Level Design, each pulling from the corresponding stage or sub-agent output (section 7 from
-`session.json`'s `progress.reviewCycles.database.approvedOutput`, section 10 from the `lld` key), plus an 11th
-conditional "Decentralized Architecture Considerations" section when the Web3 track was active, a 12th conditional
-"Offline-First Considerations" section when the offline-first track was active, a required 13th "Domain Model (DDD)"
-section from the `domainModel` key, and a required 14th "Trade-off and Risk Analysis" section from the
+**Document body sections (in order)**: follow `references/document-template.md` — eleven fixed sections from Project
+Overview through Low-Level Design, each pulling from the corresponding stage or sub-agent output (section 2 "Core
+Features" derived from the same Stage 2 functional requirements Stage 6d's "Core feature coverage requirement" already
+treats as core features, cross-referenced against the dedicated sequence diagram each one already has in section 7;
+section 8 from `session.json`'s `progress.reviewCycles.database.approvedOutput`; section 11 from the `lld` key), plus a
+12th conditional "Decentralized Architecture Considerations" section when the Web3 track was active, a 13th conditional
+"Offline-First Considerations" section when the offline-first track was active, a required 14th "Domain Model (DDD)"
+section from the `domainModel` key, and a required 15th "Trade-off and Risk Analysis" section from the
 `stage5.tradeoffAnalysis` and `riskRegister` keys.
 
 Record `progress.lastCompletedStep = "step11"` per `references/session-schema.md` section "Recording
@@ -611,7 +669,7 @@ Record `progress.lastCompletedStep = "step11"` per `references/session-schema.md
 Spawn the `architecture-designer:document-reviewer` agent with the path to the saved document, the requirements summary
 (per `references/session-schema.md` section "Requirements-summary scope for sub-agent spawns"), and the expected
 filename. Wait for the verdict. (`document-reviewer`/`document-fixer` read `references/document-review-checklist.md`
-directly for the exact F1–F7/C1–C15 criteria — no need to read it here.) **Regardless of verdict**, apply
+directly for the exact F1–F7/C1–C16 criteria — no need to read it here.) **Regardless of verdict**, apply
 `references/session-schema.md` section "Reviewer–fixer cycle procedure" step 0 as soon as the verdict is received
 (records the verdict/cycle/`documentHash` into `progress.reviewCycles.document` and
 `docs/architecture-designer/last-review.md`; this runs even on a clean first-try pass, not only on failure).
@@ -654,13 +712,13 @@ applicable remediation plan", using the approved document's path. Then run `refe
 path**, if the user chooses to resume.
 
 Then follow `references/session-schema.md` section "Implementation-planner → architecture-implementer spawn sequence" to
-spawn `implementation-planner` and, once its plan is confirmed, `architecture-implementer`, passing these six inputs:
+spawn `architecture-designer:implementation-planner` and, once its plan is confirmed, `architecture-designer:architecture-implementer`, passing these six inputs:
 
 - The path to the approved document
 - **Existing project summary** — translated into the agent's expected strategy label: `Fresh start (empty project)` if
   nothing was found; `Merge` if the user chose (a); `Fresh start (existing project)` if the user chose (b);
   `User-described layout` if the user chose (c)
-- **Technology stack** — read from the approved architecture document's Technology Decisions section (section 5), the
+- **Technology stack** — read from the approved architecture document's Technology Decisions section (section 6), the
   same source `implement/SKILL.md` Step 3 and `review/SKILL.md` step 4h use, rather than `stage5` directly — this is a
   first-time save with no revision in between, so the two agree here, but reading the document keeps this input
   consistent with the other two spawn sites

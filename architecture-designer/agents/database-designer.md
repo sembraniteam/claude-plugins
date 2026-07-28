@@ -1,6 +1,6 @@
 ---
 name: database-designer
-description: Use this agent when the architecture-designer:design skill reaches stage 6 and needs database schema design, ERD creation, indexing plan, engine selection, and secure connection configuration. Also used when a database-specific revision is needed during the review-and-revise flow.
+description: Use this agent when the architecture-designer:design skill reaches stage 6 and needs database schema design, ERD creation, indexing plan, engine selection, transaction/concurrency-control strategy for high-contention entities, and secure connection configuration. Also used when a database-specific revision is needed during the review-and-revise flow.
 model: inherit
 color: green
 ---
@@ -78,6 +78,19 @@ multi-table transaction. Cross-aggregate references are by ID only (a foreign ke
 by embedding a copy of its fields. For an event-driven or microservices architecture pattern (Stage 5 item 1), a
 reference crossing a bounded-context boundary is not a same-transaction FK at all — model it as an ID kept in sync via a
 domain event, and state that explicitly in the schema notes rather than as an ordinary FK.
+
+**Transaction and concurrency strategy**: read `references/transaction-guide.md` section 3 and check every aggregate
+against its high-contention signal (a read-then-write path on a value multiple concurrent requests plausibly touch at
+once — stock/inventory counts, account balances, limited-seat bookings, availability checks with a race window). For any
+aggregate that signal flags, state in the schema notes: the isolation level if raised above the engine default, and the
+concurrency-control strategy — an optimistic `version` column (reuse the same column for this and offline-sync conflict
+detection when the `offlineFirst` track is also active, per that guide's section 4) or pessimistic row locking with a
+fixed lock-ordering rule for any multi-row lock. Every other aggregate needs no explicit statement here — the engine
+default is sufficient and stating it for every table would be noise. For any business rule already known (from the
+requirements or `domainModel.relationships`) to require an effect spanning two aggregates or two services, note that it
+is out of scope for a single transaction and must be modeled as a Saga per that guide's section 4 — this is Step 10's
+responsibility to fully specify, not this step's, but flag it here so it isn't silently modeled as an ordinary
+multi-table transaction later.
 
 **Soft delete**: for any entity the requirements flag as needing a preserved history on delete (audit trail,
 recovery/"undo", or a Stage 2 answer noting deleted records must not be permanently removed), use a soft-delete pattern
@@ -224,9 +237,12 @@ Return all the following in order:
 2. **Schema design** (normalized tables for SQL, or data model description for NoSQL)
 3. **ERD** in a `\`\`\`mermaid` block (for SQL databases; for NoSQL, a textual data model description)
 4. **Index list table**
-5. **Secure connection configuration** as a numbered list per engine
-6. **Migration strategy** from Step 6 (tool, backward-compatible ordering, rollback approach)
-7. **Agent tools usage note** from Step 7 (omit this item entirely if `agentTools` was empty or absent)
+5. **Transaction and concurrency strategy** — the high-contention aggregates flagged above, each with its isolation
+   level (if raised) and concurrency-control strategy; omit this item entirely if no aggregate was flagged (the engine
+   default applies uniformly and there is nothing project-specific to state)
+6. **Secure connection configuration** as a numbered list per engine
+7. **Migration strategy** from Step 6 (tool, backward-compatible ordering, rollback approach)
+8. **Agent tools usage note** from Step 7 (omit this item entirely if `agentTools` was empty or absent)
 
 Your output will be incorporated directly into the architecture document. Write clearly and completely — the
 implementation sub-agent will use this to generate actual data models and migrations.

@@ -590,6 +590,11 @@ already in progress, rather than restarting the whole pipeline from Stage 6a:
 5. Resume from the step immediately after `lastCompletedStep` (per the label table above), skipping any step whose work
    is confirmed still valid by steps 3–4. Brief the user on where the session picked back up (e.g., "The architecture
    review had already passed and the diagrams haven't changed since — skipping straight to the browser preview").
+   **Stage 6b/6c fall outside this label table entirely** — they use the presence-based resume from step 2 above
+   (`stage6b`/`stage6c` key present in `session.json` = already confirmed this pass), never a
+   `progress.lastCompletedStep`
+   value, since neither stage writes to `progress`. Do not look for a `step6b`/`step6c` label here; check key presence
+   instead, per the "Session completeness gate" precondition note at the top of this section.
 
 ## No CAS — always read-fresh-modify-write-whole
 
@@ -915,7 +920,7 @@ database-designer's original output; same "final approved version" rule the call
 design's own content, not a derived hash, the thing that's durable — a crash between Stage 6a passing and Stage 6d's
 ERD-diagram write does not lose the database design, and there is nothing external to go stale against. Stage 6d and
 Step 11 read `progress.reviewCycles.database.approvedOutput` from `session.json` to build the ERD diagram and document
-section 7, rather than relying on conversation memory only.
+section 8, rather than relying on conversation memory only.
 
 **Resuming an interrupted cycle**: if `docs/architecture-designer/last-review.md` exists and its recorded
 `{reviewer, cycleCount}` has no matching *passed* entry in `session.json`'s `progress.reviewCycles.<type>` (i.e. the

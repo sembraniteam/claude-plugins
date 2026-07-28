@@ -65,6 +65,17 @@ network_arg=$(printf '%s' "$command_lc" | grep -oE -- '--network[= ]+[A-Za-z0-9_
 # A --network flag whose value could not be parsed as a plain literal (e.g. a
 # shell variable or command substitution, which the regex above cannot resolve)
 # is treated as unresolved and blocked rather than assumed safe.
+#
+# Known gap: this "no flag = safe" assumption does not hold for a Hardhat
+# project whose hardhat.config.js sets a non-default `defaultNetwork` (e.g.
+# `defaultNetwork: "mainnet"`) — `npx hardhat run scripts/deploy.js` with no
+# --network flag then deploys to that configured network, not Hardhat's
+# built-in in-memory default. Detecting this would require parsing the
+# project's config file, which this hook deliberately does not attempt (same
+# heuristic-not-exhaustive tradeoff as the rest of this script — see the file
+# header). A project relying on a non-default defaultNetwork is not protected
+# by this specific check; the scripts/deploy/* and CLI-subcommand checks above
+# still apply independently.
 network_is_risky() {
   [ "$network_present" -eq 0 ] && return 1
   [ -z "$network_arg" ] && return 0
@@ -102,7 +113,7 @@ elif contains "tx wasm store" || contains "tx wasm instantiate"; then
   reason="cosmwasm tx wasm store/instantiate"
 elif contains "starknet deploy" || contains "sncast deploy"; then
   reason="starknet deploy"
-elif printf '%s' "$command_lc" | grep -qE '(npm run|yarn|pnpm)[[:space:]]+([a-z0-9_.-]*:)?deploy([[:space:]]|$)'; then
+elif printf '%s' "$command_lc" | grep -qE '(npm run|yarn|pnpm)[[:space:]]+([a-z0-9_.-]*:)?deploy(:[a-z0-9_.-]+)?([[:space:]]|$)'; then
   reason="npm/yarn/pnpm deploy script"
 elif { contains "hardhat deploy" || contains "hardhat run" || contains "hardhat ignition deploy"; } && network_is_risky; then
   reason="hardhat deploy/run --network ${network_arg:-<unresolved>}"

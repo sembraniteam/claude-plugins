@@ -8,9 +8,14 @@
 # a plan file with `Status: In progress` actually exists on disk under
 # docs/architecture-designer/plan/.
 #
-# If the spawning prompt names a specific plan file, that exact file's
-# Status row is checked. Otherwise it falls back to checking whether ANY
-# plan file in the directory is still `In progress`.
+# The spawning prompt is required to name the specific plan file being
+# implemented (every call site does, per session-schema.md's
+# "Implementation-planner -> architecture-implementer spawn sequence" —
+# the plan path is always one of the six passed inputs). That exact file's
+# Status row is checked; if no plan path can be extracted from the prompt,
+# the call is blocked rather than falling back to "any In-progress plan
+# file in the directory," which could pass the gate against an unrelated
+# plan's state.
 set -uo pipefail
 
 command -v jq >/dev/null 2>&1 || exit 0
@@ -46,14 +51,5 @@ if [ -n "$referenced_plan" ]; then
   exit 2
 fi
 
-if [ -d "$plan_dir" ]; then
-  for f in "$plan_dir"/*.md; do
-    [ -e "$f" ] || continue
-    if is_in_progress "$f"; then
-      exit 0
-    fi
-  done
-fi
-
-echo "BLOCKED: no plan file under $plan_dir has 'Status: In progress'. architecture-implementer must not be spawned until implementation-planner has proposed a folder structure, gotten user confirmation, and saved the plan — run implementation-planner first." >&2
+echo "BLOCKED: architecture-implementer is being spawned without a specific plan file path in its prompt (expected a $plan_dir/*.md path among the six inputs — see session-schema.md's spawn sequence). Spawn it with the plan file's path explicitly stated." >&2
 exit 2

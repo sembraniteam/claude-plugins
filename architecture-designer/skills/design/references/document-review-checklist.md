@@ -1,4 +1,4 @@
-# Document Review Checklist (F1-F7, C1-C15)
+# Document Review Checklist (F1-F7, C1-C16)
 
 The canonical catalog of format (F) and content (C) checks for architecture documents. `document-reviewer` audits every
 item below as PASS/FAIL; `document-fixer` corrects every FAIL item. Both agents implement the full catalog — this file
@@ -33,6 +33,7 @@ itself, only its own role's criteria or fix procedure.
 | C13 | Project Overview section present                          |
 | C14 | Database Design section present                           |
 | C15 | Low-Level Design section present                          |
+| C16 | Core Features section present and diagram-linked          |
 
 ## Literal formats (must match exactly in both agents)
 

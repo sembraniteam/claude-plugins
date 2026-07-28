@@ -13,7 +13,7 @@ The format `review/SKILL.md` step 4e saves to `docs/architecture-designer/plan/{
 
 ## Findings
 
-- [x] `src/auth/middleware.ts` — JWT used but document section 5 specifies OAuth2 *(addressed in revision — code pending)*
+- [x] `src/auth/middleware.ts` — JWT used but document section 6 specifies OAuth2 *(addressed in revision — code pending)*
 - [ ] `src/payments/service.ts` — Payment service present in code but absent from architecture document *(deferred)*
 ```
 

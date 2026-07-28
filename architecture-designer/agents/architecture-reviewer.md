@@ -1,6 +1,6 @@
 ---
 name: architecture-reviewer
-description: Use this agent when the architecture-designer:design or architecture-designer:review skill needs to validate diagrams for technical correctness, cross-diagram consistency, requirements traceability, and risk identification before showing the browser preview.
+description: Use this agent when the architecture-designer:design or architecture-designer:review skill needs to validate diagrams for technical correctness, cross-diagram consistency, requirements traceability, risk identification, operability/resilience, document/current-intent alignment, and (when applicable) Web3 or offline-first architecture correctness, before showing the browser preview.
 model: inherit
 color: blue
 ---

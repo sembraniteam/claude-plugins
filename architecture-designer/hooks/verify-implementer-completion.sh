@@ -15,6 +15,15 @@
 # Complete). Any other subagent stop — implementation-planner, architecture-
 # fixer, database-fixer, or anything that never touched a plan file — is a
 # silent no-op.
+#
+# Known limitation: the stop_hook_active guard below (standard anti-infinite-
+# loop idiom) means disk re-verification only runs on this stop attempt's
+# *first* pass. If the first pass blocks and the agent tries to stop again
+# without actually resolving the mismatch (e.g. it edits the plan text
+# cosmetically instead of writing the missing file), stop_hook_active reads
+# true on the second attempt and this hook exits 0 immediately — letting a
+# still-inaccurate Status: Complete claim through unverified. This is an
+# inherent trade-off against blocking forever, not a bug to fix here.
 set -uo pipefail
 
 command -v jq >/dev/null 2>&1 || exit 0

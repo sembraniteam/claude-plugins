@@ -1,6 +1,6 @@
 ---
 name: database-reviewer
-description: Use this agent after the architecture-designer:database-designer agent returns its output and before that output is embedded in the architecture document. Independently audits the database design for schema quality, normalization, ERD accuracy, index completeness, and security config correctness. Returns a structured PASS/FAIL report.
+description: Use this agent after the architecture-designer:database-designer agent returns its output and before that output is embedded in the architecture document. Independently audits the database design for schema quality, normalization, ERD accuracy, index completeness, transaction/concurrency-control correctness for high-contention entities, and security config correctness. Returns a structured PASS/FAIL report.
 model: inherit
 color: cyan
 ---
@@ -62,9 +62,13 @@ Work through every dimension. Be specific: cite table names, column names, and i
   mechanism named as timezone-aware (an IANA zone identifier, not a fixed UTC offset)? Flag as **Major** if a recurring
   local-time feature's design implies a fixed-offset schedule — this is a silent DST bug, not a style preference.
 - PKs should be surrogate keys (`UUID` or `BIGSERIAL`/`BIGINT AUTO_INCREMENT`) — not mutable natural keys
-- **Soft-delete correctness**, for any table with a `deleted_at` column: does a `UNIQUE` constraint on that table remain
-  plain (not converted to a partial index `WHERE deleted_at IS NULL`) — this silently blocks reuse of a soft-deleted
-  row's unique value and is a real bug, not style; does any FK pointing to that table still use `ON DELETE CASCADE`
+- **Soft-delete correctness**, for any table with a `deleted_at` column: is a mandatory default-scope filter
+  (`WHERE deleted_at IS NULL`) on every ordinary query stated explicitly — e.g. as an ORM global scope/middleware —
+  rather than left as an unstated convention developers must remember per-query; this is the most fundamental of the
+  soft-delete consequences (per `database-designer.md`'s Step 2), and its absence means soft-deleted rows silently leak
+  into ordinary reads, not just a style gap; does a `UNIQUE` constraint on that table remain plain (not converted to a
+  partial index `WHERE deleted_at IS NULL`) — this silently blocks reuse of a soft-deleted row's unique value and is a
+  real bug, not style; does any FK pointing to that table still use `ON DELETE CASCADE`
   without an explicit note on whether the cascade should be application-level instead; is a retention/purge policy
   stated when the requirements carry a data-erasure compliance flag; if Stage 2 confirmed a reuse-cooldown requirement
   (per `references/discovery-questions.md`'s security question), does the partial index actually encode the cooldown
@@ -78,10 +82,27 @@ Work through every dimension. Be specific: cite table names, column names, and i
   references by ID only (never an embedded copy of the other aggregate's fields)? For an event-driven or microservices
   architecture pattern, is a cross-bounded-context reference explicitly noted as eventually consistent (via a domain
   event) rather than modeled as an ordinary same-transaction FK?
-- Flag as **Critical** if a data type choice would cause data corruption or loss; **Major** for normalization
-  violations, wrong types, a missed partial-unique-index conversion on a soft-deletable table, a partial index missing a
-  confirmed reuse-cooldown window, or two aggregates collapsed into one table/transaction with no stated reason;
-  **Minor** for style.
+- **Transaction and concurrency correctness** (per `references/transaction-guide.md` section 3): for any entity whose
+  access patterns show a read-then-write path multiple concurrent requests plausibly touch at once (stock/inventory
+  counts, account balances, limited-seat bookings, a uniqueness check with a race window), does the design state an
+  explicit concurrency-control strategy (optimistic `version` column, or pessimistic locking with a fixed lock-ordering
+  rule for any multi-row lock)? A high-contention entity with no stated strategy at all is a lost-update/overselling bug
+  waiting to happen, not a stylistic gap. Where a `version` column already exists for offline-sync conflict detection
+  (`offlineFirst` track), is it correctly reused rather than a redundant second version column added? Per
+  `database-designer.md`'s own Step 2 instruction, an isolation level is only stated when *raised above* the engine
+  default — silence on isolation level is the normal, correct case for an entity relying on the default, not itself a
+  gap. Flag only when the schema notes describe a scenario that logically needs a raised isolation level (e.g. a
+  read-then-decide business rule spanning multiple statements where the stated concurrency strategy alone wouldn't close
+  the race) but no isolation level is named at all, or when a stated isolation level and the entity's stated
+  concurrency-control strategy are inconsistent with each other (e.g. Serializable named alongside a plain, unguarded
+  `UPDATE` with no retry-on-serialization-failure note per `references/transaction-guide.md` section 3).
+- Flag as **Critical** if a data type choice would cause data corruption or loss, or if a flagged high-contention entity
+  has no concurrency-control strategy stated at all; **Major** for normalization violations, wrong types, a missed
+  partial-unique-index conversion on a soft-deletable table, a partial index missing a confirmed reuse-cooldown window,
+  a soft-deletable table with no stated default-scope filter, two aggregates collapsed into one table/transaction with
+  no stated reason, a stated concurrency strategy that doesn't actually prevent the anomaly the entity is exposed to
+  (e.g. optimistic locking chosen for a lock-ordering problem it doesn't address), or an isolation level inconsistent
+  with the entity's own concurrency-control strategy; **Minor** for style.
 
 ### 3. ERD accuracy (SQL databases)
 

@@ -1,6 +1,6 @@
 ---
 name: review
-description: This skill should be used when the user wants to review or revise an existing architecture, says "review my architecture", "audit my architecture", "check my architecture", "my architecture needs review", "update my architecture document", "revise the architecture", "architecture drift", "compare design vs implementation", "architecture is outdated", "architecture inconsistency", "check if my code matches my design", or wants to compare their architecture document against their current codebase. Also trigger when the user mentions their architecture document needs updating after new features were added or requirements changed — including adding/changing an API contract, endpoint, business rule, DTO, or other Low-Level Design artifact on a system that already has an architecture document. Not for a brand-new system's first design — use the design skill for that.
+description: This skill should be used when the user wants to review or revise an existing architecture, says "review my architecture", "audit my architecture", "check my architecture", "my architecture needs review", "update my architecture document", "revise the architecture", "architecture drift", "compare design vs implementation", "architecture is outdated", "architecture inconsistency", "check if my code matches my design", or wants to compare their architecture document against their current codebase. Also trigger when the user mentions their architecture document needs updating after new features were added or requirements changed — including adding/changing an API contract, endpoint, business rule, DTO, or other Low-Level Design artifact on a system that already has an architecture document. Also trigger to produce a first architecture document for an existing, undocumented codebase — reconstructing architecture from real code (option b below) is this skill's job even when no document exists yet. Not for a brand-new system with no codebase yet — use the design skill for that.
 allowed-tools: ["Read", "Write", "Edit", "Bash", "Glob", "Agent", "WebSearch"]
 ---
 
@@ -117,8 +117,8 @@ If the user also has a document (option c): compare the reconstructed architectu
 **Drift Report**:
 
 **File path requirement**: Every claim in the Drift Report must cite its evidence source. For code-based claims, include
-the specific file path where the evidence was found (e.g., "`src/auth/middleware.ts` uses JWT but document section 5
-specifies OAuth2"). For document-based claims, cite the document section (e.g., "section 7 Database Design"). A claim
+the specific file path where the evidence was found (e.g., "`src/auth/middleware.ts` uses JWT but document section 6
+specifies OAuth2"). For document-based claims, cite the document section (e.g., "section 8 Database Design"). A claim
 without a source reference must not be written.
 
 - Components in the document but absent from the code
@@ -184,7 +184,10 @@ Ask:
   handling of a Stage 2 revision.
 - Does this revision change a technology decision, or introduce a new tension between requirements (e.g. a new
   consistency, latency, or cost constraint)? If so, flag it for 4b — the Trade-off and Risk Analysis pass needs to be
-  re-run, mirroring `design/SKILL.md` Step 9's handling of a Stage 5 revision.
+  re-run, mirroring `design/SKILL.md` Step 9's handling of a Stage 5 revision. A revised stack also means
+  `references/agent-tools.md`'s matching procedure needs re-running — see 4h's "Agent tools" input below, which
+  overwrites `agentTools` in full to match, the same "overwrite, don't merge" rule Step 9 applies to `agentTools` on the
+  design side.
 - Does this revision introduce a new bounded context, or change an existing aggregate's boundary (entities that were
   transactionally grouped are being split, or vice versa)? If so, flag it for 4b — the Domain Model needs to be re-run,
   mirroring `design/SKILL.md` Step 9's handling of a Stage 6a-affecting revision.
@@ -214,7 +217,14 @@ as the input in place of stages 1–5. Then continue to 4c as normal.
 
 Otherwise, based on the revision scope:
 
-- For architecture changes: update the affected Mermaid diagrams (C4, sequence, deployment)
+- For architecture changes: update the affected Mermaid diagrams (C4, sequence, deployment). If a Class Diagram exists
+  and is affected, apply `design/SKILL.md` Stage 6d's design-principle and GoF-pattern passes before writing it back —
+  read `design/references/design-principles-guide.md` and check the revised classes against SOLID, DRY, YAGNI, Tell
+  Don't Ask, the Hollywood Principle, and the Law of Demeter, and read `design/references/design-patterns-guide.md`
+  Part 2 to check whether a revised or newly-added class matches a named GoF pattern's signal, same as a first-time
+  design session. If the revision changes item (1)'s architecture pattern (Stage 5), also re-check
+  `design/references/design-patterns-guide.md` Part 1 for the applicable POSA architectural pattern (s) and update the
+  Stage 5 justification accordingly.
 - For database changes: re-spawn the `architecture-designer:database-designer` agent with the same three inputs
   `design/SKILL.md` Stage 6a passes on first use — the updated requirements summary (per
   `design/references/session-schema.md` section "Requirements-summary scope for sub-agent spawns" — same scope and
@@ -227,9 +237,10 @@ Otherwise, based on the revision scope:
   steps 1–4 (binary verdict — cycle until `DATABASE REVIEW PASSED`): the fixer receives the review report, the
   database-designer output, the requirements summary (same scope), and the path to
   `docs/architecture-designer/diagrams.json`. It writes the corrected ERD and indexPlan directly into `diagrams.json`
-  **and returns the corrected schema, ERD, index plan, and connection config as text — replace the database-designer
-  output held in context with this corrected text; it is what gets embedded in the revised document (step 4f), not the
-  original.** Once `DATABASE REVIEW PASSED` is reached, record `progress.lastCompletedStep = "step6a"` per
+  **and returns the corrected schema, ERD, index plan, transaction and concurrency strategy (when present), and
+  connection config as text — replace the database-designer output held in context with this corrected text; it is what
+  gets embedded in the revised document (step 4f), not the original.** Once `DATABASE REVIEW PASSED` is reached, record
+  `progress.lastCompletedStep = "step6a"` per
   `design/references/session-schema.md` section "Recording `progress.lastCompletedStep`" — mirroring `design/SKILL.md`
   Stage 6a's own write for exactly this label.
 - For new features: apply `design/SKILL.md` Stage 6d's **Core feature coverage requirement** — every new functional
@@ -256,8 +267,8 @@ Otherwise, based on the revision scope:
   and/or `design/references/cicd-guide.md` as applicable, work through the affected decision points against the revised
   stack, and overwrite `session.json`'s `stage6b`/`stage6c` in full to match (this skill is an authorized second writer
   of these keys for exactly this case — see `design/references/session-schema.md` section "Single writer per key").
-  Update the deployment/infrastructure and CI/CD pipeline diagrams, and note in 4f that the document's IaC (section 8)
-  and CI/CD (section 9) sections need regenerating from the new decisions rather than carried over unchanged.
+  Update the deployment/infrastructure and CI/CD pipeline diagrams, and note in 4f that the document's IaC (section 9)
+  and CI/CD (section 10) sections need regenerating from the new decisions rather than carried over unchanged.
 - If 4a flagged an NFR change: read `design/references/quality-driven-design-guide.md`, re-formalize the changed/added
   NFRs into Quality Attribute Scenarios, and overwrite `session.json`'s `stage2.qualityAttributeScenarios` in full (this
   skill is an authorized second writer of this key for exactly this case, same as `stage6b`/`stage6c` above). Then
@@ -342,8 +353,17 @@ by following `design/SKILL.md` Step 10 in full against the newly-formalized diag
 Otherwise, once the revised diagrams are confirmed (end of 4d), read `design/references/lld-guide.md` and update the
 affected Low-Level Design groups to match: new or changed endpoints visible in the revised sequence diagrams get
 new/updated API contract entries; new or changed business rules, DTOs, inter-service contracts, and error-catalog
-entries follow the same "derive from the diagrams, never invent" discipline as `design/SKILL.md` Step 10. Present the
-updated groups, confirm, then write them into `session.json`'s `lld` key the same way Step 10 does
+entries follow the same "derive from the diagrams, never invent" discipline as `design/SKILL.md` Step 10. For new or
+changed business rules, also apply `design/SKILL.md` Step 10's design-principle, clean-code, GoF-pattern, and
+transaction-boundary checks — read `design/references/design-principles-guide.md`'s DRY, YAGNI, and Tell-Don't-Ask
+sections, `design/references/clean-code-guide.md`'s "Functional core, imperative shell" section,
+`design/references/design-patterns-guide.md` Part 2 (naming a pattern only where a real signal is present), and, for a
+rule whose `Post-conditions` list two or more writes, `design/references/transaction-guide.md` (stating the transaction
+boundary or rewriting the rule as a Saga per that guide's section 4) — and check the revised rule against all of them
+before presenting it. If the revision changed which entities are high-contention (a new read-then-write path added, or
+an existing one removed), also re-spawn `architecture-designer:database-designer`'s transaction-and-concurrency-strategy
+check (per the database-changes bullet in 4b above) rather than leaving a stale strategy in place. Present the updated
+groups, confirm, then write them into `session.json`'s `lld` key the same way Step 10 does
 (read-fresh-modify-write-whole, adding any newly-confirmed group to `lld.confirmedGroups`) — do not touch groups 4a
 didn't flag.
 
@@ -430,10 +450,11 @@ After saving, append `{ "path": "<absolute path of the saved file>", "createdAt"
 the same time if the file predates them, per the tolerant-read rule in `design/references/session-schema.md`). This lets
 `/architecture-designer:implement` find the latest approved document — the last entry's `path` — without asking.
 
-The document body follows the same structure as the design workflow (all sections, all diagrams), including section 10
-(Low-Level Design) pulled from `session.json`'s `lld` key — the same key the "Update Low-Level Design" step above just
-confirmed is current. This is a standalone document, not a diff — someone reading it without the previous version should
-have complete context.
+The document body follows the same structure as the design workflow (all sections, all diagrams), including section 2
+(Core Features — re-derive if 4a flagged a functional-requirement change, so a feature added or removed by this revision
+is reflected) and section 11 (Low-Level Design) pulled from `session.json`'s `lld` key — the same key the "Update
+Low-Level Design" step above just confirmed is current. This is a standalone document, not a diff — someone reading it
+without the previous version should have complete context.
 
 Record `progress.lastCompletedStep = "step11"` per `design/references/session-schema.md` section "Recording
 `progress.lastCompletedStep`".
@@ -471,17 +492,19 @@ Run `design/references/session-schema.md` section "Resumable-plan detection proc
 path as `{document}` to produce the **Previous plan path**, if the user chooses to resume.
 
 Then follow `design/references/session-schema.md` section "Implementation-planner → architecture-implementer spawn
-sequence" to spawn `implementation-planner` and, once its plan is confirmed, `architecture-implementer`, passing these
-six inputs:
+sequence" to spawn `architecture-designer:implementation-planner` and, once its plan is confirmed,
+`architecture-designer:architecture-implementer`, passing these six inputs:
 
 - The path to the approved document
 - **Existing project summary** — translated into the agent's expected strategy label: `Fresh start (empty project)` if
   the scan found nothing; `Merge` if the user chose (a); `Fresh start (existing project)` if the user chose (b);
   `User-described layout` if the user chose (c)
-- **Technology stack** — from the architecture document's Technology Decisions section (section 5)
-- **Agent tools** (optional) — `session.json`'s `"agentTools"` array, if present and non-empty (this key is written once
-  at Stage 5 during `/architecture-designer:design` and is not re-derived here, but still valid and worth passing
-  through unless the revision replaced the entire stack)
+- **Technology stack** — from the architecture document's Technology Decisions section (section 6)
+- **Agent tools** (optional) — if this revision touched the technology stack (per 4a's Stage-5-change question above),
+  re-run `references/agent-tools.md`'s matching procedure against the revised stack now and overwrite `session.json`'s
+  `"agentTools"` in full with the new result before passing it through — the same re-run `design/SKILL.md` Step 9
+  performs on a Stage 5 revision; do not carry forward a stale match set from before the revision. If the stack was
+  untouched this revision, pass through the existing `"agentTools"` array as-is (if present and non-empty).
 - **Remediation plan path** — the full path to the `{yyyymmdd}-{topic}-remediation.md` file saved in step 4e (present
   whenever step 4e ran — i.e. every case except option (b) alone, which skips it entirely; omit this input for that
   case) — see `design/references/session-schema.md` section "Finding the applicable remediation plan" for why its

@@ -139,6 +139,16 @@ reused-identity rule:
 - For any entity with both soft-delete and a reusable unique field (email, username), write the re-registration rule
   above even though registration itself is otherwise simple CRUD — the reuse/cooldown decision is exactly the
   non-trivial branch this section exists to document, not an exception to the "skip simple CRUD" rule
+- **Transaction boundary**: when `Post-conditions` lists two or more writes (as in the "Calculate Order Total" example
+  above — order row, inventory reservation, cart clear), read `references/transaction-guide.md` and state explicitly
+  whether they commit as one database transaction or not. If every write stays within one aggregate
+  (`references/ddd-guide.md`), add a one-line **Transaction** note under `Post-conditions` naming the statements that
+  commit together, plus the concurrency-control strategy if the entity was flagged high-contention by
+  `database-designer` (e.g. "Order + inventory reservation commit in one transaction; inventory row uses optimistic
+  `version` check"). If the writes legitimately span two aggregates or two services, do not describe them as one atomic
+  operation — rewrite the rule as an explicit Saga per `references/transaction-guide.md` section 4: ordered steps, each
+  step's own local transaction, and each step's compensating transaction (or an explicit "no compensation needed"
+  statement) instead of a single flat `Post-conditions` list.
 
 ---
 
@@ -250,7 +260,7 @@ A single table of all application-level error codes. Derive entries from the API
 
 ## Section order in the architecture document
 
-When writing section 10 (Low-Level Design) in the architecture document, use this order:
+When writing section 11 (Low-Level Design) in the architecture document, use this order:
 
 1. **API Contracts** — one sub-section per endpoint, grouped by resource (auth, users, orders, etc.)
 2. **Business Rules** — one sub-section per rule, ordered from most fundamental to most derived

@@ -105,17 +105,17 @@ Infrastructure drifts when someone changes a resource manually (console, CLI) ou
 
 ## 6. What to include in the architecture document
 
-IaC section (section 8) should contain:
+IaC section (section 9) should contain:
 
 1. **Tool selection** — tool name and version, why it was chosen (cite constraints from stages 3–5)
 2. **State backend** — backend type, bucket/container name convention, locking mechanism
 3. **Module breakdown table** — one row per module:
 
    | Module   | Provisions                                       | Dev variation           | Prod variation               |
-               |----------|--------------------------------------------------|-------------------------|------------------------------|
+                  |----------|--------------------------------------------------|-------------------------|------------------------------|
    | network  | VPC, 2 public + 2 private subnets, NAT gateway   | Single AZ               | Multi-AZ                     |
    | compute  | ECS Fargate cluster, ALB, target group           | 1 task, no autoscaling  | 2–10 tasks, autoscaling      |
-   | database | RDS PostgreSQL 17, subnet group, parameter group | db.t3.micro, no replica | db.r7g.large, 1 read replica |
+   | database | RDS PostgreSQL 18, subnet group, parameter group | db.t3.micro, no replica | db.r7g.large, 1 read replica |
 
 4. **Environment strategy** — which approach and why
 5. **Drift detection** — how and how often

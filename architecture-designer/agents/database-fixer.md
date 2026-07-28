@@ -1,6 +1,6 @@
 ---
 name: database-fixer
-description: Use this agent when the database-reviewer has returned Critical or Major findings and the database design needs targeted corrections before it is embedded in the architecture document. Receives the review report, the original database-designer output, the requirements summary, and the diagrams.json path. Applies the minimum changes to close each finding, writes the corrected ERD and indexPlan directly into diagrams.json (same pattern as architecture-fixer), and returns the corrected schema, index plan, and connection config for document embedding.
+description: Use this agent when the database-reviewer has returned Critical or Major findings and the database design needs targeted corrections before it is embedded in the architecture document. Receives the review report, the original database-designer output, the requirements summary, and the diagrams.json path. Applies the minimum changes to close each finding, writes the corrected ERD and indexPlan directly into diagrams.json (same pattern as architecture-fixer), and returns the corrected schema, index plan, transaction/concurrency strategy, and connection config for document embedding.
 model: inherit
 color: red
 ---
@@ -76,6 +76,21 @@ Work through every Critical finding first, then Major findings. For each:
 - **Soft-delete finding** (plain `UNIQUE` on a `deleted_at`-bearing table): convert the constraint to a partial unique
   index (`CREATE UNIQUE INDEX ... WHERE deleted_at IS NULL`) in both the schema and the index plan; remove the old
   plain-`UNIQUE` index-plan row if it was listed separately.
+- **Missing default-scope filter note** (a soft-deletable table's schema notes never state the mandatory
+  `WHERE deleted_at IS NULL` default-scope filter): add a schema note naming the ORM's global-scope/middleware mechanism
+  for the confirmed stack (e.g. a Prisma middleware, a Sequelize default scope, a SQLAlchemy query filter) — this is a
+  documentation fix, the schema/ERD/index plan themselves don't change, so it never triggers the three-artifacts-in-sync
+  check above.
+- **`ON DELETE CASCADE` on a soft-deletable table with no application-level-cascade note**: add a schema note stating
+  explicitly whether the child row should also be soft-deleted alongside its parent (application-level cascade, naming
+  where that logic lives) or remain independent — do not silently pick one; if the correct choice isn't obvious from the
+  requirements, list it in the fix log as an item requiring skill-level action rather than guessing. This is a
+  documentation fix like the default-scope note above.
+- **Missing retention/purge policy on a soft-deletable table with a data-erasure compliance flag**: add a schema note
+  stating a retention window and the hard-delete/purge mechanism (a scheduled job or the confirmed stack's equivalent)
+  is required, tagged **"⚠ Needs legal/compliance validation"** per the Stage 2 compliance-grounding rule — never invent
+  a specific retention duration; if none was confirmed, list it in the fix log as an item requiring skill-level action
+  the same way a missing cooldown duration is handled below.
 - **Missing reuse-cooldown window on a partial unique index** (only when Stage 2 confirmed a cooldown requirement per
   `references/discovery-questions.md`'s security question): rewrite the partial index condition to
   `WHERE deleted_at IS NULL OR deleted_at > now() - interval '{N} days'`, with `{N}` taken from the confirmed NFR —
@@ -103,6 +118,24 @@ Work through every Critical finding first, then Major findings. For each:
   single FK-by-ID column, remove the embedded columns from the schema and ERD, and add the FK index. This does not
   invent a new entity or change any aggregate boundary, so it is safe to fix directly, unlike the aggregate-collapse
   case below.
+- **Missing or wrong concurrency-control strategy on a flagged high-contention entity** (per
+  `references/transaction-guide.md` section 3) — covers both variants database-reviewer can emit: *absent* (no strategy
+  stated at all) and *present-but-wrong* (a stated strategy that doesn't actually prevent the anomaly the entity is
+  exposed to, e.g. optimistic locking chosen for a problem that needs a fixed lock-ordering rule instead). Both are
+  mechanical to fix — for the default/absent case, add an optimistic `version BIGINT` column (server-incremented on
+  every write) to the entity, and add a schema note stating every write to it must be conditional on the version it read
+  (`UPDATE ... WHERE id = $1 AND version = $2`). Reuse the existing `version` column instead of adding a second one if
+  the entity already has one for offline-sync conflict detection (`offlineFirst` track). Add the column to the ERD and
+  note it in the schema description — this does not change any table's normalization or relationships, so it is safe to
+  fix directly. If the reviewer's finding specifically calls for pessimistic locking instead (e.g. the finding cites
+  contention severe enough that retries would themselves bottleneck, or a wrong-strategy finding identifies a
+  lock-ordering problem optimistic locking can't address), replace the incorrect strategy's schema note with the
+  `SELECT ... FOR UPDATE` note and a fixed lock-ordering rule (by ascending PK) instead of the `version`
+  column — follow whichever the finding text specifies; default to optimistic when the finding doesn't specify, and
+  remove any `version` column that was added solely for the now-replaced strategy if nothing else depends on it (e.g.
+  offline-sync). For an isolation-level finding (a stated isolation level inconsistent with the entity's
+  concurrency-control strategy, or a scenario needing a raised isolation level with none stated), add or correct the
+  isolation-level schema note directly — this is prose only and never triggers the three-artifacts-in-sync check.
 - **Risk-register-cross-check finding** (an `Open`, `Medium`/`High`-likelihood-and-impact `riskRegister` entry about
   data loss or a single point of failure with no visible mitigation): fix directly when the mitigation is a durability/
   replication/backup configuration change — e.g. add a read replica or automated backup note to the connection
@@ -143,7 +176,9 @@ Return the complete corrected output in this order (the calling skill embeds the
 1. **Corrected schema** — full table definitions with corrected data types, PKs, FKs
 2. **Corrected ERD** — updated ` ```mermaid ` block reflecting all schema changes
 3. **Corrected index plan** — updated markdown table (same columns: Index Name, Table, Column (s), Type, Reason)
-4. **Corrected connection config** — updated security section
+4. **Corrected transaction and concurrency strategy** — only if this section changed (a `version` column or locking note
+   added/corrected); omit if untouched
+5. **Corrected connection config** — updated security section
 
 ### Step 2 — Update `diagrams.json` in place
 
