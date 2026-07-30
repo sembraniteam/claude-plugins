@@ -459,7 +459,9 @@ performs the primary update:
 **Agent-tools usage log** (only when `agentTools` was passed and non-empty) — the tools recorded in `session.json` were
 selected so you would use them while implementing, not merely be aware of them. For the log to be verifiable, report
 actual interaction, not intention. For **every** entry in the passed `agentTools` array, record one of exactly three
-outcomes — the result is not a free-form summary:
+outcomes — the same base USED / NOT APPLICABLE / UNAVAILABLE convention defined in `references/agent-tools.md`'s
+"Evidentiary reporting convention" section, with this agent's own stricter must-use enforcement layered on top below.
+The result is not a free-form summary:
 
 - **USED** → you invoked the tool during implementation. State which file (s) or step it was applied to, and include a
   **verbatim excerpt of the tool's actual output** (the diagnostic line, the symbol result, the provisioning response —

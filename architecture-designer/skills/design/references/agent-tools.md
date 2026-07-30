@@ -101,6 +101,25 @@ Every sub-agent spawned from `design/SKILL.md` or `review/SKILL.md` receives `ag
   fixing already runs upstream of document review, and this guide's `purpose` column is implementation-phase, neither
   currently has a matching design-time action to perform with it.
 
+## Evidentiary reporting convention (USED / NOT APPLICABLE / UNAVAILABLE)
+
+Every agent listed above under "must invoke a matching entry" (`architecture-implementer`, `database-designer`,
+`database-fixer`, `architecture-fixer`, `database-reviewer`, and `architecture-reviewer` for its Web3-network
+exception) reports the outcome of that obligation using this same three-value convention in its own output — each
+agent's "Using agent tools" section (or, for `architecture-implementer`, its "Agent-tools usage log" section) points
+back here rather than redefining it:
+
+- **USED** — a matching `agentTools` entry existed and was actually invoked; quote the actual tool output (or a
+  representative excerpt of it) as evidence, not just a restated claim that it was called.
+- **NOT APPLICABLE** — `agentTools` was non-empty, but no entry's domain matched the specific fact, engine, finding,
+  or step at hand; state briefly why nothing matched.
+- **UNAVAILABLE** — a plausible domain match exists in principle, but `agentTools` was empty, absent, or contained no
+  entry of that domain; state that no matching tool was available to invoke.
+
+Do not report an outcome at all for a step where none of the three applies (e.g. a fix with no `agentTools` entry
+whose domain is relevant, and no reasonable expectation one should exist) — omit the line entirely rather than
+padding the output with an empty note.
+
 This field is entirely optional end to end: an empty or absent `agentTools` never blocks Stage 6, document approval, or
 implementation — it is a convenience, not a gate. Once a non-empty entry matches something a "must invoke" consumer
 above is actually doing, though, using it for that match is mandatory, not optional — see each linked section for the

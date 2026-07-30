@@ -191,18 +191,104 @@ function checkArchitectureBetaIcons(keyword, trimmed, parserRan) {
 
 /**
  * C4: UpdateLayoutConfig is a layout requirement, not enforced by syntax — so
- * this runs regardless of whether the real parser ran.
+ * this runs regardless of whether the real parser ran. Also checks relationship
+ * density: diagrams-guide.md Rule 6's `c4ShapeMargin` note — UpdateLayoutConfig only
+ * prevents shape-box overlap; it does nothing for Rel() label collisions, which is a
+ * verified, separate failure mode once enough relationships converge on one shape.
+ * Returns {errors, notes} since the relationship-density check is advisory.
  */
 function checkC4LayoutConfig(keyword, trimmed) {
     const errors = [];
+    const notes = [];
     if (keyword === 'C4Context' || keyword === 'C4Container') {
         if (!trimmed.includes('UpdateLayoutConfig')) {
             errors.push(
                 'Missing UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1") — required to prevent node overlap'
             );
         }
+        const relCount = (trimmed.match(/^\s*Rel\w*\(/gm) ?? []).length;
+        if (relCount >= 7 && !/c4ShapeMargin/.test(trimmed)) {
+            notes.push(
+                `Rule 6: ${relCount} Rel() relationships detected with no c4ShapeMargin override — relationship labels have no automatic collision avoidance in Mermaid's C4 renderer and can overlap each other once this many converge on a shape, even with UpdateLayoutConfig set correctly. Consider %%{init: {'c4': {'c4ShapeMargin': 90}}}%% and check the live preview for colliding labels; use UpdateRelStyle($from=..., $to=..., $offsetY=...) to nudge any that still overlap — see diagrams-guide.md Rule 6.`
+            );
+        }
     }
-    return errors;
+    return {errors, notes};
+}
+
+/**
+ * Rule 7 (diagrams-guide.md "Preventing Node Overlap"): sibling (non-nested) subgraphs
+ * connected by inter-subgraph edges — the "sequential stages/pipeline" shape (e.g. the
+ * CI/CD Pipeline Diagram template's CI -> dev -> staging -> prod stages). This has a
+ * *verified* ELK failure mode (empirically reproduced via rendered-DOM inspection, not a
+ * theoretical concern): an edge from a node inside one sibling subgraph to a node inside
+ * another can get routed through many unrelated nodes far outside the direct path, worse
+ * than the node overlap ELK exists to prevent. Detected regardless of whether ELK is
+ * present, so both directions can be advised: don't require ELK here on node-count
+ * grounds alone (Rule 1), and warn if ELK is already active for this exact risky shape.
+ *
+ * Heuristic approach: track which top-level (depth-1) subgraph "owns" each identifier
+ * token seen while inside it (covers both bracket-declared nodes and bare-id edge
+ * endpoints declared inline, e.g. `Lint --> UnitTest["cargo test"]`), then scan
+ * depth-0 edge lines for a source/target pair whose owners differ.
+ */
+function checkSiblingSubgraphEdges(keyword, lines) {
+    if (keyword !== 'flowchart' && keyword !== 'graph') {
+        return {riskyShape: false, topLevelCount: 0, interSubgraphEdges: 0};
+    }
+
+    const idTokenRe = /[A-Za-z][A-Za-z0-9_]*/g;
+    const arrowRe = /--[.ox]*>|==[.ox]*>|-\.-*>/;
+
+    let depth = 0;
+    let topLevelIndex = -1;
+    let topLevelCount = 0;
+    const nodeOwner = new Map();
+    for (const line of lines) {
+        const t = line.trim();
+        if (/^subgraph\b/.test(t)) {
+            depth++;
+            if (depth === 1) {
+                topLevelIndex = topLevelCount;
+                topLevelCount++;
+            }
+            continue;
+        }
+        if (/^end$/.test(t)) {
+            depth = Math.max(0, depth - 1);
+            if (depth === 0) topLevelIndex = -1;
+            continue;
+        }
+        if (depth >= 1 && topLevelIndex >= 0) {
+            let m;
+            idTokenRe.lastIndex = 0;
+            while ((m = idTokenRe.exec(t)) !== null) {
+                if (!nodeOwner.has(m[0])) nodeOwner.set(m[0], topLevelIndex);
+            }
+        }
+    }
+    if (topLevelCount < 2) return {riskyShape: false, topLevelCount, interSubgraphEdges: 0};
+
+    depth = 0;
+    let interSubgraphEdges = 0;
+    for (const line of lines) {
+        const t = line.trim();
+        if (/^subgraph\b/.test(t)) { depth++; continue; }
+        if (/^end$/.test(t)) { depth = Math.max(0, depth - 1); continue; }
+        if (depth !== 0 || !arrowRe.test(t)) continue;
+        const parts = t.split(arrowRe);
+        if (parts.length < 2) continue;
+        const leftMatches = parts[0].match(idTokenRe);
+        const leftId = leftMatches ? leftMatches[leftMatches.length - 1] : null;
+        const rightRaw = parts[parts.length - 1].replace(/^\|[^|]*\|/, '');
+        const rightMatches = rightRaw.match(idTokenRe);
+        const rightId = rightMatches ? rightMatches[0] : null;
+        if (!leftId || !rightId) continue;
+        const a = nodeOwner.get(leftId), b = nodeOwner.get(rightId);
+        if (a !== undefined && b !== undefined && a !== b) interSubgraphEdges++;
+    }
+
+    return {riskyShape: interSubgraphEdges > 0, topLevelCount, interSubgraphEdges};
 }
 
 /**
@@ -211,12 +297,19 @@ function checkC4LayoutConfig(keyword, trimmed) {
  * whether the real parser ran (same rationale as the C4 check above).
  * Returns { errors, notes } since Rule 2 is advisory (a note), not a failure.
  */
-function checkFlowchartNodeOverlap(keyword, trimmed, lines) {
+function checkFlowchartNodeOverlap(keyword, trimmed, lines, siblingSubgraphInfo) {
     const errors = [];
     const notes = [];
     if (keyword !== 'flowchart' && keyword !== 'graph') return {errors, notes};
 
     const hasElkInit = /%%\{\s*init:\s*\{\s*['"]?layout['"]?\s*:\s*['"]elk['"]/i.test(trimmed);
+    const {riskyShape, topLevelCount, interSubgraphEdges} = siblingSubgraphInfo;
+
+    if (hasElkInit && riskyShape) {
+        notes.push(
+            `Rule 7: ${topLevelCount} sibling subgraphs connected by ${interSubgraphEdges} inter-subgraph edge(s), with ELK layout active — ELK has a verified failure mode for exactly this shape (a cross-subgraph edge can route through many unrelated nodes far outside the direct path, worse than the overlap it's meant to prevent — this is exactly what the CI/CD Pipeline Diagram template's stage-to-stage edges hit). Open the live preview and confirm these edges render as short, direct paths; if any detour through unrelated nodes, remove the ELK init directive and use default Dagre layout instead — see diagrams-guide.md Rule 7.`
+        );
+    }
 
     // Rule 1 / Rule 5 — subgraph nesting depth and node count drive the ELK requirement.
     let depth = 0, maxDepth = 0;
@@ -241,9 +334,13 @@ function checkFlowchartNodeOverlap(keyword, trimmed, lines) {
                 `Rule 1/5: subgraph nesting depth is ${maxDepth} (3+) with no ELK init directive — add %%{init: {'layout': 'elk'}}%% as the first line, or flatten to at most 2 levels`
             );
         }
-        if (nodeIds.size >= 12) {
+        if (nodeIds.size >= 12 && !riskyShape) {
             errors.push(
                 `Rule 1: ${nodeIds.size} nodes detected with no ELK init directive — add %%{init: {'layout': 'elk'}}%% as the first line for diagrams with 12+ nodes`
+            );
+        } else if (nodeIds.size >= 12 && riskyShape) {
+            notes.push(
+                `Rule 1/7: ${nodeIds.size} nodes across ${topLevelCount} sibling subgraphs connected by inter-subgraph edges — Rule 1's ELK recommendation is intentionally NOT applied here, since Rule 7's verified failure mode makes ELK actively worse for this shape. Default Dagre is correct; only add spacing overrides (Rule 2) if nodes overlap within one subgraph.`
             );
         } else if (nodeIds.size >= 8) {
             notes.push(
@@ -300,7 +397,11 @@ function checkArchitectureBetaAlignOrder(keyword, lines) {
     lines.forEach((line, i) => {
         const t = line.trim();
         if (/^align\s/.test(t)) alignIdx.push(i);
-        else if (/--/.test(t) && !t.startsWith('%%')) edgeIdx.push(i);
+        // Architecture-beta's edge operator is "--" or "-->", always whitespace-delimited
+        // on both sides (e.g. "serviceA:R -- L:serviceB"). Requiring that whitespace avoids
+        // false-positiving on a title/label string that merely contains a double hyphen
+        // (e.g. "read--write") or hyphenated words, which have no surrounding space.
+        else if (/\s--(>)?\s/.test(t) && !t.startsWith('%%')) edgeIdx.push(i);
     });
     if (alignIdx.length > 0 && edgeIdx.length > 0) {
         const firstEdge = Math.min(...edgeIdx);
@@ -313,7 +414,16 @@ function checkArchitectureBetaAlignOrder(keyword, lines) {
     return errors;
 }
 
-/** flowchart / graph: bracket-balance heuristic (only when real parser unavailable). */
+/**
+ * flowchart / graph: bracket-balance heuristic (only when real parser unavailable).
+ * Tolerates a difference of up to 4 before flagging, to avoid false positives on
+ * legitimate single stray brackets inside a node label. This means a genuine
+ * unclosed-bracket bug with a diff of 1-3 silently passes undetected while in this
+ * degraded (parser-unavailable) mode — the "(heuristics only)" quality marker this
+ * function's errors are reported under already discloses reduced coverage, but this
+ * specific blind spot (up to 3 unbalanced brackets can slip through) is not obvious
+ * from that marker alone.
+ */
 function checkBracketBalance(keyword, trimmed, parserRan) {
     const errors = [];
     if (!parserRan && (keyword === 'flowchart' || keyword === 'graph')) {
@@ -353,16 +463,22 @@ async function validateCode(id, code) {
     // Heuristics run as fallback when no parser is available for this type, or for
     // semantic checks that aren't syntax rules (e.g. UpdateLayoutConfig is a layout
     // requirement, not enforced by the grammar — check it even when parser passes).
-    const flowchartChecks = checkFlowchartNodeOverlap(keyword, trimmed, lines);
+    const siblingSubgraphInfo = checkSiblingSubgraphEdges(keyword, lines);
+    const flowchartChecks = checkFlowchartNodeOverlap(keyword, trimmed, lines, siblingSubgraphInfo);
+    const c4Checks = checkC4LayoutConfig(keyword, trimmed);
     const errors = [
         ...checkArchitectureBetaIcons(keyword, trimmed, parserRan),
-        ...checkC4LayoutConfig(keyword, trimmed),
+        ...c4Checks.errors,
         ...flowchartChecks.errors,
         ...checkArchitectureBetaAlignOrder(keyword, lines),
         ...checkBracketBalance(keyword, trimmed, parserRan),
     ];
 
-    return {errors, notes: flowchartChecks.notes, quality: parserRan ? 'parsed' : 'heuristics'};
+    return {
+        errors,
+        notes: [...flowchartChecks.notes, ...c4Checks.notes],
+        quality: parserRan ? 'parsed' : 'heuristics',
+    };
 }
 
 // ── indexPlan contract check ──────────────────────────────────────────────────

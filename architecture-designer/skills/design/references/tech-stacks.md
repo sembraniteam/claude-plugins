@@ -13,6 +13,7 @@ guide.
     - [Go Stack](#go-stack)
     - [Rust Stack](#rust-stack)
     - [Java / JVM Stack](#java--jvm-stack)
+    - [Ruby / Rails Stack](#ruby--rails-stack)
 3. [Microservices Stack](#microservices-stack)
     - [Core Platform](#core-platform)
     - [Service Communication](#service-communication)
@@ -195,6 +196,9 @@ size the actual TPS target from this project's own capacity planning (Stage 4), 
 
 ### Rust Stack
 
+Crate versions below (Axum/Actix-web/Rocket/SeaORM/Diesel/SQLx) move quickly — confirm the current major/minor before
+committing, same as the other version-specific claims in this file.
+
 ```
 Backend:     Rust (stable) + Axum 0.8 (Tokio-based, most popular choice for new services)
              or Actix-web 4 (mature, highest raw throughput) or Rocket 0.5 (batteries-included,
@@ -297,6 +301,62 @@ footprint).
 
 ---
 
+### Ruby / Rails Stack
+
+Ruby follows an annual December release cadence and Rails ships minor releases between majors — confirm the current
+stable versions before committing, same as the other version-specific claims in this file.
+
+```
+Backend:     Ruby 3.4 + Rails 8 (batteries-included: ORM, background jobs, caching, and a deploy
+             tool ship together, and its "Solid Trifecta" — Solid Queue, Solid Cache, Solid Cable —
+             lets a small-to-medium app run entirely on the primary database with no separate Redis
+             instance) or Sinatra (minimal, unopinionated — pick this only for a small API with no
+             need for Rails' conventions/scaffolding)
+ORM:         Active Record (Rails' built-in ORM — migrations, associations, and validations ship
+             together, the default for any Rails app) or Sequel (framework-agnostic, more explicit
+             query control — the right choice outside Rails, where Active Record's tight coupling to
+             it doesn't apply)
+Validation:  Active Record validations (declarative, built into the model layer — no separate schema
+             to keep in sync with the database) or dry-validation (framework-agnostic, composable —
+             outside Rails, or when validation logic needs to be decoupled from models)
+Auth:        Rails 8's built-in `bin/rails generate authentication` (session-based, bcrypt via
+             `has_secure_password` — no gem required for a standard username/password flow) or
+             Devise (the long-standing, most feature-complete gem: registrations, confirmable,
+             lockable, OmniAuth — reach for it once the built-in generator's scope isn't enough) or
+             Rodauth (security-focused, more explicit configuration) — jwt gem (JWT) or paseto gem
+             (PASETO) for token-based APIs
+Primary DB:  PostgreSQL 18 (default relational choice, same reasoning as the other stacks above —
+             see "Database Selection Guide" below for when another engine fits better)
+Cache:       Rails 8's Solid Cache (database-backed — no separate cache store to provision for a
+             small-to-medium app) or Redis 8 / Valkey / DragonflyDB / Garnet (once cache-hit latency
+             or throughput outgrows what a database-backed cache can sustain)
+Queue:       Solid Queue (Rails 8 default — database-backed, no separate broker) or Sidekiq
+             (Redis-backed — the ecosystem standard for high-throughput background jobs once Solid
+             Queue's database-backed model becomes the bottleneck) or good_job (Postgres-backed
+             alternative to Sidekiq, no Redis dependency)
+Frontend:    Hotwire (Turbo + Stimulus — Rails' own default: SPA-like interactivity from
+             server-rendered HTML, no separate frontend build) or a separate React/Next.js SPA (once
+             the frontend needs its own team or interactivity Hotwire can't express cleanly)
+Testing:     RSpec (the ecosystem-standard test framework — most third-party gems document RSpec
+             examples first) or Minitest (Rails' built-in default, lighter dependency footprint) +
+             Capybara (browser-driven system tests) + FactoryBot (test data generation)
+Build:       Bundler (dependency management, the standard for the ecosystem) + Propshaft (Rails 8's
+             default asset pipeline) or Vite Ruby (once the frontend needs a modern JS build pipeline
+             alongside Hotwire)
+Deploy:      Kamal (Rails' own zero-downtime Docker deploy tool, the Rails 8 default — deploys to any
+             VPS with no PaaS lock-in) or Coolify / Dokku (self-hosted, open-source PaaS) or Render /
+             Fly.io / Heroku (zero ops, deploy on push)
+```
+
+**Best for**: Content-heavy and CRUD-centric web apps, teams that value convention-over-configuration and shipping
+speed, startups validating a product where Rails' batteries-included defaults save real time.
+
+**When to avoid**: CPU-bound workloads (MRI's Global VM Lock limits true in-process parallelism — scale via multiple
+processes/dynos instead, not threads), teams with no Ruby experience and no runway to build it, services needing the
+raw throughput ceiling Go/Rust/Java reach more easily.
+
+---
+
 ## Microservices Stack
 
 Only recommend microservices when: teams are large enough to own individual services, deployment independence is a hard
@@ -339,16 +399,21 @@ Schema registry:            Confluent Schema Registry (with Kafka — the standa
                             before a breaking change ships
 ```
 
-**Kafka vs RabbitMQ**:
+**Kafka vs RabbitMQ**: the real differentiator is the messaging model, not a throughput ceiling — RabbitMQ comfortably
+handles tens of thousands of msg/s on modest hardware (verify current benchmarks for the target config; do not use a
+fixed msg/s number as the deciding factor), so pick based on the model actually needed:
 
-- Kafka: event sourcing, audit trails, replay, > 10K msg/s, multiple consumer groups
-- RabbitMQ: task queues, fan-out, < 10K msg/s, simpler ops, traditional message routing
+- Kafka: an ordered, durable log with configurable retention — needed when consumers must replay history, multiple
+  independent consumer groups read the same stream, or event sourcing/audit-trail semantics are required
+- RabbitMQ: a routed queue with flexible exchange/binding topology — needed for task queues, fan-out, or traditional
+  message routing (priority queues, delayed messages, per-consumer ack/retry) where replay isn't the goal
 
 ### Per-Service Stack
 
 Each service can use any language. Common choices:
 
-- **API-heavy CRUD services**: Node.js/TypeScript + Fastify + Prisma
+- **API-heavy CRUD services**: Node.js/TypeScript + Fastify + Prisma, or Ruby on Rails (API-only mode) for
+  convention-over-configuration speed
 - **Compute-heavy services**: Go, Rust, or Java/Kotlin
 - **ML/data services**: Python + FastAPI
 - **Event consumers/producers**: Go or Rust (lowest overhead, via `rdkafka`) or Java (Spring Kafka)
@@ -708,7 +773,10 @@ second store just for this.
 
 ## How to justify recommendations in the architecture document
 
-Every technology choice must cite at least one requirement from stages 1–4. Use this pattern:
+Every technology choice must cite at least one requirement from stages 1–4. Use this pattern (the `$150/month` figure
+below is illustrative-only, not a live, verified quote — per `cost-estimation-guide.md`'s dating rule, cite an actual
+figure with a WebSearch-verified date or the literal `"estimate — verify at implementation time"` tag when writing a
+real document, never a bare unsourced number):
 
 > **PostgreSQL 18** was chosen as the primary database because:
 > - The team has 3 years of PostgreSQL experience [Stage 3 — team competencies]

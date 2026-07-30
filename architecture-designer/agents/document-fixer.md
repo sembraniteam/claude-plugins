@@ -18,12 +18,13 @@ passed.
 The skill that spawns you will pass:
 
 1. **Document path** — read the full document with the Read tool before making any changes
-2. **Document review report** — the structured FAIL items (F1–F7, C1–C16) with evidence from document-reviewer
+2. **Document review report** — the structured FAIL items (F1–F7, C1–C19) with evidence from document-reviewer
 3. **Requirements summary** — user requirements, constraints, capacity targets, and technology decisions from stages
-   1–5, plus IaC decisions from stage6b and CI/CD decisions from stage6c if present, the `web3`/`offlineFirst` keys if
-   present, the `agentTools` array if present, and the `architecturalDrivers`/`riskRegister`/`domainModel` keys if
-   present (per `references/session-schema.md` section "Requirements-summary scope for sub-agent spawns"); needed to
-   write accurate content for content-check failures
+   1–5, including `stage5.tradeoffAnalysis` and `stage5.costEstimate`, plus IaC decisions from stage6b and CI/CD
+   decisions from stage6c if present, the `web3`/`offlineFirst` keys if present, the `agentTools` array if present, and
+   the `architecturalDrivers`/`riskRegister`/`domainModel`/`testStrategy`/`adrs` keys if present (per
+   `references/session-schema.md` section "Requirements-summary scope for sub-agent spawns"); needed to write accurate
+   content for content-check failures
 4. **`diagrams.json` path** (optional) — if C5 or C5a diagrams are missing, read from here to get the Mermaid code
 
 ## Rules before you start
@@ -69,7 +70,7 @@ starting; this section states only the fix procedure for each item.
   the code from diagrams.json + ` ``` `. If the block exists but starts with an unrecognized keyword, correct the
   keyword to one of the valid Mermaid types listed in `references/document-review-checklist.md`.
 
-## Content failures (C1–C16)
+## Content failures (C1–C19)
 
 These require accurate content from the requirements summary:
 
@@ -163,6 +164,27 @@ These require accurate content from the requirements summary:
   reference — this is the same "derive from confirmed data, never invent" discipline as every other C-item, not a
   design decision, since both `stage2` and the diagram set already exist. Never invent a feature with no corresponding
   `stage2` requirement.
+
+- **C17 — Cost Estimation section missing, or a row lacks a source**: Add or correct a "Cost Estimation" section per
+  `references/document-template.md` section 16, using the Cost Breakdown table header from
+  `references/document-review-checklist.md` and the `stage5.costEstimate` key from the requirements summary. Every row's
+  Source column must read either the WebSearch-verified citation already recorded in `costEstimate`, or the literal
+  `"estimate — verify at implementation time"` — never fabricate a source tag that isn't actually in the requirements
+  summary. If `session.json` has no `stage5.costEstimate` key at all, note this in the fix log as an item requiring
+  skill-level action instead of inventing cost figures.
+
+- **C18 — Test Strategy section missing**: Add a "Test Strategy" section per `references/document-template.md` section
+  17, using the `testStrategy` key from the requirements summary (test pyramid, load/performance targets and tool,
+  resilience/chaos scenarios, security checklist, UAT table). Do not invent a target, scenario, or tool that wasn't
+  actually confirmed. If `session.json` has no `testStrategy` key at all, note this in the fix log as an item requiring
+  skill-level action instead of inventing test-strategy content.
+
+- **C19 — Architecture Decision Records section missing, or a row is stale**: Add or correct an "Architecture Decision
+  Records" section per `references/document-template.md` section 18, using the ADR pointer table header from
+  `references/document-review-checklist.md` and the `adrs` array from the requirements summary — one row per entry,
+  including its actual current `status` (e.g. `Superseded by ADR-0003`). Never invent an ADR entry, and never duplicate
+  an ADR's own Context/Decision/Consequences prose into this table. If `session.json` has no `adrs` key at all, note this
+  in the fix log as an item requiring skill-level action instead of inventing ADR content.
 
 ## Output
 

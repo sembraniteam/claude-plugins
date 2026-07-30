@@ -6,10 +6,11 @@
  * request, builds an HTML page with all Mermaid diagrams, and opens the
  * browser automatically. No external deps — built-ins only.
  *
- * diagrams.json schema:
+ * diagrams.json schema (only title/generatedAt/diagrams are read by buildHtml() below —
+ * a "topic" key may also be present on disk for filename-generation purposes elsewhere
+ * in the plugin, but this server does not read it):
  * {
  *   "title": "Project Title",
- *   "topic": "project-topic-kebab",
  *   "generatedAt": "ISO 8601 string",
  *   "diagrams": [
  *     {
@@ -149,6 +150,20 @@ function buildHtml(data) {
 
     // NOTE: backticks and ${...} inside the <script> block are escaped as \` and \${...}
     // because they live inside an outer JS template literal.
+    //
+    // NOTE (regex/string escapes inside the <script> block): the same outer-template-literal
+    // rule silently swallows any `\X` where X is not a JS-recognized escape char (\n, \t, \\, \`,
+    // etc.) -- e.g. writing a client-side regex as /[\s,]+/ in this source produces the *string*
+    // `/[s,]+/` in the served HTML (backslash dropped), which the browser then parses as a
+    // character class matching literal 's'/',' -- not whitespace. This is a silent semantic bug,
+    // not a syntax error, so it will not surface as an exception anywhere -- it just makes the
+    // regex quietly match the wrong thing. Confirmed root cause of a real bug: this exact typo on
+    // the PNG-download viewBox parser made viewBox parsing silently fail for every diagram, falling
+    // through to less reliable fallbacks. Any regex or string literal added inside this template
+    // that needs a real backslash in the OUTPUT must double it here (`\\s`, `\\d`, etc.) -- verify
+    // with `curl -s http://localhost:<port> | grep '<the pattern>'` against the *served* HTML
+    // before trusting a new escape sequence in this block, since the source file reading correct
+    // is not sufficient evidence.
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -398,13 +413,27 @@ function buildHtml(data) {
         const svgEl = inner.querySelector('svg');
         if (!svgEl) { alert('Diagram SVG not found — it may still be rendering.'); return; }
 
-        // Use viewBox for natural dimensions to avoid zoom/pan transform skew from getBoundingClientRect
+        // Use viewBox for the download's canvas size — it's Mermaid's own computed content
+        // bounding box (see mermaid's setupGraphViewbox: viewBox is derived directly from
+        // getBBox() of the real rendered content, plus padding), so it is the diagram's true,
+        // stable native resolution regardless of how wide the page's CSS happens to stretch or
+        // squeeze its container. Some diagram types (state diagrams, and any other type Mermaid
+        // lays out with useMaxWidth) render with width="100%" so the on-screen CSS size varies
+        // with the container — e.g. the *same* diagram can display at 300x1574 in a two-diagram
+        // page but 300x129 in a twenty-diagram page with a narrower per-diagram column — neither
+        // number is the diagram's real resolution. Empirically verified: sizing the download from
+        // viewBox produces a crisp PNG; sizing it from the live on-screen rect produced a tiny,
+        // blurry PNG the moment the container happened to be narrower than the content's native
+        // scale (exactly the page layout this plugin's own preview uses for a multi-diagram
+        // project) — never reintroduce a live-rect-based primary path here.
         let W = 0, H = 0;
         const vb = svgEl.getAttribute('viewBox');
         if (vb) {
-          const parts = vb.trim().split(/[\s,]+/);
+          const parts = vb.trim().split(/[\\s,]+/);
           if (parts.length >= 4) { W = Math.round(parseFloat(parts[2])); H = Math.round(parseFloat(parts[3])); }
         }
+        // Fall back to width/height attributes, then the live rect, only when viewBox is absent —
+        // last resort, since neither is a reliable resolution source (see above).
         if (!W || !H) {
           W = Math.round(parseFloat(svgEl.getAttribute('width'))) || 0;
           H = Math.round(parseFloat(svgEl.getAttribute('height'))) || 0;

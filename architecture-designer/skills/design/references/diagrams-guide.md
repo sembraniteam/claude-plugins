@@ -122,12 +122,16 @@ and labels can overlap. Apply these rules before finishing any diagram.
 
 ### Rule 1 — Use ELK for complex flowcharts
 
-ELK (Eclipse Layout Kernel) handles nested subgraphs and many-edge graphs far better than Dagre. Use it for any
-`flowchart` diagram that has:
+ELK (Eclipse Layout Kernel) handles deeply nested subgraphs and dense single-cluster graphs far better than Dagre. Use
+it for any `flowchart` diagram that has:
 
 - 3 or more levels of nested subgraphs (e.g., cloud region → VPC → subnet → node), or
-- 12 or more nodes, or
-- Edges that cross subgraph boundaries in multiple directions
+- 12 or more nodes **concentrated within one subgraph or with no subgraphs at all**
+
+**Do not use it just because edges cross subgraph boundaries** — see Rule 7 below. ELK has a verified failure mode for
+diagrams with 2+ *sibling* (non-nested) subgraphs connected by inter-subgraph edges (the common "sequential
+stages/pipeline" shape): those edges can route through many unrelated nodes far outside the direct path, which is worse
+than the node overlap ELK is meant to prevent. That shape should default to plain Dagre instead.
 
 Add this as the **first line** of the diagram code:
 
@@ -211,6 +215,62 @@ UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
 
 Adjust `$c4ShapeInRow` to control how many shapes appear per row. Use `"2"` for diagrams with long description text on
 shapes, `"3"` or `"4"` for simpler shapes.
+
+**`UpdateLayoutConfig` controls shape rows, not relationship labels** — a C4 diagram can have zero shape-box overlap
+(every box correctly placed by `$c4ShapeInRow`/`$c4BoundaryInRow`) and still look broken because two or more `Rel()`
+labels land on top of each other or on top of a shape's own description text. This is a **different, verified failure
+mode** (confirmed via rendered-DOM inspection): Mermaid's C4 renderer has no automatic collision avoidance for
+relationship labels — it places each one at its edge's midpoint independent of every other edge, so two unrelated
+relationships whose midpoints happen to coincide produce visually merged, unreadable text (e.g. two labels rendering
+as one run-on string with no space between them). This gets more likely as the number of `Rel()` lines converging
+on/from one shape grows — a C4 Context diagram with 8-9 relationships is enough to trigger it.
+
+Two tools fix this, in order of effort:
+
+1. **Increase `c4ShapeMargin`** (default is Mermaid's own, generally too tight for dense diagrams) via a *separate*
+   init directive — this is a general mermaid config value, not a `UpdateLayoutConfig` parameter:
+   ```
+   %%{init: {'c4': {'c4ShapeMargin': 90}}}%%
+   C4Context
+     ...
+   ```
+   This gives every relationship's label more vertical room between shape rows, reducing (but not always eliminating)
+   crowding. Try 80-100 as a starting point for a dense diagram; the plain flowchart `nodeSpacing`/`rankSpacing` init
+   keys (Rule 2) do not apply here — `c4ShapeMargin` is C4's own equivalent.
+2. **Manually offset specific colliding labels with `UpdateRelStyle`** when margin alone isn't enough — this is
+   Mermaid's own documented escape hatch for exactly this problem, confirmed functional:
+   ```
+   UpdateRelStyle($from="aqufil", $to="xendit", $offsetY="-40")
+   ```
+   `$from`/`$to` are the element aliases from the `Person()`/`System()`/`Rel()` declarations (not their display names).
+   `$offsetX`/`$offsetY` nudge that one relationship's label away from whatever it's colliding with. **This requires
+   visual iteration in the live preview** — there is no formula that computes the right offset from the source text
+   alone; open the preview, identify which two labels overlap, add an `UpdateRelStyle` call for one of them, refresh,
+   and adjust the offset until they separate. Do not guess an offset and move on without checking the preview — an
+   untested offset can just as easily move a label into a *new* collision.
+
+### Rule 7 — Avoid ELK for sibling subgraphs connected by inter-subgraph edges
+
+**Verified failure mode** (empirically reproduced and confirmed via rendered-DOM inspection, not a theoretical
+concern): when a `flowchart` has 2 or more *sibling* subgraphs — same nesting level, not one nested inside another —
+connected to each other by edges that run from a node inside one subgraph to a node inside a different one (the
+CI/CD Pipeline Diagram's stage-to-stage shape is the canonical example: `CI` → `CD_Dev` → `CD_Staging` → `CD_Prod`),
+ELK's edge routing can send that connecting edge on a wildly indirect path — looping back through an entirely
+unrelated, already-passed subgraph and several of its nodes — rather than a short, direct line to the next stage. This
+is worse than the node-overlap problem ELK exists to solve, and it does not go away by adding more spacing or
+switching ELK's node-count threshold; the routing itself is wrong for this cluster topology.
+
+**Rule**: for a flowchart with 2+ sibling subgraphs joined by inter-subgraph edges, default to plain Dagre (omit the
+`layout: 'elk'` init directive entirely), regardless of total node count. Reserve ELK (Rule 1) for diagrams where the
+complexity is nesting depth or in-subgraph density, not inter-subgraph connections — e.g., a deployment diagram with
+region → VPC → subnet nesting and no sibling-subgraph cross-edges is a legitimate Rule 1 case; a CI/CD pipeline with
+sequential stage subgraphs is not.
+
+**If node overlap appears *within* a single stage subgraph** once ELK is removed (rare — Dagre handles a handful of
+nodes in a line fine), reach for Rule 2's spacing overrides first; only reintroduce ELK scoped to that specific
+diagram if spacing alone doesn't resolve it, and re-verify the inter-subgraph edges still route cleanly afterward (the
+failure mode above can reappear the moment ELK is back in play, even if the original reason for adding it was
+unrelated to the inter-subgraph edges).
 
 ---
 
@@ -361,7 +421,8 @@ ENTITY_NAME {
 assigned to").
 
 **Index plan table** (required after every `erDiagram` block — populates the `indexPlan` field in `diagrams.json`; see
-section "`diagrams.json` Schema" above):
+section "`diagrams.json` Schema" above). Use the exact header row `document-review-checklist.md`'s C5a item defines
+(`references/document-review-checklist.md` is the single source of truth for this literal format); example rows:
 
 | Index Name                  | Table    | Column(s)            | Type               | Reason                       |
 |-----------------------------|----------|----------------------|--------------------|------------------------------|
@@ -1071,7 +1132,14 @@ staged release process with security scans or manual gates.
 
 **Conventions**:
 
-- Use `%%{init: {'layout': 'elk'}}%%` — pipeline diagrams have many sequential nodes and ELK renders them cleanly
+- **Do not default to `%%{init: {'layout': 'elk'}}%%`** for this diagram shape — see "Preventing Node Overlap" Rule 7.
+  A CI/CD pipeline is exactly the shape that rule warns about: sibling stage subgraphs (CI, dev, staging, prod)
+  connected by inter-subgraph edges (`Push --> DeployDev`, `DevOK -->|Yes| DeployStaging`, ...). ELK has a verified
+  failure mode here — those inter-subgraph edges can route through many unrelated nodes far outside the direct path
+  (confirmed: an edge meant to go from one stage's health-check gate to the next stage's deploy step instead looped
+  back through the entire CI subgraph). Default Dagre (no `layout` override) renders this shape cleanly. Only add ELK
+  if a specific stage subgraph itself is deeply nested (3+ levels) or so dense internally that Dagre overlaps nodes
+  *within* one subgraph — never as a default for the pipeline shape as a whole.
 - Group stages into swimlane subgraphs if CI and CD run on different platforms (CI: GitHub Actions, CD: Argo CD)
 - Dashed arrows (`-.->`) for rollback or failure notification paths
 - Color-code environments with Mermaid `style` if useful (green for prod, orange for staging)
@@ -1085,7 +1153,6 @@ staged release process with security scans or manual gates.
 **Template**:
 
 ```mermaid
-%%{init: {'layout': 'elk'}}%%
 flowchart TD
   Trigger([Push to main branch]) --> Lint
 

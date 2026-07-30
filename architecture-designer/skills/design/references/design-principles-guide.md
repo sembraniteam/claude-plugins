@@ -301,9 +301,11 @@ stable, intention-revealing method name.
 
 **Definition**: high-level policy code should not call out into low-level implementation details on its own schedule;
 instead, the low-level component registers itself and waits to be invoked by a framework or orchestrator that owns the
-flow of control. Directly related to, and the intuition behind, the Dependency Inversion Principle above — DIP is the
-structural (which types depend on which) statement, the Hollywood Principle is the runtime-control-flow (who calls whom,
-and when) statement of the same idea.
+flow of control. This is the classic articulation of Inversion of Control (IoC), the broader idea — achievable via a
+Template Method base class calling an overridden subclass method, event/callback registration, or a framework's own
+lifecycle hooks, none of which strictly require an abstraction both sides depend on. DIP-based dependency injection
+(the structural, which-types-depend-on-which statement above) is the mechanism this guide standardizes on for
+achieving it, not the only way IoC can be achieved — treat DIP and Hollywood as closely related, not interchangeable.
 
 **Why it matters**: when a high-level service directly instantiates and calls its low-level dependencies
 (`new StripePaymentGateway().charge(...)` inline inside `OrderService`), the high-level class now owns both *what* to do

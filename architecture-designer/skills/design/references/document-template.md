@@ -18,7 +18,11 @@ The section order and content for the architecture document saved by `design/SKI
    requirements, never invents a capability.
 3. **Requirements Summary** — functional and non-functional requirements from stages 1–2, including the Quality
    Attribute Scenarios table and the ranked Architectural Drivers list (`stage2.qualityAttributeScenarios` and
-   `architecturalDrivers`) — see `quality-driven-design-guide.md`
+   `architecturalDrivers`) — see `quality-driven-design-guide.md` — plus a **Domain Edge Cases** sub-list (category,
+   question, answer) from `stage2.domainEdgeCases`, when present, per `domain-edge-cases-guide.md`. This is elaboration
+   on the requirements above, not a separate numbered section — an answer recorded as "out of scope" belongs here just
+   as much as one that expanded a requirement, since the point is making the boundary of what was actually considered
+   visible, not only the parts that became in-scope features.
 4. **Constraints and Feasibility** — from stage 3
 5. **Capacity Planning** — from stage 4 with numeric estimates
 6. **Technology Decisions** — the eleven items from `design/SKILL.md` Stage 5, in that order: architecture pattern,
@@ -29,10 +33,10 @@ The section order and content for the architecture document saved by `design/SKI
    architectural driver ID (s) each item satisfies when one applies
 7. **Architecture Diagrams** — every created diagram with: a heading, a paragraph description, then the mermaid code
    block. For the ERD, include the index list table immediately after the mermaid block.
-8. **Database Design** — the full output from the database-designer agent (schema, ERD explanation, index plan,
-   transaction and concurrency strategy for any high-contention entity — per `references/transaction-guide.md` — when
-   present, connection config, migration strategy), or database-fixer's corrected version if a fixer cycle ran — never
-   the pre-fix original once a fix has been applied
+8. **Database Design** — the full output from the database-designer agent per its "Output format" (engine
+   recommendation, schema, ERD explanation, index plan, transaction and concurrency strategy for any high-contention
+   entity — per `references/transaction-guide.md` — when present, connection config, migration strategy), or
+   database-fixer's corrected version if a fixer cycle ran — never the pre-fix original once a fix has been applied
 9. **Infrastructure as Code** — IaC tool and justification, state backend config, module breakdown table (module name,
    what it provisions, environment-specific sizing), environment strategy, drift detection approach. Follow
    `iac-guide.md` section 6 for the exact format.
@@ -65,3 +69,26 @@ The section order and content for the architecture document saved by `design/SKI
     corresponding `architecturalDrivers` entry (`relatedDriver` is optional in the schema) — a blank cell there is
     valid, not a content gap. A simple system with few competing drivers may honestly have only a small number of
     entries in each — do not pad the lists to look thorough.
+16. **Cost Estimation** (required — see `cost-estimation-guide.md`) — the Cost Breakdown table (component, service/tier,
+    monthly cost, sizing basis, source) from `session.json`'s `stage5.costEstimate.breakdown`, followed by the monthly
+    total, annual total, scale-sensitivity notes, and budget reconciliation from that same key's remaining fields. Every
+    row's Source column must read either a WebSearch-verified citation with a date, or the literal
+    **"estimate — verify at implementation time"** — never a bare number with no source. A genuinely zero-cost project
+    (a library or CLI tool with no hosting need) states that explicitly as the table's only row.
+17. **Test Strategy** (required — see `test-strategy-guide.md`) — the test pyramid table, the load/performance testing
+    targets and tool selection, the resilience/chaos testing scenarios (omitted only for a system with no external
+    dependencies, per `resilience-guide.md`'s own skip condition), the security testing checklist, and the UAT
+    Given/When/Then table, from `session.json`'s `testStrategy` key. State explicitly when a sub-section is empty per
+    its own skip condition (e.g. no resilience scenarios for a dependency-free monolith) rather than omitting the
+    heading.
+18. **Architecture Decision Records** (required — see `adr-guide.md`) — a pointer table only, never a duplicate of each
+    ADR's own Context/Decision/Consequences prose:
+
+    ```markdown
+    | ID       | Title                          | Status                | File |
+    |----------|---------------------------------|------------------------|------|
+    | ADR-0001 | Database engine selection      | Accepted               | `docs/architecture-designer/adr/0001-database-engine-selection.md` |
+    ```
+
+    Populate from `session.json`'s top-level `adrs` array. A superseded ADR still appears in this table with its actual
+    `Superseded by ADR-{NNNN}` status — never dropped from the list once generated.

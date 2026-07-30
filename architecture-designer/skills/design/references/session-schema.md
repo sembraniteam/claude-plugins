@@ -45,6 +45,13 @@ The top-level keys are fixed; the field names inside each stage object are the u
         "response": "...",
         "responseMeasure": "..."
       }
+    ],
+    "domainEdgeCases": [
+      {
+        "category": "Inventory & Order Fulfillment",
+        "question": "Can a partially-shipped order be cancelled for only its unshipped items?",
+        "answer": "No — cancellation is all-or-nothing for v1; partial cancellation is explicitly out of scope."
+      }
     ]
   },
   "stage3": {
@@ -94,7 +101,22 @@ The top-level keys are fixed; the field names inside each stage object are the u
         "rationale": "...",
         "relatedRisks": ["RISK-1"]
       }
-    ]
+    ],
+    "costEstimate": {
+      "breakdown": [
+        {
+          "component": "Database",
+          "serviceTier": "AWS RDS PostgreSQL db.t3.medium, Multi-AZ",
+          "monthlyCost": "...",
+          "sizingBasis": "...",
+          "source": "WebSearch verified 29-Jul-2026"
+        }
+      ],
+      "monthlyTotal": "...",
+      "annualTotal": "...",
+      "scaleSensitivity": "...",
+      "budgetReconciliation": "..."
+    }
   },
   "riskRegister": [
     {
@@ -219,6 +241,24 @@ The top-level keys are fixed; the field names inside each stage object are the u
     ],
     "updatedAt": "2026-07-13T10:35:00Z"
   },
+  "testStrategy": {
+    "testPyramid": "...",
+    "loadTesting": "...",
+    "resilienceTesting": "...",
+    "securityTesting": "...",
+    "uat": "..."
+  },
+  "adrs": [
+    {
+      "id": "ADR-0001",
+      "path": "/absolute/path/to/docs/architecture-designer/adr/0001-database-engine-selection.md",
+      "title": "Database engine selection",
+      "status": "Accepted",
+      "relatedDecision": "database",
+      "supersedes": null,
+      "createdAt": "2026-07-13T10:38:00Z"
+    }
+  ],
   "documents": [
     {
       "path": "/absolute/path/to/docs/architecture-designer/architecture/YYYYMMDD-topic.md",
@@ -255,10 +295,26 @@ run — written by that skill, and must be passed to implementation-planner when
 appear after `architecture-designer:implementation-planner` has run — written by that agent itself after saving its plan
 file, not by the `design` skill. Each entry may also carry an optional `split` object when the plan was too large for
 one file — see "Resolving a split plan's parts" below. `architecture-implementer` never writes to `session.json`; it
-only reads the plan path passed to it. `progress`, `lld`, and `pending` are never guaranteed either — see their own
-paragraphs below and "Resuming Steps 6a–13 via `progress`" for how a reader distinguishes their absence (nothing reached
-Stage 6a yet) from a resumed legacy session that predates this schema addition (same "absent means not-yet-applicable"
-treatment either way — no reader should error on their absence).
+only reads the plan path passed to it. `progress`, `lld`, `testStrategy`, `adrs`, and `pending` are never guaranteed
+either — see their own paragraphs below and "Resuming Steps 6a–13 via `progress`" for how a reader distinguishes their
+absence (nothing reached Stage 6a yet) from a resumed legacy session that predates this schema addition (same "absent
+means not-yet-applicable" treatment either way — no reader should error on their absence).
+
+**`testStrategy`** is optional and holds the confirmed Test Strategy content from Step 10b, written once Step 10b's plan
+is confirmed. Two writers: `design/SKILL.md` Step 10b (first write, for a project's initial plan) and `review/SKILL.md`'s
+"Update Test Strategy" step (4d.6, an authorized second writer, same class of exception as `lld` above) — it overwrites
+the key in full whenever 4a flags an NFR, capacity, resilience/rate-limiting, or core-feature change; a revision outside
+that scope leaves the prior pass's plan as confirmed. Step 11/4f reads this key to build document section 17. Absence
+means Step 10b hasn't confirmed a plan yet, or the session predates this key.
+
+**`adrs`** is optional and holds the append-only history of generated Architecture Decision Records, per
+`references/adr-guide.md`. Two appenders: `design/SKILL.md` Step 11 (first write, for a project's initial decisions) and
+`review/SKILL.md` step 4f (an authorized second appender, mirroring the `documents` append-only exception below) — each
+appends new entries for newly-qualifying or superseding decisions; neither ever mutates or removes another entry (a
+superseded ADR's own file gets a terminal `Status` edit per `references/adr-guide.md`'s "Revising ADRs," but its
+`session.json` entry is never rewritten — the newer entry's `supersedes` field is what records the relationship). Step
+11/4f reads this key to build document section 18's pointer table. Absence means no ADR has been generated yet, or the
+session predates this key.
 
 **`pending`** is optional and holds whatever answers have been gathered so far for the stage or step currently in
 progress, before that stage's own confirmed key is written. It is overwritten wholesale (not merged) each time a new
@@ -345,10 +401,12 @@ artifact file itself (see the `implement` skill and `implementation-planner` age
 
 Files written before this schema may still have plain strings inside these arrays instead of objects, and may lack
 `schemaVersion`/`project`/`description`/`updatedAt` entirely. Any reader must accept both shapes: a string entry
-`"...path..."` is equivalent to
-`{ "path": "...path...", "document": null, "remediationPlan": null, "supersedes": null, "createdAt": null }`. Never fail
-or ask the user to migrate — normalize silently. Do not rewrite old entries in place; the next append naturally writes
-the new shape going forward. If a legacy file is being written to and lacks `description`, backfill it at the same time
+`"...path..."` is equivalent to `{ "path": "...path..." }`, with every other field (e.g. `document`/`remediationPlan`/
+`supersedes`/`createdAt` on `implementationPlans`, `document`/`supersedes`/`createdAt` on `remediationPlans`,
+`createdAt` on `documents`) simply absent rather than backfilled with an explicit `null` — treat "absent" and
+"explicit null" as equivalent when reading. Never fail or ask the user to migrate — normalize silently. Do not
+rewrite old entries in place; the next append naturally writes the new shape going forward. If a legacy file is being
+written to and lacks `description`, backfill it at the same time
 `schemaVersion: 2` and `project` are backfilled (see `design/SKILL.md`'s "Legacy-session backfill check," run at session
 resume and again at the Stage 6 gate — Step 11's own backfill note is the same check, just triggered by a document save
 instead) — synthesize it from whatever `stage1` content is present rather than leaving it absent going forward. Unlike
@@ -440,21 +498,32 @@ stop condition is met — not after any individual part.
 ## Single writer per key
 
 "Single writer" means single *mutator*: each key has exactly one writer that may set or overwrite its value, except
-`documents` (append-only, two legitimate appenders — see the exception below) and `web3`/`offlineFirst`/`stage6b`/
-`stage6c`/`progress`/`pending`/`architecturalDrivers`/`riskRegister`/`domainModel`/`stage2.qualityAttributeScenarios`/
-`stage5.tradeoffAnalysis`/`lld` (each with two legitimate whole-value overwriters, or in `lld`'s case two legitimate
-incremental-writers — see below). These exceptions exist for different reasons: `documents`'s two appenders are safe
-because append-only removes the lost-update risk the single-writer rule exists to prevent; the rest's two overwriters
-are safe for the sequential-execution reason given below, not an append-only one.
+`documents`/`adrs` (append-only, two legitimate appenders each — see the exception below) and `web3`/`offlineFirst`/
+`stage6b`/`stage6c`/`progress`/`pending`/`architecturalDrivers`/`riskRegister`/`domainModel`/
+`stage2.qualityAttributeScenarios`/`stage5.tradeoffAnalysis`/`stage5.costEstimate`/`lld`/`testStrategy`/
+`stage2.domainEdgeCases` (each with two legitimate whole-value overwriters, or in `lld`'s/`testStrategy`'s/
+`stage2.domainEdgeCases`'s case two legitimate incremental-writers — see below).
+These exceptions exist for different reasons: `documents`'s and `adrs`'s two appenders are safe because append-only
+removes the lost-update risk the single-writer rule exists to prevent; the rest's two overwriters are safe for the
+sequential-execution reason given below, not an append-only one.
 
 `schemaVersion`, `project`, and `description` are written only by `design/SKILL.md`, at Stage 1 confirmation (and
 backfilled by the same skill on legacy files per Step 11). `stage1`, `stage3`, and `stage4` are written only by
 `design/SKILL.md`. `stage2` is written only by `design/SKILL.md`, **except its nested `qualityAttributeScenarios`
 field**, which has one authorized second writer: `review/SKILL.md` step 4b overwrites it in full when step 4a flags an
-NFR change, per `references/quality-driven-design-guide.md`. `stage5` follows the identical pattern for its nested
+NFR change, per `references/quality-driven-design-guide.md`. `stage2.domainEdgeCases` also has one authorized second
+writer — `review/SKILL.md` step 4b — but unlike `qualityAttributeScenarios` it is written incrementally (new entries
+appended for a newly-matched category), the same class of exception as `lld`/`testStrategy` below rather than the
+whole-value-overwrite pattern: an existing category's answer is still valid after an unrelated revision and is never
+re-asked or removed just because a different category was newly matched, per `references/domain-edge-cases-guide.md` —
+every other `stage2` field is written only by `design/SKILL.md`. `stage5` follows the identical whole-value-overwrite
+pattern for its nested
 `tradeoffAnalysis` field: written by `design/SKILL.md` at Stage 5 confirmation, with `review/SKILL.md` step 4b as the
-same authorized second writer when a revision changes a technology decision or introduces a new requirement tension —
-every other `stage5` field is written only by `design/SKILL.md`. `architecturalDrivers` and `riskRegister` are written
+same authorized second writer when a revision changes a technology decision or introduces a new requirement tension.
+`stage5.costEstimate` follows the same two-writer pattern: written by `design/SKILL.md` at Stage 5 confirmation, with
+`review/SKILL.md` step 4b as the same authorized second writer when a revision changes a capacity number or a
+cost-affecting technology decision, per `references/cost-estimation-guide.md` — every other `stage5` field is written
+only by `design/SKILL.md`. `architecturalDrivers` and `riskRegister` are written
 by `design/SKILL.md` at Stage 5 confirmation (overwritten in full on any Stage 2 or Stage 5 revision per Step 9, per
 `references/quality-driven-design-guide.md`), with the same authorized second writer: `review/SKILL.md` step 4b
 overwrites either in full when step 4a flags an NFR change or a technology-decision/requirement-tension change,
@@ -466,7 +535,11 @@ full on any Stage 5 revision, per `references/agent-tools.md`) — no other skil
 written by `design/SKILL.md` at Step 10, incrementally per confirmed artifact group, with one authorized second writer:
 `review/SKILL.md`'s "Update Low-Level Design" step (4d.5) updates the same key, incrementally per group, whenever 4a
 flags a change touching an API contract, business rule, DTO, inter-service contract, or error condition — groups outside
-that revision's scope are left as `design`/a prior revision confirmed them. `web3` is written by
+that revision's scope are left as `design`/a prior revision confirmed them. `testStrategy` follows a similar pattern —
+written by `design/SKILL.md` at Step 10b (overwritten in full, not per-group like `lld`, since its five parts are
+confirmed together in one round-trip per `references/test-strategy-guide.md`), with `review/SKILL.md`'s "Update Test
+Strategy" step (4d.6) as the authorized second writer whenever 4a flags an NFR, capacity, resilience/rate-limiting, or
+core-feature change. `web3` is written by
 `design/SKILL.md` at Stage 5 confirmation, and only when the Web3 track is active (overwritten in full on any Stage 5
 revision, per `references/web3-guide.md`) — with one authorized second writer: `review/SKILL.md` step 4b also overwrites
 it in full when a revision changes the project's decentralization status (creating the key if newly decentralized,
@@ -484,29 +557,38 @@ two-writer keys, its writes are incremental field-level updates within the same 
 rather than one wholesale overwrite per skill run, since either skill may touch it many times across a single pipeline
 pass. `pending` is written by both `design/SKILL.md` (Stages 1–6c) and `review/SKILL.md` (step 4a) — always overwritten
 wholesale with the stage currently in progress, and deleted (not left stale) once that stage's real key is confirmed.
-All twelve two-writer keys/fields (`web3`, `offlineFirst`, `stage6b`, `stage6c`, `progress`, `pending`,
+All fifteen two-writer keys/fields (`web3`, `offlineFirst`, `stage6b`, `stage6c`, `progress`, `pending`,
 `architecturalDrivers`, `riskRegister`, `domainModel`, `stage2.qualityAttributeScenarios`, `stage5.tradeoffAnalysis`,
-`lld`) are safe for the same reason stated in "No CAS — always read-fresh-modify-write-whole" below:
-these skills never run concurrently within one conversation, so whichever write happens later is always the
-intentionally-authoritative one, not a lost update — unlike `documents`'s two appenders, these keys' writers overwrite
-the whole value (or, for `progress`/`lld`, individual fields/groups within it) rather than append, so the guarantee
-rests on sequential execution, not on append-only semantics. No other skill or agent writes to any of these keys.
+`stage5.costEstimate`, `lld`, `testStrategy`, `stage2.domainEdgeCases`) are safe for the same reason stated in "No
+CAS — always
+read-fresh-modify-write-whole" below: these skills never run concurrently within one conversation, so whichever write
+happens later is always the intentionally-authoritative one, not a lost update — unlike `documents`'s/`adrs`'s two
+appenders, most of these keys' writers overwrite the whole value (or, for `progress`/`lld`/`testStrategy`, individual
+fields/groups within it) rather than append; `stage2.domainEdgeCases` is the one exception that appends new entries
+(per `references/domain-edge-cases-guide.md`) rather than overwriting the array, but is still safe for the identical
+sequential-execution reason, not an append-only one (unlike `documents`/`adrs`, a second `stage2.domainEdgeCases`
+writer appending concurrently within the same conversation is not a scenario this plugin's skills ever create). No
+other skill or
+agent writes to any of these keys.
 
-**Exception — `documents` has two legitimate appenders:** `design/SKILL.md` (Step 11) and `review/SKILL.md` (step 4f)
-both append to it, and both are valid — each produces an architecture document (an initial design and a revision,
-respectively), so each is entitled to record the artifact it just wrote. Neither ever mutates or removes another
-writer's entry; each only appends its own new one. That append-only discipline is what makes two appenders safe here —
-there is no lost-update to guard against, since no writer's change can clobber another's. `remediationPlans` and
-`implementationPlans` are also append-only but, unlike `documents`, each currently has only one appender in practice
-(see below) — nothing here forbids a second legitimate appender being added for those keys too, as long as it only
-appends.
+**Exception — `documents` and `adrs` each have two legitimate appenders:** `design/SKILL.md` (Step 11) and
+`review/SKILL.md` (step 4f) both append to `documents`, and both are valid — each produces an architecture document (an
+initial design and a revision, respectively), so each is entitled to record the artifact it just wrote. The same two call
+sites append to `adrs` for the same reason — each produces newly-qualifying or superseding ADRs at the point it saves a
+document, per `references/adr-guide.md`. Neither ever mutates or removes another writer's entry; each only appends its
+own new one (for `adrs`, a superseded decision's *new* entry records the relationship via its own `supersedes` field —
+the old entry itself is never rewritten). That append-only discipline is what makes two appenders safe here — there is
+no lost-update to guard against, since no writer's change can clobber another's. `remediationPlans` and
+`implementationPlans` are also append-only but, unlike `documents`/`adrs`, each currently has only one appender in
+practice (see below) — nothing here forbids a second legitimate appender being added for those keys too, as long as it
+only appends.
 
 `remediationPlans` is appended to only by `review/SKILL.md` (step 4e). `implementationPlans` is appended to only by
 `implementation-planner`. `architecture-implementer` never writes to `session.json`. No key is ever written by more
-writers than listed here — for `documents`, `web3`, `offlineFirst`, `stage6b`, `stage6c`, `progress`, `pending`,
-`architecturalDrivers`, `riskRegister`, `domainModel`, `stage2.qualityAttributeScenarios`, `stage5.tradeoffAnalysis`,
-and
-`lld`, that means no writer beyond the two named above for each; for every other key, exactly the one named.
+writers than listed here — for `documents`, `adrs`, `web3`, `offlineFirst`, `stage6b`, `stage6c`, `progress`, `pending`,
+`architecturalDrivers`, `riskRegister`, `domainModel`, `stage2.qualityAttributeScenarios`, `stage2.domainEdgeCases`,
+`stage5.tradeoffAnalysis`, `stage5.costEstimate`, `lld`, and `testStrategy`, that means no writer beyond the two named
+above for each; for every other key, exactly the one named.
 
 ## Recording `progress.lastCompletedStep`
 
@@ -522,8 +604,9 @@ other field in this key):
 | `step7`  | Step 7 — architecture review passed        | step 4c — architecture re-review passed                                                                                       |
 | `step8`  | Step 8 — browser preview opened            | step 4d — preview opened/refreshed                                                                                            |
 | `step9`  | Step 9 — user confirmed the design         | step 4d — user confirmed the revision                                                                                         |
-| `step10` | Step 10 — all five LLD groups confirmed    | "Update Low-Level Design" step (4d.5) — run only when 4a flagged an LLD-affecting change; skip straight to `step11` otherwise |
-| `step11` | Step 11 — document saved                   | step 4f — revised document saved                                                                                              |
+| `step10` | Step 10 — all five LLD groups confirmed    | "Update Low-Level Design" step (4d.5) — run only when 4a flagged an LLD-affecting change; skip straight to `step10b`/`step11` otherwise |
+| `step10b`| Step 10b — Test Strategy confirmed         | "Update Test Strategy" step (4d.6) — run only when 4a flagged a test-affecting change; skip straight to `step11` otherwise    |
+| `step11` | Step 11 — document saved (incl. ADRs)      | step 4f — revised document saved (incl. ADRs)                                                                                 |
 | `step12` | Step 12 — document reviewed/approved       | step 4g — document reviewed/approved                                                                                          |
 | `step13` | Step 13 — implementation offered           | step 4h — implementation offered                                                                                              |
 
@@ -622,15 +705,17 @@ or `SESSION CHECK FAILED` at the end:
    1–5 are present and non-empty. "Non-empty" is checked recursively, not just by presence/length — a stage object whose
    only field is an empty string (e.g. `{"backend": ""}`) fails this check rather than passing as a non-empty dict.
 2. **Structural schema** — every other key present (`updatedAt`, `agentTools`, `pending`, `progress`, `lld`,
-   `documents`,
+   `testStrategy`, `documents`, `adrs`,
    `remediationPlans`, `implementationPlans`, `architecturalDrivers`, `riskRegister`, `domainModel`) is checked against
    `<scripts_dir>/session-schema.json`, a JSON Schema covering the fixed-shape parts of this file
    (array-of-objects-or-legacy-string entries, the `split` object, enums like `agentTools[].type`,
-   `riskRegister[].category`/`.likelihood`/`.impact`/`.status`, and `domainModel.relationships[].pattern` — and the
-   required fields on `architecturalDrivers`/`riskRegister`/`domainModel` entries, e.g. every `architecturalDrivers`
-   entry must carry `id` and `description`). `stage1`–`stage5` (including `stage2.qualityAttributeScenarios` and
-   `stage5.tradeoffAnalysis`), `web3`, `offlineFirst`, `stage6b`, `stage6c` stay untyped in that schema, since their
-   inner field names are the user's own confirmed answers and legitimately vary by project.
+   `riskRegister[].category`/`.likelihood`/`.impact`/`.status`, `domainModel.relationships[].pattern`, and
+   `adrs[].status` — and the required fields on `architecturalDrivers`/`riskRegister`/`domainModel`/`adrs` entries, e.g.
+   every `architecturalDrivers` entry must carry `id` and `description`, and every `adrs` entry must carry `id`, `path`,
+   `title`, and `status`). `stage1`–`stage5` (including `stage2.qualityAttributeScenarios`, `stage2.domainEdgeCases`,
+   `stage5.tradeoffAnalysis`, and `stage5.costEstimate`), `web3`, `offlineFirst`, `stage6b`, `stage6c`, `testStrategy`
+   stay untyped in that schema, since their inner field names are the user's own confirmed answers or agent-drafted
+   prose and legitimately vary by project.
 3. **Referential integrity** (advisory, printed but never fails the gate) — two independent checks:
    (a) link fields between `documents`/`remediationPlans`/`implementationPlans` (`document`, `remediationPlan`,
    `supersedes`, `split.previousPlan`/`split.nextPlan`) are checked for whether they resolve to a path present elsewhere
@@ -834,18 +919,20 @@ Ten call sites assemble a "requirements summary" to pass into a spawned sub-agen
 rather than a uniquely-numbered step, reusing the requirements summary already assembled for their paired reviewer's
 spawn immediately above, but still subject to the same scope rule via their own agent file's documented inputs. All ten
 use the same scope rule: read every relevant top-level `session.json` key, not stage1–5 alone — stage1–5 (including
-`stage5.tradeoffAnalysis`) and the top-level `description` always, plus `agentTools`, `stage6b`, `stage6c`, `web3`,
-`offlineFirst`, `architecturalDrivers`,
-`riskRegister`, and `domainModel` whenever present.
+`stage2.domainEdgeCases`, `stage5.tradeoffAnalysis`, and `stage5.costEstimate`) and the top-level `description` always,
+plus `agentTools`, `stage6b`, `stage6c`, `web3`, `offlineFirst`, `architecturalDrivers`, `riskRegister`, `domainModel`,
+`testStrategy`, and `adrs` whenever present.
 
 This matters most for `web3` and `offlineFirst`: a receiving agent's Web3-specific or offline-sync-specific dimension or
 check can only fire if that key was actually included in what it received. Omitting it because "the caller only read
 stages 1–5" produces a false "not applicable" from the receiving agent, not an honest evaluation — the agent has no way
 to distinguish "this project isn't decentralized/offline-first" from "the caller didn't pass me the key that would tell
 me so." The same reasoning applies to `stage6b`/`stage6c` for IaC/CI-CD-aware checks, `agentTools` for any check that
-reasons about available tooling, `domainModel` for aggregate-boundary-aware schema checks, and `architecturalDrivers`/
-`riskRegister` for driver-traceability and risk-cross-check findings. `architecturalDrivers`, `riskRegister`, and
-`domainModel` are "whenever present" rather than "always" because a resumed session that confirmed Stage 5 or Stage 6a
+reasons about available tooling, `domainModel` for aggregate-boundary-aware schema checks, `architecturalDrivers`/
+`riskRegister` for driver-traceability and risk-cross-check findings, and `testStrategy`/`adrs` for `document-reviewer`/
+`document-fixer`'s C17–C19 checks (Step 12/step 4g) — the same false-"not applicable" risk applies if either is omitted
+from what those two agents receive. `architecturalDrivers`, `riskRegister`, `domainModel`, `testStrategy`, and `adrs`
+are "whenever present" rather than "always" because a resumed session that confirmed Stage 5, Stage 6a, or Step 10b
 before these keys existed in this plugin's schema will legitimately lack them — the same reason `stage6b`/`stage6c`
 are "whenever present" rather than "always."
 
@@ -915,8 +1002,9 @@ in Stage 6d) and before any document exists. Hashing an external file would eith
 `diagrams.json` does exist later, drift out of sync every time an unrelated diagram is added or edited (falsely
 invalidating a database verdict that never changed). So instead of a hash, step 0 for `database` writes the actual
 approved content directly into `progress.reviewCycles.database.approvedOutput` — the full corrected schema, ERD, index
-plan, engine recommendation, and connection config text (the fixer's corrected version if any cycle ran, otherwise the
-database-designer's original output; same "final approved version" rule the calling step already states). This makes the
+plan, engine recommendation, transaction and concurrency strategy, and connection config text (the fixer's corrected
+version if any cycle ran, otherwise the database-designer's original output; same "final approved version" rule the
+calling step already states). This makes the
 design's own content, not a derived hash, the thing that's durable — a crash between Stage 6a passing and Stage 6d's
 ERD-diagram write does not lose the database design, and there is nothing external to go stale against. Stage 6d and
 Step 11 read `progress.reviewCycles.database.approvedOutput` from `session.json` to build the ERD diagram and document

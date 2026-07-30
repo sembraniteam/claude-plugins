@@ -58,8 +58,10 @@ behaves identically across engines; verify against the specific engine's own doc
 "Repeatable Read" as one universal behavior. PostgreSQL's Repeatable Read (MVCC snapshot isolation) prevents phantom
 reads outright and detects lost-update conflicts by raising a serialization-failure error (`SQLSTATE 40001`) rather than
 silently allowing them. MySQL/InnoDB's Repeatable Read prevents phantoms for locking reads via next-key locking (record
-lock + gap lock), documented with caveats for scans that can't use an index efficiently — but a plain `UPDATE`
-with no explicit locking read beforehand can still silently lose an update, unlike PostgreSQL's hard failure. Treat
+lock + gap lock), documented with caveats for scans that can't use an index efficiently — but an application-level
+read-then-write (a separate `SELECT` followed by an `UPDATE` that recomputes the new value from client-side code, not
+a single atomic `UPDATE table SET x = x - 1 WHERE id = ?`, which is safe under either engine) with no explicit locking
+read beforehand can still silently lose an update, unlike PostgreSQL's hard failure. Treat
 InnoDB's Repeatable Read as "phantom-safe for locking reads, not lost-update-safe by default" rather than assuming it
 matches PostgreSQL's stronger guarantee.
 

@@ -21,12 +21,15 @@
 # something it shouldn't. Pattern coverage is necessarily a heuristic, not an
 # exhaustive list of every chain toolchain's deploy command.
 #
-# Known bypass class: matching is plain substring detection on the literal
-# tool_input.command string. It catches unobfuscated, typical invocations only —
-# it does not (and cannot, at this layer) defeat deliberate obfuscation such as
-# quote-splitting (fo''rge create), command substitution ($(echo forge) create),
-# or piping through eval/base64. Treat this hook as a safety net for accidental
-# deploys, not a security boundary against an adversarial caller.
+# Known bypass class: matching is regex detection (whitespace-tolerant, but
+# otherwise literal) on the tool_input.command string of the CURRENT Bash call
+# only. It catches unobfuscated, typical invocations only — it does not (and
+# cannot, at this layer) defeat deliberate obfuscation such as quote-splitting
+# (fo''rge create), command substitution ($(echo forge) create), piping through
+# eval/base64, or reconstructing the command from shell variables/aliases set in
+# a prior, unmatched call (e.g. `export A=forge; export B=create` followed by
+# `$A $B ...`). Treat this hook as a safety net for accidental deploys, not a
+# security boundary against an adversarial caller.
 set -uo pipefail
 
 command -v jq >/dev/null 2>&1 || exit 0
@@ -43,10 +46,15 @@ command_lc=$(printf '%s' "$command_str" | tr '[:upper:]' '[:lower:]')
 contains() {
   local pattern
   pattern=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
-  case "$command_lc" in
-    *"$pattern"*) return 0 ;;
-    *) return 1 ;;
-  esac
+  # Escape regex metacharacters that could appear in a pattern, then treat any
+  # literal whitespace in the pattern as "one or more whitespace characters" so
+  # multi-word patterns (e.g. "forge create") still match when the actual
+  # command has extra spaces or a tab between the words — plain substring
+  # matching missed this (e.g. "forge  create" or "forge<TAB>create" bypassed
+  # detection entirely).
+  pattern=$(printf '%s' "$pattern" | sed -E 's/[.[\*^$(){}?+|\\]/\\&/g')
+  pattern=$(printf '%s' "$pattern" | sed -E 's/[[:space:]]+/[[:space:]]+/g')
+  printf '%s' "$command_lc" | grep -qE -- "$pattern"
 }
 
 is_safe_network() {

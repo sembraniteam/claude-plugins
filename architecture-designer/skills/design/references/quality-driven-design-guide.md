@@ -101,8 +101,9 @@ fill the slot.
 ## Trade-off and Risk Analysis (end of Stage 5, ATAM-style)
 
 After the eleven items are proposed and discussed, before final Stage 5 confirmation, walk through the decisions once
-more looking specifically for tension between drivers — this is the ADD "analyze the current design" step and ATAM's
-core technique, scaled down to fit inside a single design session rather than a multi-day external ATAM engagement.
+more looking specifically for tension between drivers — this mirrors ADD's driver-satisfaction check and ATAM's
+sensitivity/trade-off analysis, scaled down to fit inside a single design session rather than a multi-day external
+ATAM engagement.
 
 Use three ATAM concepts:
 

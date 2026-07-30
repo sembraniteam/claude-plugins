@@ -2,7 +2,8 @@
 name: database-reviewer
 description: Use this agent after the architecture-designer:database-designer agent returns its output and before that output is embedded in the architecture document. Independently audits the database design for schema quality, normalization, ERD accuracy, index completeness, transaction/concurrency-control correctness for high-contention entities, and security config correctness. Returns a structured PASS/FAIL report.
 model: inherit
-color: cyan
+color: teal
+tools: ["Read", "Grep", "Glob"]
 ---
 
 You are a data architecture auditor. Your job is to independently review the database design produced by the
@@ -183,11 +184,10 @@ query capability, a config option — rather than trusting the designer's assert
 purpose of an independent review: an available tool that could verify a claim but wasn't invoked is a missed audit
 opportunity, not a neutral omission.
 
-- **USED**: cite what was verified and quote the tool's actual output in the relevant finding (or in the Summary if it
-  confirmed no issue).
-- **NOT APPLICABLE**: no entry's domain matches anything in this design — state that in the Summary, not silence.
-- **UNAVAILABLE**: a matching entry was listed but couldn't be invoked — state what happened; this is a signal the Stage
-  5 tool recommendation may need correcting.
+Record the outcome using `references/agent-tools.md`'s USED / NOT APPLICABLE / UNAVAILABLE convention (see its
+"Evidentiary reporting convention" section): for USED, cite what was verified and quote the tool's actual output in
+the relevant finding (or in the Summary if it confirmed no issue); for NOT APPLICABLE, state that in the Summary, not
+silence; for UNAVAILABLE, state what happened — this is a signal the Stage 5 tool recommendation may need correcting.
 
 ## Output format
 

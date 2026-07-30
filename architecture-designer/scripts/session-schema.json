@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://architecture-designer.local/schemas/session.schema.json",
   "title": "docs/architecture-designer/session.json",
-  "description": "Structural schema for the fixed-shape parts of session.json. stage1-stage5 (including stage2.qualityAttributeScenarios and stage5.tradeoffAnalysis), web3, offlineFirst, stage6b, stage6c, pending.answers, progress.reviewCycles, and domainModel.boundedContexts[].ubiquitousLanguage are intentionally left as free-form objects here -- their inner field names are the user's own confirmed answers or agent-recorded text and vary by project. architecturalDrivers, riskRegister, and domainModel, by contrast, ARE structurally typed below (required fields, enums) since their shape is agent-recorded and fixed rather than user-varying. The full narrative contract (single-writer rules, when each key is written, how array links resolve) lives in skills/design/references/session-schema.md; this file only covers what can be checked mechanically: presence, type, and the array-of-objects-or-legacy-string shape. Read and applied by scripts/validate-session.py, which implements a small purpose-built subset of JSON Schema (type/properties/required/items/oneOf/enum/minimum) rather than depending on a third-party validator, to keep the script stdlib-only.",
+  "description": "Structural schema for the fixed-shape parts of session.json. stage1-stage5 (including stage2.qualityAttributeScenarios, stage5.tradeoffAnalysis, and stage5.costEstimate), offlineFirst, stage6b, stage6c, testStrategy, pending.answers, progress.reviewCycles, domainModel.boundedContexts[].ubiquitousLanguage, and lld (excluding lld.confirmedGroups/lld.updatedAt, which ARE structurally typed below) are intentionally left as free-form objects here -- their inner field names are the user's own confirmed answers or agent-recorded text and vary by project. web3 is also left free-form here even though its 8 keys (per references/web3-guide.md's invariant dimensions) are actually fixed across projects -- only the values vary; it isn't typed below purely as a simplicity trade-off, not because the key set varies. architecturalDrivers, riskRegister, domainModel, and adrs, by contrast, ARE structurally typed below (required fields, enums) since their shape is agent-recorded and fixed rather than user-varying. The full narrative contract (single-writer rules, when each key is written, how array links resolve) lives in skills/design/references/session-schema.md; this file only covers what can be checked mechanically: presence, type, and the array-of-objects-or-legacy-string shape. Read and applied by scripts/validate-session.py, which implements a small purpose-built subset of JSON Schema (type/properties/required/items/oneOf/enum/minimum) rather than depending on a third-party validator, to keep the script stdlib-only.",
   "type": "object",
   "properties": {
     "schemaVersion": {
@@ -295,6 +295,50 @@
         },
         "updatedAt": {
           "type": "string"
+        }
+      }
+    },
+    "testStrategy": {
+      "type": "object"
+    },
+    "adrs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "path",
+          "title",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "relatedDecision": {
+            "type": "string"
+          },
+          "supersedes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
         }
       }
     },

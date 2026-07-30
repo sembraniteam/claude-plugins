@@ -1,6 +1,6 @@
 ---
 name: database-fixer
-description: Use this agent when the database-reviewer has returned Critical or Major findings and the database design needs targeted corrections before it is embedded in the architecture document. Receives the review report, the original database-designer output, the requirements summary, and the diagrams.json path. Applies the minimum changes to close each finding, writes the corrected ERD and indexPlan directly into diagrams.json (same pattern as architecture-fixer), and returns the corrected schema, index plan, transaction/concurrency strategy, and connection config for document embedding.
+description: Use this agent when the database-reviewer has returned Critical or Major findings and the database design needs targeted corrections before it is embedded in the architecture document. Receives the review report, the original database-designer output, the requirements summary, and the diagrams.json path. Applies the minimum changes to close each finding, writes the corrected ERD and indexPlan directly into diagrams.json when that file already exists (same pattern as architecture-fixer; returned as text only during the initial design flow's Stage 6a, before diagrams.json's skeleton exists yet), and returns the corrected schema, index plan, transaction/concurrency strategy, and connection config for document embedding.
 model: inherit
 color: red
 ---
@@ -163,9 +163,9 @@ Work through every Critical finding first, then Major findings. For each:
 When input 3's `agentTools` includes an entry whose domain matches the specific finding being fixed (e.g., a Firebase
 MCP when the fix touches a Firestore-specific config or index), **use it** to verify the corrected value against the
 tool's actual capabilities before writing the fix — do not just trust memory for the same reason `database-designer`
-doesn't. Note the outcome (**USED** with a quoted excerpt, **NOT APPLICABLE**, or **UNAVAILABLE**) in the fix log's
-"Applied fixes" entry for that finding. Omit this entirely for a fix where no `agentTools` entry's domain is relevant,
-or when `agentTools` was empty or absent.
+doesn't. Note the outcome in the fix log's "Applied fixes" entry for that finding using `references/agent-tools.md`'s
+USED / NOT APPLICABLE / UNAVAILABLE convention (see its "Evidentiary reporting convention" section). Omit the line
+entirely for a fix where no `agentTools` entry's domain is relevant, or when `agentTools` was empty or absent.
 
 ## Output
 

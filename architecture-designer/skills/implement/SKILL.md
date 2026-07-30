@@ -118,11 +118,17 @@ into the proposed structure before presenting it; proposes a full folder structu
 files that already exist and asking how to handle collisions if fresh-starting into an existing project; waits for the
 user's confirmation or adjustments; saves the plan (split into `{yyyymmdd}-{topic}-part{n}-of-{N}.md` parts instead of
 one file for large projects — more than 40 checklist items — per its "Splitting large plans" step; marks a resumed
-previous plan `Superseded`); and reports back the plan file path (s).
+previous plan `Superseded by {new plan path}`); and reports back the plan file path (s).
 
 ---
 
 ## Step 4 — Spawn the architecture-implementer agent
+
+The spawning prompt must literally include the confirmed plan file's path — a `PreToolUse` hook on the `Task` tool
+(`hooks/check-implementer-plan.sh`, see the plugin README's "Hooks" section) mechanically blocks this exact spawn
+(`exit 2`, no fallback) unless it can extract a `docs/architecture-designer/plan/*.md` path from the prompt text and
+confirm that file's `Status` row reads `In progress` on disk — passing the plan path only as a labeled "input" without
+it appearing literally in the prompt is not sufficient.
 
 `architecture-implementer` (spawned per the shared sequence above) reads the confirmed plan and the architecture
 document, then: for a brand-new project whose stack has an official generator CLI (`cargo new`, `flutter create`,
@@ -145,10 +151,15 @@ scaffold that's silently unaudited is a decision the user needs to see, not just
 No further guidance is needed once it's spawned — it has complete instructions. If it refuses to proceed (e.g. reports
 "No confirmed implementation plan found") or reports a mid-run blocker it cannot resolve on its own (something the plan
 doesn't cover), do not treat this as a normal completion — resolve the blocker with the user (which may mean re-spawning
-`implementation-planner` to update the plan) and re-spawn `architecture-implementer` once resolved, the same as Step 3's
-contingency for `implementation-planner`.
+`implementation-planner` to update the plan) and re-spawn `architecture-implementer` once resolved, the same as the
+spawn-sequence section's own contingency for a stuck/unresponsive `implementation-planner` (`session-schema.md`
+"Implementation-planner → architecture-implementer spawn sequence" step 2: keep resolving the open question with the
+user and re-spawn once ready).
 
-Proceed to Step 5 once the final part (or the only part, if the plan was not split) reports `Status: Complete`.
+Proceed to Step 5 once the final part (or the only part, if the plan was not split) reports `Status: Complete` — note
+that this self-report is independently re-verified against disk by the `SubagentStop` hook
+(`hooks/verify-implementer-completion.sh`) before the agent is even allowed to stop, so a run that appears to hang
+after reporting completion may still be resolving a discrepancy that hook found.
 
 ---
 
@@ -173,8 +184,9 @@ Once the agent reports completion, remind the user:
    an independent audit sized to value at risk (`design/references/web3-guide.md` dimension 7) before any deployment
    holding real value, and stage the rollout through testnet and a capped-value mainnet deployment before committing
    full value. This skill never runs a deploy step itself; that decision and its execution are entirely the user's.
-8. **Offline-first projects only**: before deployment, run the three tests `design/references/offline-first-guide.md`
-   section 6 names — two clients editing the same record while both offline then reconnecting (conflict path), a
+8. **Offline-first projects only** (the document has an "Offline-First Considerations" section): before deployment,
+   run the three tests `design/references/offline-first-guide.md` section 6 names — two clients editing the same
+   record while both offline then reconnecting (conflict path), a
    deliberately wrong device clock (server-assigned-timestamp fix), and a push retried after a dropped response
    (mutation-ID idempotency) — the skeleton implements the sync mechanics but does not run these tests itself.
 
