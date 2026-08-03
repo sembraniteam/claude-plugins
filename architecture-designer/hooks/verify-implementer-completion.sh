@@ -1,20 +1,22 @@
 #!/bin/bash
-# SubagentStop hook — re-verifies architecture-implementer's own completion
-# claim against disk before letting it stop, instead of trusting its
-# self-reported "Status: Complete" at face value.
+# SubagentStop hook — re-verifies a self-reported implementation-completion
+# claim against disk before letting the subagent stop, instead of trusting
+# "Status: Complete" at face value.
 #
 # There is no confirmed subagent-type field on the SubagentStop event to
 # matcher against directly (unlike PreToolUse's Task/tool_input.subagent_type
-# combo used by check-implementer-plan.sh), so this script identifies an
-# architecture-implementer run indirectly and safely: it greps this
-# subagent's own transcript for any docs/architecture-designer/plan/*.md
-# path it touched, then only acts if that plan's Status is *currently*
-# Complete on disk — a state only architecture-implementer's own
-# verification pass ever writes (see that agent's "Verification and output"
-# step; implementation-planner always saves Status: In progress, never
-# Complete). Any other subagent stop — implementation-planner, architecture-
-# fixer, database-fixer, or anything that never touched a plan file — is a
-# silent no-op.
+# combo used by check-implementer-plan.sh), so this script identifies a
+# relevant run indirectly and safely: it greps this subagent's own
+# transcript for any docs/architecture-designer/plan/*.md path it touched,
+# then only acts if that plan's Status is *currently* Complete on disk — a
+# state written by exactly two agents: architecture-implementer's own
+# verification pass (see that agent's "Verification and output" step), and
+# implementation-fixer's final step once its corrections are confirmed (see
+# that agent's "Resuming, checkpointing, and the Status re-arm" section) —
+# implementation-planner always saves Status: In progress, never Complete.
+# Any other subagent stop — implementation-planner, implementation-reviewer
+# (read-only), architecture-fixer, database-fixer, or anything that never
+# touched a plan file — is a silent no-op.
 #
 # Known limitation: the stop_hook_active guard below (standard anti-infinite-
 # loop idiom) means disk re-verification only runs on this stop attempt's

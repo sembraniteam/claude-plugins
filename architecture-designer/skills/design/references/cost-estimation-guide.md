@@ -60,17 +60,18 @@ numbers "current" vs. "growth projection."
 
 **5. Reconcile against Stage 3's budget.** If Stage 3 recorded a budget ceiling, state explicitly whether the rolled-up
 total fits under it. A mismatch is a finding to surface to the user now, before Stage 6, not a silent gap — the same
-transparency `architecturalDrivers`/`riskRegister` already apply to other tensions. Record a mismatch as a `riskRegister`
+transparency `architecturalDrivers`/`riskRegister` already apply to other tensions. Record a mismatch as a
+`riskRegister`
 entry (category `Cost`) if the user chooses to proceed anyway rather than revise the stack.
 
 ## Format
 
 **Cost Breakdown table** (one row per component from step 1):
 
-| Component | Service / Tier | Monthly Cost | Sizing Basis | Source |
-|-----------|-----------------|--------------|--------------|--------|
-| Database | AWS RDS PostgreSQL db.t3.medium, Multi-AZ | $140 | 50GB data, ~200 TPS peak (Stage 4) | WebSearch verified 29-Jul-2026 |
-| Compute | ECS Fargate, 2 tasks × 1 vCPU/2GB | $60 | 500 concurrent users (Stage 4) | estimate — verify at implementation time |
+| Component | Service / Tier                            | Monthly Cost | Sizing Basis                       | Source                                   |
+|-----------|-------------------------------------------|--------------|------------------------------------|------------------------------------------|
+| Database  | AWS RDS PostgreSQL db.t3.medium, Multi-AZ | $140         | 50GB data, ~200 TPS peak (Stage 4) | WebSearch verified 29-Jul-2026           |
+| Compute   | ECS Fargate, 2 tasks × 1 vCPU/2GB         | $60          | 500 concurrent users (Stage 4)     | estimate — verify at implementation time |
 
 Followed by:
 
@@ -81,13 +82,13 @@ Followed by:
 ## Where this fits
 
 Write the confirmed breakdown to `session.json`'s `stage5.costEstimate` at the same time as `stage5` (see
-`references/session-schema.md`) — same two-writer pattern as `stage5.tradeoffAnalysis`, with `review/SKILL.md` step 4b as
-the authorized second writer when a revision changes the technology stack or the capacity plan. It is embedded in the
+`references/session-schema.md`) — same two-writer pattern as `stage5.tradeoffAnalysis`, with `review/SKILL.md` step 4b
+as the authorized second writer when a revision changes the technology stack or the capacity plan. It is embedded in the
 architecture document's **Cost Estimation** section (`references/document-template.md`).
 
 ## Skip condition
 
-There is no legitimate "skip Stage 5 cost estimation" case the way Stage 6b/6c can be skipped for a deployment-target-free
-project — even a library or CLI tool has a cost floor (CI minutes, a package registry, at minimum "$0 — no hosting
-required"). For a genuinely zero-infrastructure-cost project, state that explicitly as the Cost Breakdown table's only
-row rather than omitting the section.
+There is no legitimate "skip Stage 5 cost estimation" case the way Stage 6b/6c can be skipped for a
+deployment-target-free project — even a library or CLI tool has a cost floor (CI minutes, a package registry, at minimum
+"$0 — no hosting required"). For a genuinely zero-infrastructure-cost project, state that explicitly as the Cost
+Breakdown table's only row rather than omitting the section.

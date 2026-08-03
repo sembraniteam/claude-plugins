@@ -102,8 +102,8 @@ fill the slot.
 
 After the eleven items are proposed and discussed, before final Stage 5 confirmation, walk through the decisions once
 more looking specifically for tension between drivers — this mirrors ADD's driver-satisfaction check and ATAM's
-sensitivity/trade-off analysis, scaled down to fit inside a single design session rather than a multi-day external
-ATAM engagement.
+sensitivity/trade-off analysis, scaled down to fit inside a single design session rather than a multi-day external ATAM
+engagement.
 
 Use three ATAM concepts:
 

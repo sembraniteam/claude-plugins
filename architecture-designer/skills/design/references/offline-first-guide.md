@@ -169,12 +169,11 @@ actually likely (user profiles, shared documents) rather than applied universall
 For genuinely collaborative data (shared text documents, shared lists/counters edited concurrently by multiple users
 while offline), Conflict-free Replicated Data Types make convergent, automatic merging structurally guaranteed rather
 than a policy choice — every replica is mathematically guaranteed to converge to the same state without a central
-arbiter. Reach for a CRDT library (Yjs or Automerge for rich text/JSON documents; Redis CRDTs — Redis Enterprise/Redis Cloud
-Active-Active only, not available in open-source Redis/Valkey/DragonflyDB — or Riak, maintained today via the
-OpenRiak community fork, for counters/sets at the database layer) only when the data model genuinely needs
-concurrent multi-writer merging — it is a larger
-architectural commitment (the CRDT becomes the document's storage format, not just a sync detail) and is overkill for
-typical CRUD entities where LWW + version-conflict detection is sufficient.
+arbiter. Reach for a CRDT library (Yjs or Automerge for rich text/JSON documents; Redis CRDTs — Redis Enterprise/Redis
+Cloud Active-Active only, not available in open-source Redis/Valkey/DragonflyDB — or Riak, maintained today via the
+OpenRiak community fork, for counters/sets at the database layer) only when the data model genuinely needs concurrent
+multi-writer merging — it is a larger architectural commitment (the CRDT becomes the document's storage format, not just
+a sync detail) and is overkill for typical CRUD entities where LWW + version-conflict detection is sufficient.
 
 **Not every CRDT is lossless, and "lossless" is not the same as "semantically correct."** An LWW-Register CRDT is still
 a CRDT by the formal definition (it satisfies the convergence guarantee), but it resolves each concurrent write by

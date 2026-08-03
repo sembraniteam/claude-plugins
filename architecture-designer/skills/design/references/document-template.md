@@ -72,9 +72,9 @@ The section order and content for the architecture document saved by `design/SKI
 16. **Cost Estimation** (required — see `cost-estimation-guide.md`) — the Cost Breakdown table (component, service/tier,
     monthly cost, sizing basis, source) from `session.json`'s `stage5.costEstimate.breakdown`, followed by the monthly
     total, annual total, scale-sensitivity notes, and budget reconciliation from that same key's remaining fields. Every
-    row's Source column must read either a WebSearch-verified citation with a date, or the literal
-    **"estimate — verify at implementation time"** — never a bare number with no source. A genuinely zero-cost project
-    (a library or CLI tool with no hosting need) states that explicitly as the table's only row.
+    row's Source column must read either a WebSearch-verified citation with a date, or the literal **"estimate — verify
+    at implementation time"** — never a bare number with no source. A genuinely zero-cost project (a library or CLI tool
+    with no hosting need) states that explicitly as the table's only row.
 17. **Test Strategy** (required — see `test-strategy-guide.md`) — the test pyramid table, the load/performance testing
     targets and tool selection, the resilience/chaos testing scenarios (omitted only for a system with no external
     dependencies, per `resilience-guide.md`'s own skip condition), the security testing checklist, and the UAT

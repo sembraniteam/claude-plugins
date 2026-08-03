@@ -11,12 +11,13 @@ Three layers, in order:
    empty, not as a passing non-empty dict.
 2. Structural schema — every other key present in the file (agentTools,
    pending, progress, lld, testStrategy, documents, adrs, remediationPlans,
-   implementationPlans, architecturalDrivers, riskRegister, domainModel) is
-   checked against session-schema.json, a JSON Schema sitting alongside this
-   script. That file is the single source of truth for the fixed-shape parts
-   of session.json (array-of-objects-or-legacy-string entries, the split
-   object, enums, and the required id/description/category/etc. fields on
-   architecturalDrivers/riskRegister/domainModel/adrs entries); this script
+   implementationPlans, reviewHistory, architecturalDrivers, riskRegister,
+   domainModel) is checked against session-schema.json, a JSON Schema sitting
+   alongside this script. That file is the single source of truth for the
+   fixed-shape parts of session.json (array-of-objects-or-legacy-string
+   entries, the split object, enums, and the required id/description/
+   category/etc. fields on architecturalDrivers/riskRegister/domainModel/
+   adrs/reviewHistory entries); this script
    applies it with a small purpose-built subset of JSON Schema keywords
    (type/properties/required/items/oneOf/enum/minimum) rather than a
    third-party validator, to stay stdlib-only.

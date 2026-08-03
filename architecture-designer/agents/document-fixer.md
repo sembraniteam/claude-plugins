@@ -156,13 +156,13 @@ These require accurate content from the requirements summary:
 
 - **C16 — Core Features section missing, or not diagram-linked**: Add a "Core Features" section per
   `references/document-template.md` section 2, deriving one bullet per Stage 2 functional requirement that
-  `design/SKILL.md` Stage 6d's "Core feature coverage requirement" already treats as a distinct core feature (skip
-  minor CRUD sub-steps grouped into an already-listed feature, the same grouping rule that step applies). Name each
-  bullet's corresponding dedicated sequence diagram title from section 7 (Architecture Diagrams) next to it. If the
-  section exists but a listed feature has no matching sequence diagram (or a diagram-worthy feature from `stage2` is
-  missing from the list entirely), correct the mismatch directly by adding the missing bullet or fixing the diagram
-  reference — this is the same "derive from confirmed data, never invent" discipline as every other C-item, not a
-  design decision, since both `stage2` and the diagram set already exist. Never invent a feature with no corresponding
+  `design/SKILL.md` Stage 6d's "Core feature coverage requirement" already treats as a distinct core feature (skip minor
+  CRUD sub-steps grouped into an already-listed feature, the same grouping rule that step applies). Name each bullet's
+  corresponding dedicated sequence diagram title from section 7 (Architecture Diagrams) next to it. If the section
+  exists but a listed feature has no matching sequence diagram (or a diagram-worthy feature from `stage2` is missing
+  from the list entirely), correct the mismatch directly by adding the missing bullet or fixing the diagram reference —
+  this is the same "derive from confirmed data, never invent" discipline as every other C-item, not a design decision,
+  since both `stage2` and the diagram set already exist. Never invent a feature with no corresponding
   `stage2` requirement.
 
 - **C17 — Cost Estimation section missing, or a row lacks a source**: Add or correct a "Cost Estimation" section per
@@ -183,8 +183,8 @@ These require accurate content from the requirements summary:
   Records" section per `references/document-template.md` section 18, using the ADR pointer table header from
   `references/document-review-checklist.md` and the `adrs` array from the requirements summary — one row per entry,
   including its actual current `status` (e.g. `Superseded by ADR-0003`). Never invent an ADR entry, and never duplicate
-  an ADR's own Context/Decision/Consequences prose into this table. If `session.json` has no `adrs` key at all, note this
-  in the fix log as an item requiring skill-level action instead of inventing ADR content.
+  an ADR's own Context/Decision/Consequences prose into this table. If `session.json` has no `adrs` key at all, note
+  this in the fix log as an item requiring skill-level action instead of inventing ADR content.
 
 ## Output
 

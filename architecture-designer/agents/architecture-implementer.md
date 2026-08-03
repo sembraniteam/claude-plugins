@@ -159,9 +159,18 @@ into what the generator wrote, don't replace the file.
 
 **Data models / schemas** — based directly on the ERD in the document:
 
-- One file per entity
+- One file per entity — **except a single-schema-file ORM by default** (Prisma's `prisma/schema.prisma`, unless the
+  project configured Prisma's opt-in multi-file schema split — `prismaSchemaFolder` — in which case one-file-per-entity
+  applies as usual, one file per entity under the schema folder): the plan lists exactly one Data models item for the
+  shared file in the single-file case (`implementation-planner`'s single-schema-file exception), annotated with every
+  entity it must define — write all of them into that one file, do not split it into per-entity files the plan doesn't
+  list.
 - Fields, data types, and relationships as specified in the ERD
-- Migrations if the framework uses them (e.g., Prisma `schema.prisma`, Flyway `.sql` migration files, SQLAlchemy models)
+- Migrations if the framework uses them (e.g., Prisma `schema.prisma`, Flyway `.sql` migration files, SQLAlchemy
+  models) — for Prisma specifically, run `npx prisma generate` after writing/editing `schema.prisma` to regenerate the
+  Prisma Client, and `npx prisma migrate dev` (typically wired into the Setup command, not run standalone here) to
+  produce `prisma/migrations/` — see `references/scaffolding-guide.md`'s "Prisma worked example" for why that directory
+  is never a hand-authored checklist item
 - For NoSQL: collection/table definitions, index creation scripts
 
 **API endpoints / route handlers** — based on the sequence diagrams:
@@ -172,12 +181,13 @@ into what the generator wrote, don't replace the file.
 - Auth middleware applied on routes that require authentication (per the sequence diagram auth flow)
 - Error responses matching the document's Error Catalog (LLD section) — a route that can fail per its sequence diagram's
   `alt` block returns the matching error code/status from the catalog, not a bare uncaught exception
-- **Error handling and resilience** — apply the document's Technology Decisions error-handling/resilience strategy, not
-  just a TODO comment: wrap calls to external dependencies named in that strategy with the named retry policy and
-  timeout (e.g. an actual `axios-retry`/`opossum`/`resilience4j`/`Polly` config matching the chosen library, not a
-  hand-rolled loop), and route uncaught errors through one centralized error-handling middleware/handler per service
-  rather than repeating try/catch boilerplate per route. If the document names no resilience strategy (no external
-  dependencies), skip this — do not invent retry logic that wasn't decided in Stage 5.
+- **Error handling and resilience** — apply the document's Technology Decisions error-handling/resilience strategy (per
+  `references/resilience-guide.md`), not just a TODO comment: wrap calls to external dependencies named in that strategy
+  with the named retry policy and timeout (e.g. an actual `axios-retry`/`opossum`/`resilience4j`/`Polly`
+  config matching the chosen library, not a hand-rolled loop), and route uncaught errors through one centralized
+  error-handling middleware/handler per service rather than repeating try/catch boilerplate per route. If the document
+  names no resilience strategy (no external dependencies), skip this — do not invent retry logic that wasn't decided in
+  Stage 5.
 - **Rate limiting** — apply the document's Technology Decisions rate-limiting strategy (per
   `references/rate-limiting-guide.md`) as actual middleware, not a TODO comment: install and wire the named library
   (e.g. `express-rate-limit`, `@fastify/rate-limit`, `slowapi`, `Bucket4j`) with the confirmed algorithm and
@@ -226,18 +236,33 @@ into what the generator wrote, don't replace the file.
 - All scripts must work identically on Windows, macOS, and Linux — use `cross-env`, Node.js scripts, or platform-neutral
   npm lifecycle hooks
 
-**Test files** — one per data model and one per API route group, per the plan's "Test files" section
-(`implementation-planner` proposes these with the same one-per-component rigor as models and routes, not a single token
-example):
+**Test files** — one per data model, one per API route group, one per non-trivial business rule's service, one per
+external integration with a mock test, plus any test helpers and fixtures the plan lists, per the plan's "Test files"
+section (`implementation-planner` proposes these with the same one-per-component rigor as models and routes, not a
+single token example):
 
 - Model test: covers field/relationship validation and basic CRUD behavior against the ERD in the document.
 - Route test: covers request/response shape and auth-middleware enforcement for every endpoint in that route group,
   matching the sequence diagram.
+- Business-rule/service test: covers the rule's stated post-conditions and at least one named edge case. Stub assertions
+  with `// TODO: implement` wherever they depend on business logic the route handler itself hasn't been written yet
+  (same as the handler's own `// TODO: implement` body) — a stubbed test that runs and fails clearly is still a real
+  file for verification purposes; an absent one is a FAIL.
+- **Mock test for an external integration is implemented for real, not stubbed** — it exercises the resilience wrapping
+  (retry/circuit-breaker/timeout) already built for real per the "Error handling and resilience" rule above, not
+  unwritten business logic, so there is nothing to defer. Mock the external client with the ecosystem's mocking
+  facility, assert the call parameters, then simulate a failure and assert the wrapper's actual configured behavior —
+  retry count, circuit-breaker threshold, timeout budget, per `references/resilience-guide.md`'s pattern table for the
+  confirmed library — matches the document, not a generic "it doesn't throw" assertion with no failure path exercised. A
+  test that skips the failure path is a FAIL, same bar as a named-but-unused resilience library elsewhere in this
+  agent's conformance checks.
+- **Test helpers and fixtures are implemented for real, not stubbed** — unlike model/route/business-rule tests, a helper
+  (test-database connection/teardown, test-server bootstrap, an authenticated-request token minter) or a fixture/factory
+  (sample data matching the ERD's fields, types, and relationships exactly) has no dependency on business logic that
+  doesn't exist yet; write its actual working implementation, not a TODO placeholder. A stubbed helper is a FAIL the
+  same as a missing one, since every test file that imports it would fail to even run.
 - Use the test framework and location convention already confirmed in Stage 5 or the architecture document (e.g. Jest,
   pytest, Go's `testing` package) — do not introduce a different framework than the rest of the skeleton uses.
-- Stub assertions with `// TODO: implement` where full coverage depends on business logic not yet written, same as route
-  handlers — a stubbed test file that runs and fails clearly is still a real file for verification purposes; an absent
-  one is a FAIL.
 - **Apply `references/clean-code-guide.md` Part 2** to every generated test: structure each test case in
   Arrange-Act-Assert order; apply FIRST (Fast, Independent, Repeatable, Self-validating, Timely) — no test depends on
   another test's side effects or on real wall-clock time; inject any time/randomness source as a collaborator rather

@@ -111,7 +111,8 @@ Deploy:      Docker + docker-compose (dev) → Coolify / Dokku (self-hosted, ope
 ### Python Stack
 
 ```
-Backend:     Python 3.14 + FastAPI 0.115 (async, auto OpenAPI docs — the async-native choice when
+Backend:     Python 3.14 + FastAPI (latest stable — verify current version; async, auto OpenAPI docs —
+             the async-native choice when
              the API calls other network services concurrently) or Django 5 + DRF
              (batteries-included: auth, admin panel, and ORM migrations all ship together — better
              for rapid CRUD apps where that scaffolding saves real time)
@@ -352,8 +353,8 @@ Deploy:      Kamal (Rails' own zero-downtime Docker deploy tool, the Rails 8 def
 speed, startups validating a product where Rails' batteries-included defaults save real time.
 
 **When to avoid**: CPU-bound workloads (MRI's Global VM Lock limits true in-process parallelism — scale via multiple
-processes/dynos instead, not threads), teams with no Ruby experience and no runway to build it, services needing the
-raw throughput ceiling Go/Rust/Java reach more easily.
+processes/dynos instead, not threads), teams with no Ruby experience and no runway to build it, services needing the raw
+throughput ceiling Go/Rust/Java reach more easily.
 
 ---
 
@@ -573,7 +574,7 @@ the project before treating "Redis" as a single, unambiguous license decision:
 
 | Requirement                         | Recommendation                                                                                                                                                                                                                       |
 |-------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Flexible schema, nested documents   | **MongoDB 7** (Atlas managed)                                                                                                                                                                                                        |
+| Flexible schema, nested documents   | **MongoDB 8** (Atlas managed)                                                                                                                                                                                                        |
 | Firebase ecosystem, real-time sync  | **Firestore**                                                                                                                                                                                                                        |
 | Extreme write throughput, key-value | **DynamoDB** (AWS) or **Cassandra 5** or **ScyllaDB** (Cassandra-compatible; per ScyllaDB's own benchmarks, faster on the same hardware — verify against an independent or workload-specific benchmark before relying on the figure) |
 | Embedded / edge key-value           | **SQLite** (WAL mode) or **SlateDB** (LSM-based)                                                                                                                                                                                     |

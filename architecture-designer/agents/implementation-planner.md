@@ -66,6 +66,16 @@ Typical ambiguities to watch for:
 - Language version or runtime version
 - Test framework not mentioned
 
+**Document completeness check (required, in addition to the ambiguities above)**: read the document's Low-Level Design
+section (API contracts, business rules, DTOs, inter-service contracts, error catalog) and its ERD before proposing
+anything. A section that is present but thin — an error catalog with no entries despite sequence diagrams showing
+`alt` failure branches, a business rule with no `Post-conditions`, an entity referenced in a sequence diagram but absent
+from the ERD — is not a deferred detail for implementation to fill in; it is exactly the kind of ambiguity this step
+exists to catch, since Step 3 below can only enumerate what the document actually contains. Surface each gap the same
+way as any other ambiguity: state what's thin or missing, offer concrete options (e.g., "derive minimal error codes from
+the `alt` blocks now" vs. "flag as out of scope for this skeleton"), and get the user's answer before proposing
+structure.
+
 ## Step 2 — Carry over from previous plan (if resuming)
 
 Skip this step entirely if no **Previous plan path** was passed.
@@ -148,6 +158,29 @@ Design a folder structure that matches the architecture pattern described in the
 | Serverless           | `functions/{function-name}/`, `shared/`                                                               |
 | Event-driven         | `producers/`, `consumers/`, `shared/schemas/`                                                         |
 
+**Exhaustive derivation from the document (required)**: the tree's data-model and API-route items are not filled in from
+judgment about what a "typical" project needs — they are derived exhaustively from the document's own content, the same
+discipline `architecture-implementer` applies when it later builds each file. Read the document's ERD in full and add
+**one Data model checklist item per entity**, no fewer — a document with fifteen entities gets fifteen items, not a
+representative handful. Read every sequence diagram in full and add **one API route checklist item per distinct endpoint
+group** (group only trivial CRUD sub-actions of the same feature together, the same grouping rule
+`design/SKILL.md`'s Core feature coverage requirement uses for diagrams) — every endpoint shown in any sequence diagram
+must be traceable to some route item in the tree, not just the diagrams that seemed most central. This matters because
+`architecture-implementer` refuses to invent a file the plan doesn't list — an entity or endpoint missing here is one
+that silently never gets built, not something a later stage will catch and fill in on its own.
+
+**Exception — single-schema-file ORMs by default (e.g. Prisma)**: some ORMs define every model in one shared schema file
+by default rather than one class/file per entity — Prisma's `prisma/schema.prisma` is the common case. (Prisma also
+supports an opt-in multi-file schema split — `prismaSchemaFolder`, stable since v6.7 — so confirm which mode the project
+actually uses rather than assuming single-file just because the stack names Prisma; if multi-file is configured, the
+ordinary one-item-per-entity rule applies instead, one file per entity under the schema folder.) When the confirmed
+setup does use one shared file, the ERD-coverage requirement above is satisfied by **one** checklist item for that file,
+not one item per entity pointing at the same path — annotate it explicitly to state it must define every entity from the
+ERD (e.g. "`prisma/schema.prisma` — defines User, Order, and Product per the ERD, with their relations"), so the single
+item's scope is still traceable to all N entities the same way N separate items would be. Confirm which mode the
+confirmed ORM uses as part of resolving the "ORM vs raw SQL" ambiguity in Step 1, before applying either rule — do not
+default to one-file-per-entity, or to single-file, without checking.
+
 **Decentralized / Web3 projects** (the document has a "Decentralized Architecture Considerations" section): add
 `contracts/` (or `programs/` per the target network's convention) for on-chain source, `scripts/deploy/` for deployment
 scripts, and `artifacts/` or `abi/` for compiled interface output, alongside whichever pattern above matches the
@@ -174,21 +207,76 @@ Show the full tree (use ASCII tree notation). Include:
 - Configuration files (`package.json`, `tsconfig.json`, `.env.example`, `docker-compose.yml`, `Dockerfile`, etc.) — only
   the ones *not* already covered by `[generated]` entries above; plus `CHANGELOG.md` only when input 4 (**Agent tools**)
   has a matching changelog/release-notes entry (see "What you receive" above)
-- Test directory structure, following the "One test file per component" rule below
+- Test directory structure, following the test-coverage rules below
 - Infrastructure files (Dockerfile, IaC, CI config)
 
-**One test file per component**: test coverage is proposed with the same rigor as the source it tests, not as a single
-token example. For every data model in the proposed tree, include one unit test file (e.g. `tests/models/User.test.ts`
-for `src/models/User.ts`) covering field/relationship validation or CRUD behavior. For every API route group, include
-one integration test file (e.g. `tests/routes/auth.test.ts` for `src/routes/auth.ts`) covering the endpoints'
-request/response shapes and auth enforcement. Name and locate test files per the test framework already confirmed in
-Stage 5 or the architecture document (e.g. Jest's `__tests__/`, Go's `_test.go` alongside the source file, pytest's
-`tests/`) — match the ecosystem convention rather than inventing a new one. If a project proposes zero models and zero
-routes (rare), the Test files section is correspondingly empty — do not fabricate a test file with nothing to test. If
-input 4 (**Agent tools**) includes an entry whose `purpose` overlaps testing or diagnostics (e.g. a language-server MCP
-that can check a generated test file compiles/parses), note that in the plan alongside the "Agent tools" metadata row —
-`architecture-implementer` prefers such a tool over a generic approach when writing this file group, per its own "Using
-agent tools" step.
+**One test file per component (models and routes)**: test coverage is proposed with the same rigor as the source it
+tests, not as a single token example. For every data model in the proposed tree, include one unit test file (e.g.
+`tests/models/User.test.ts` for `src/models/User.ts`) covering field/relationship validation or CRUD behavior. For every
+API route group, include one integration test file (e.g. `tests/routes/auth.test.ts` for `src/routes/auth.ts`)
+covering the endpoints' request/response shapes and auth enforcement. Name and locate test files per the test framework
+already confirmed in Stage 5 or the architecture document (e.g. Jest's `__tests__/`, Go's `_test.go`
+alongside the source file, pytest's `tests/`) — match the ecosystem convention rather than inventing a new one. For a
+single-schema-file ORM (per the Prisma exception above), a model test still gets one file per entity even though the
+schema itself doesn't — map it to the entity's model block within the shared schema file instead of a per-entity source
+file (e.g. `tests/models/user.test.ts` for the `User` model in `prisma/schema.prisma`).
+
+**One test file per non-trivial business rule**: a route's integration test above checks the HTTP contract (shape,
+status codes, auth) — it does not exercise a business rule's actual logic (the invariants and post-conditions the
+document's Low-Level Design "Business Rules" group states). For every business rule the document lists that isn't simple
+CRUD (the same "skip simple CRUD" bar `design/SKILL.md` Step 10 group (2) already applies), include one unit test file
+for the service/function implementing it (e.g. `tests/services/orderService.test.ts` for a
+`calculateOrderTotal` rule), asserting the rule's stated post-conditions and at least one edge case named in the rule or
+implied by its `Logic` (a boundary value, the concurrent-write race a transaction-boundary note addresses, an
+invalid-input rejection). Group rules belonging to the same service into one test file rather than one file per rule —
+the same grouping discipline the API-routes rule above already applies. This test can legitimately stay stubbed until
+the rule's own logic is written (see `agents/architecture-implementer.md`'s "Test files" section for how it handles
+that) — but the file itself, and what its assertions are *about*, belongs in the plan now, not as an afterthought once
+business logic exists.
+
+**Test helpers and utilities** (one file per shared concern, not folded into every test file): where two or more test
+files in the proposed tree would otherwise duplicate the same setup — a test-database connection/teardown, a test-server
+or request-client bootstrap (e.g. a supertest instance wired to the app but a test database), an authenticated-request
+helper (mint a valid token/session for route tests that need one), or a shared assertion helper — add one helper file
+per concern instead (e.g. `tests/helpers/testDb.ts`, `tests/helpers/testServer.ts`,
+`tests/helpers/auth.ts`), named and located per the test framework's own convention (Jest's `tests/helpers/` or a root
+`jest.setup.ts`, pytest's `conftest.py`, a Go `_test`-package-level helper file). Skip this entirely for a project with
+too few test files to share anything meaningfully (e.g. a single-model, no-auth project) — a helpers file with nothing
+actually shared between callers is not a helper, it's an extra file to maintain.
+
+**Fixtures / factories** (one per entity that's actually reused, or a shared fixtures module for a small project): a
+test asserting against inline, ad-hoc literals repeated across files drifts from the ERD the moment a field is added or
+renamed. For every entity that appears in two or more test files (a model test and at least one route test, or two route
+tests), add one fixture or factory file (e.g. `tests/fixtures/userFixtures.ts`, or a factory function
+`tests/factories/userFactory.ts`) producing realistic sample data matching the ERD's fields, types, and required
+relationships exactly. Prefer a factory with sensible defaults and override support over static fixture data when the
+confirmed ecosystem favors it (e.g. a JS/TS factory function); otherwise follow the ecosystem's own convention (Rails
+fixtures/`factory_bot`, Django fixtures, pytest fixtures). Skip this for an entity that appears in only one test file —
+inline data is fine there, and a fixture with a single caller isn't sharing anything either.
+
+**Mock test per external integration** (the one category that legitimately mocks a real dependency): for every
+third-party integration the document's Technology Decisions section names — a payment gateway, email/SMS provider, or
+other external API, not this project's own database or cache, which the model/route tests above already exercise against
+a real test instance — include one test file that mocks the external client and asserts two things: (1) the call is made
+with the correct parameters, and (2) if the document's resilience strategy (Stage 5 item 10, per
+`references/resilience-guide.md`) wraps this dependency, the wrapper actually engages on a simulated failure — the
+configured retry count, the circuit breaker opening after its threshold, or the timeout budget, matching what the
+document states, not a generic "it retries sometimes" assertion. Name it per the integration (e.g.
+`tests/integrations/stripeClient.test.ts`) and use the ecosystem's mocking facility (Jest's `jest.mock`, Python's
+`unittest.mock`, a Go interface-based fake) — never call the real external service from a test. Hitting the project's
+own database or cache is a Stub/Fake concern per
+`references/clean-code-guide.md`'s test-double taxonomy (already applied to the tests above), not this rule; reserve an
+actual Mock for a boundary this codebase doesn't own. Skip this entirely if the document names no external integration
+with a resilience strategy, or Stage 5 item 10 was skipped outright (no external dependencies) — do not fabricate a mock
+for nothing to mock.
+
+If a project proposes zero models and zero routes (rare), the entire Test files section — including helpers, fixtures,
+and mock tests — is correspondingly empty; do not fabricate a test file, helper, fixture, or mock with nothing to test,
+share, or mock. If input 4 (**Agent tools**) includes an entry whose `purpose` overlaps testing or diagnostics (e.g. a
+language-server MCP that can check a generated test file compiles/parses), note that in the plan alongside the "Agent
+tools" metadata row — `architecture-implementer` prefers such a tool over a generic approach when writing this file
+group, per its own
+"Using agent tools" step.
 
 **File collision handling** — apply depending on the strategy received:
 
@@ -259,7 +347,8 @@ section's heading, so `architecture-implementer` can detect it mechanically rath
 ```markdown
 ## Data models
 
-> _Continues in `{next-part-filename}` — do not mark the "Implement data models" task \`completed\` until that part finishes it._
+> _Continues in `{next-part-filename}` — do not mark the "Implement data models" task \`completed\` until that part
+finishes it._
 
 - [ ] `src/models/User.ts` — User entity
 ```
@@ -317,7 +406,12 @@ entries if it doesn't exist yet), and write the whole file back:
   "remediationPlan": "<remediation plan path received as input, or null if none>",
   "supersedes": "<previous plan path received as input, or null if this is not a resume>",
   "createdAt": "<current ISO timestamp>",
-  "split": { "part": 1, "total": 3, "previousPlan": null, "nextPlan": "<absolute path of part 2>" }
+  "split": {
+    "part": 1,
+    "total": 3,
+    "previousPlan": null,
+    "nextPlan": "<absolute path of part 2>"
+  }
 }
 ```
 
@@ -361,7 +455,9 @@ was passed in.
 
 ## Scaffolding
 
-- [ ] Run: `npx --yes create-next-app@latest . --typescript --eslint --tailwind --app --use-npm` — generates package.json, tsconfig.json, app structure (omit this entire section if no generator applies — see the check at the top of Step 3)
+- [ ] Run: `npx --yes create-next-app@latest . --typescript --eslint --tailwind --app --use-npm` — generates
+  package.json, tsconfig.json, app structure (omit this entire section if no generator applies — see the check at the
+  top of Step 3)
 
 ## Data models
 
@@ -392,9 +488,21 @@ was passed in.
 
 ## Test files
 
-- [ ] `tests/models/User.test.ts` — unit test for User model fields/relationships (per "One test file per component" above)
+- [ ] `tests/helpers/testDb.ts` — test database connection/teardown, shared by model and route tests
+- [ ] `tests/fixtures/userFixtures.ts` — realistic User sample data matching the ERD, shared by model and route tests
+- [ ] `tests/models/User.test.ts` — unit test for User model fields/relationships (per "One test file per component"
+  above)
 - [ ] `tests/routes/auth.test.ts` — integration test for auth endpoints' request/response shapes and auth enforcement
+- [ ] `tests/services/orderService.test.ts` — unit test for the calculateOrderTotal business rule's post-conditions and
+  edge cases
+- [ ] `tests/integrations/emailService.test.ts` — mocked test for the transactional-email integration: correct call
+  params, and the configured retry policy engaging on a simulated failure
 ```
+
+**ORM-specific example — Prisma**: for a full worked example applying the single-schema-file exception above (one Data
+models item covering multiple entities, the `.env` `DATABASE_URL` convention, the Setup command wiring in
+`prisma migrate dev`, and how a model test maps to an entity that has no per-entity source file), see
+`references/scaffolding-guide.md`'s "Prisma worked example" section rather than a restated copy here.
 
 > **Note on the "Last updated" and "Last verified item" rows**: these are the resume-marker for
 > architecture-implementer's write-through checkpointing (see that agent's Step 2). Set `Last updated` to the current

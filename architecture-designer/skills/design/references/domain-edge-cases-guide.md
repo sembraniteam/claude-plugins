@@ -20,17 +20,16 @@ failure mode, rather than only validating structural correctness of whatever was
 
 ## Procedure
 
-1. **Match, don't force**: read the confirmed functional requirements (not yet the final confirmation — this runs
-   before that) and check them against the **Signal** column in the table below. A category applies only when its
-   signal is actually present — do not ask payment questions for a system with no payment feature, the same
-   don't-force-it discipline `references/resilience-guide.md`/`references/rate-limiting-guide.md` apply to their own
-   scope conditions.
+1. **Match, don't force**: read the confirmed functional requirements (not yet the final confirmation — this runs before
+   that) and check them against the **Signal** column in the table below. A category applies only when its signal is
+   actually present — do not ask payment questions for a system with no payment feature, the same don't-force-it
+   discipline `references/resilience-guide.md`/`references/rate-limiting-guide.md` apply to their own scope conditions.
 2. **Ask only the matched categories' questions**, folded conversationally into the same Stage 2 discussion rather than
    as a separate rigid checklist — mirroring how Stage 1's questions are already combined into a conversational flow per
    `design/SKILL.md`.
 3. **A "no" or "out of scope" answer is a valid, complete answer** — the goal is surfacing the question, not forcing
-   every edge case into scope. Record the answer either way (including "not supported — explicitly out of scope for
-   v1") so the decision is visible in the document rather than silently absent.
+   every edge case into scope. Record the answer either way (including "not supported — explicitly out of scope for v1")
+   so the decision is visible in the document rather than silently absent.
 4. **Fold the confirmed answers into the same Stage 2 summary and confirmation** — this is not a separate round-trip;
    presenting the matched questions and their answers together with the functional/non-functional requirements list, in
    the same "does this summary look correct" confirmation Stage 2 already ends with.
@@ -50,8 +49,8 @@ unlisted domain.
 - What happens after N failed login attempts — lockout, delay, CAPTCHA, or nothing?
 - Can a user have multiple active sessions/devices simultaneously? If a password is reset, do other sessions get
   invalidated?
-- Is there an account-recovery path if the user loses access to their registered email/phone? What identity check
-  gates it?
+- Is there an account-recovery path if the user loses access to their registered email/phone? What identity check gates
+  it?
 - What happens to a user's data when their account is deleted — hard delete, soft delete with a retention window, or
   anonymization? (Ties into the `database-designer` agent's soft-delete pattern at Stage 6a, if applicable.)
 - Can a single person hold multiple roles at once, or is role assignment exclusive?
@@ -72,8 +71,8 @@ unlisted domain.
 **Signal**: inventory, stock, orders, warehouses, or fulfillment mentioned.
 
 - Can stock go negative (backorder allowed), or is a sale blocked at zero stock?
-- When two customers race to buy the last unit, how is the conflict resolved (first-committed-wins, reservation
-  hold with expiry, overselling accepted and resolved manually)?
+- When two customers race to buy the last unit, how is the conflict resolved (first-committed-wins, reservation hold
+  with expiry, overselling accepted and resolved manually)?
 - Can a partially-shipped order be cancelled for only its unshipped items, or is cancellation all-or-nothing?
 - Are returns tied to original stock location, or restocked centrally?
 
@@ -154,8 +153,8 @@ requirements, not a new deliverable category.
 
 ## Skip condition
 
-None outright — every project has at least one matched category, since every system does *something* (even a system
-with none of the eight categories above still benefits from applying the same underlying method to whatever domain it
-actually is). A system matching zero categories from the table is the signal to apply the general method by hand
-rather than skip the step — state explicitly which categories were considered and found not to apply, rather than
-silently omitting the pass.
+None outright — every project has at least one matched category, since every system does *something* (even a system with
+none of the eight categories above still benefits from applying the same underlying method to whatever domain it
+actually is). A system matching zero categories from the table is the signal to apply the general method by hand rather
+than skip the step — state explicitly which categories were considered and found not to apply, rather than silently
+omitting the pass.

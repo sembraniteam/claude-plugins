@@ -281,6 +281,15 @@ The top-level keys are fixed; the field names inside each stage object are the u
       "supersedes": null,
       "createdAt": "2026-07-13T10:40:00Z"
     }
+  ],
+  "reviewHistory": [
+    {
+      "date": "2026-07-20T14:15:00Z",
+      "source": "codebase",
+      "outcome": "declined",
+      "summary": "Payment service uses Memcached instead of the documented Redis; user declined to revise.",
+      "path": "/absolute/path/to/docs/architecture-designer/review/20260720-topic-review.md"
+    }
   ]
 }
 ```
@@ -291,17 +300,22 @@ illustrative, not contractual. The only guaranteed top-level keys are `schemaVer
 guaranteed — it may be absent or empty when no matching tools were found; pass it to sub-agents when present but never
 block on its absence. `stage6b` and `stage6c` are written after Stage 6b/6c confirmation and must be included when
 passing session context to sub-agents. `remediationPlans` may also appear after `/architecture-designer:review` has
-run — written by that skill, and must be passed to implementation-planner when present. `implementationPlans` may also
-appear after `architecture-designer:implementation-planner` has run — written by that agent itself after saving its plan
-file, not by the `design` skill. Each entry may also carry an optional `split` object when the plan was too large for
-one file — see "Resolving a split plan's parts" below. `architecture-implementer` never writes to `session.json`; it
-only reads the plan path passed to it. `progress`, `lld`, `testStrategy`, `adrs`, and `pending` are never guaranteed
-either — see their own paragraphs below and "Resuming Steps 6a–13 via `progress`" for how a reader distinguishes their
-absence (nothing reached Stage 6a yet) from a resumed legacy session that predates this schema addition (same "absent
-means not-yet-applicable" treatment either way — no reader should error on their absence).
+run — written by that skill, and must be passed to implementation-planner when present. `reviewHistory` may also appear
+after `/architecture-designer:review` has run — append-only, written solely by that skill (unlike
+`documents`/`adrs`, no other skill ever appends to it), one entry per Step 3 reached regardless of whether the user
+chose to revise; read it (if present) only to surface prior findings for continuity per its own "Check for prior review
+history" step, never as a gate. `implementationPlans` may also appear after
+`architecture-designer:implementation-planner` has run — written by that agent itself after saving its plan file, not by
+the `design` skill. Each entry may also carry an optional `split` object when the plan was too large for one file — see
+"Resolving a split plan's parts" below. `architecture-implementer` never writes to `session.json`; it only reads the
+plan path passed to it. `progress`, `lld`, `testStrategy`, `adrs`, and `pending` are never guaranteed either — see their
+own paragraphs below and "Resuming Steps 6a–13 via `progress`" for how a reader distinguishes their absence (nothing
+reached Stage 6a yet) from a resumed legacy session that predates this schema addition (same "absent means
+not-yet-applicable" treatment either way — no reader should error on their absence).
 
 **`testStrategy`** is optional and holds the confirmed Test Strategy content from Step 10b, written once Step 10b's plan
-is confirmed. Two writers: `design/SKILL.md` Step 10b (first write, for a project's initial plan) and `review/SKILL.md`'s
+is confirmed. Two writers: `design/SKILL.md` Step 10b (first write, for a project's initial plan) and `review/SKILL.md`
+'s
 "Update Test Strategy" step (4d.6, an authorized second writer, same class of exception as `lld` above) — it overwrites
 the key in full whenever 4a flags an NFR, capacity, resilience/rate-limiting, or core-feature change; a revision outside
 that scope leaves the prior pass's plan as confirmed. Step 11/4f reads this key to build document section 17. Absence
@@ -404,9 +418,9 @@ Files written before this schema may still have plain strings inside these array
 `"...path..."` is equivalent to `{ "path": "...path..." }`, with every other field (e.g. `document`/`remediationPlan`/
 `supersedes`/`createdAt` on `implementationPlans`, `document`/`supersedes`/`createdAt` on `remediationPlans`,
 `createdAt` on `documents`) simply absent rather than backfilled with an explicit `null` — treat "absent" and
-"explicit null" as equivalent when reading. Never fail or ask the user to migrate — normalize silently. Do not
-rewrite old entries in place; the next append naturally writes the new shape going forward. If a legacy file is being
-written to and lacks `description`, backfill it at the same time
+"explicit null" as equivalent when reading. Never fail or ask the user to migrate — normalize silently. Do not rewrite
+old entries in place; the next append naturally writes the new shape going forward. If a legacy file is being written to
+and lacks `description`, backfill it at the same time
 `schemaVersion: 2` and `project` are backfilled (see `design/SKILL.md`'s "Legacy-session backfill check," run at session
 resume and again at the Stage 6 gate — Step 11's own backfill note is the same check, just triggered by a document save
 instead) — synthesize it from whatever `stage1` content is present rather than leaving it absent going forward. Unlike
@@ -475,7 +489,11 @@ agent tools, remediation plan path, previous plan path) — see each call site f
    implementation-planner split the plan — see its "Output" section), plus the same document path, existing project
    summary, technology stack, agent tools, and remediation plan path.
 4. If the plan was split into multiple parts, follow "Split-plan implementation loop" below to spawn
-   `architecture-implementer` again for each subsequent part in order.
+   `architecture-implementer` again for each subsequent part in order, until its stop condition is met.
+5. **Once implementation is complete** — immediately after step 3 if the plan was not split, or once "Split-plan
+   implementation loop" reaches its stop condition if it was — run "Implementation reviewer–fixer cycle" below before
+   the calling skill's post-implementation wrap-up step. This step applies unconditionally, split or not; it is not part
+   of the split-only loop below.
 
 ## Split-plan implementation loop
 
@@ -489,11 +507,35 @@ already spawned `architecture-implementer` on Part 1 (its step 3) — `design/SK
 2. If `Next plan` names another file (not `None — final part`), spawn `architecture-designer:architecture-implementer`
    again with that file's path (same document path, existing project summary, technology stack, agent tools, and
    remediation plan path used for every prior part) and repeat from step 1.
-3. Stop once a part's `Next plan` row reads `None — final part`.
+3. Stop once a part's `Next plan` row reads `None — final part` — this is this loop's stop condition, referenced by step
+   5 of "Implementation-planner → architecture-implementer spawn sequence" above.
 
 Report each part's completion to the user as it finishes, rather than staying silent through all parts. A calling skill
-with its own post-implementation wrap-up step (e.g. `implement/SKILL.md`'s Step 5) proceeds to it only once this loop's
-stop condition is met — not after any individual part.
+with its own post-implementation wrap-up step (e.g. `implement/SKILL.md`'s Step 5) proceeds to it only once the parent
+sequence's step 5 review cycle reaches its exit condition — not after any individual part, and not merely once every
+part reports `Complete`. A part reporting `Complete` means `architecture-implementer` believes its own work is done; it
+does not yet mean an independent check has confirmed that.
+
+## Implementation reviewer–fixer cycle
+
+Spawn `architecture-designer:implementation-reviewer` with: the full ordered list of plan file path (s) (every part, if
+split; the single path otherwise), the architecture document path, the technology stack, and the `agentTools` array if
+present. This follows the same "Reviewer–fixer cycle procedure" below, with `implementation` as the `<type>` — read that
+section for the full step 0–4 mechanics (unconditional recording, the fixer spawn, re-verification, the 3-cycle cap)
+rather than a restated copy here. Two implementation-specific details that section doesn't cover:
+
+- **Status re-arm**: if `implementation-fixer` is spawned (a FAILED verdict), it flips the last plan part's `Status`
+  row from `Complete` back to `In progress` for the duration of its fix pass, then back to `Complete` once its fixes are
+  confirmed — see `agents/implementation-fixer.md`'s "Re-arm the deploy-command hook for the duration of this run" for
+  why. This is the one case in this cycle where `Status` moves after `architecture-implementer` already set it; no
+  calling-skill action is needed for this — the fixer does it directly, as part of its own write pass.
+- **Exit condition applies before wrap-up, not before a preview or an approval gate**: unlike the other three cycle
+  types (which block a browser preview or a document's `Approved` status), this cycle's exit condition
+  (`IMPLEMENTATION REVIEW PASSED`, or the 3-cycle cap reached) gates the calling skill's post-implementation wrap-up
+  step (`design/SKILL.md` Step 13, `review/SKILL.md` step 4h, `implement/SKILL.md` Step 5) — do not tell the user
+  implementation is finished, or hand back the "Next steps" list, until this exit condition is met. If the 3-cycle cap
+  is reached without a PASSED verdict, present the remaining findings verbatim and let the user decide whether to
+  proceed to wrap-up anyway or investigate further — same as the general procedure's own cap handling.
 
 ## Single writer per key
 
@@ -502,10 +544,10 @@ stop condition is met — not after any individual part.
 `stage6b`/`stage6c`/`progress`/`pending`/`architecturalDrivers`/`riskRegister`/`domainModel`/
 `stage2.qualityAttributeScenarios`/`stage5.tradeoffAnalysis`/`stage5.costEstimate`/`lld`/`testStrategy`/
 `stage2.domainEdgeCases` (each with two legitimate whole-value overwriters, or in `lld`'s/`testStrategy`'s/
-`stage2.domainEdgeCases`'s case two legitimate incremental-writers — see below).
-These exceptions exist for different reasons: `documents`'s and `adrs`'s two appenders are safe because append-only
-removes the lost-update risk the single-writer rule exists to prevent; the rest's two overwriters are safe for the
-sequential-execution reason given below, not an append-only one.
+`stage2.domainEdgeCases`'s case two legitimate incremental-writers — see below). These exceptions exist for different
+reasons: `documents`'s and `adrs`'s two appenders are safe because append-only removes the lost-update risk the
+single-writer rule exists to prevent; the rest's two overwriters are safe for the sequential-execution reason given
+below, not an append-only one.
 
 `schemaVersion`, `project`, and `description` are written only by `design/SKILL.md`, at Stage 1 confirmation (and
 backfilled by the same skill on legacy files per Step 11). `stage1`, `stage3`, and `stage4` are written only by
@@ -523,8 +565,8 @@ same authorized second writer when a revision changes a technology decision or i
 `stage5.costEstimate` follows the same two-writer pattern: written by `design/SKILL.md` at Stage 5 confirmation, with
 `review/SKILL.md` step 4b as the same authorized second writer when a revision changes a capacity number or a
 cost-affecting technology decision, per `references/cost-estimation-guide.md` — every other `stage5` field is written
-only by `design/SKILL.md`. `architecturalDrivers` and `riskRegister` are written
-by `design/SKILL.md` at Stage 5 confirmation (overwritten in full on any Stage 2 or Stage 5 revision per Step 9, per
+only by `design/SKILL.md`. `architecturalDrivers` and `riskRegister` are written by `design/SKILL.md` at Stage 5
+confirmation (overwritten in full on any Stage 2 or Stage 5 revision per Step 9, per
 `references/quality-driven-design-guide.md`), with the same authorized second writer: `review/SKILL.md` step 4b
 overwrites either in full when step 4a flags an NFR change or a technology-decision/requirement-tension change,
 mirroring exactly how it handles `web3` below. `domainModel` is written by `design/SKILL.md` at Stage 6a (overwritten in
@@ -559,33 +601,34 @@ pass. `pending` is written by both `design/SKILL.md` (Stages 1–6c) and `review
 wholesale with the stage currently in progress, and deleted (not left stale) once that stage's real key is confirmed.
 All fifteen two-writer keys/fields (`web3`, `offlineFirst`, `stage6b`, `stage6c`, `progress`, `pending`,
 `architecturalDrivers`, `riskRegister`, `domainModel`, `stage2.qualityAttributeScenarios`, `stage5.tradeoffAnalysis`,
-`stage5.costEstimate`, `lld`, `testStrategy`, `stage2.domainEdgeCases`) are safe for the same reason stated in "No
-CAS — always
-read-fresh-modify-write-whole" below: these skills never run concurrently within one conversation, so whichever write
-happens later is always the intentionally-authoritative one, not a lost update — unlike `documents`'s/`adrs`'s two
+`stage5.costEstimate`, `lld`, `testStrategy`, `stage2.domainEdgeCases`) are safe for the same reason stated in "No CAS —
+always read-fresh-modify-write-whole" below: these skills never run concurrently within one conversation, so whichever
+write happens later is always the intentionally-authoritative one, not a lost update — unlike `documents`'s/`adrs`'s two
 appenders, most of these keys' writers overwrite the whole value (or, for `progress`/`lld`/`testStrategy`, individual
-fields/groups within it) rather than append; `stage2.domainEdgeCases` is the one exception that appends new entries
-(per `references/domain-edge-cases-guide.md`) rather than overwriting the array, but is still safe for the identical
+fields/groups within it) rather than append; `stage2.domainEdgeCases` is the one exception that appends new entries (per
+`references/domain-edge-cases-guide.md`) rather than overwriting the array, but is still safe for the identical
 sequential-execution reason, not an append-only one (unlike `documents`/`adrs`, a second `stage2.domainEdgeCases`
-writer appending concurrently within the same conversation is not a scenario this plugin's skills ever create). No
-other skill or
-agent writes to any of these keys.
+writer appending concurrently within the same conversation is not a scenario this plugin's skills ever create). No other
+skill or agent writes to any of these keys.
 
 **Exception — `documents` and `adrs` each have two legitimate appenders:** `design/SKILL.md` (Step 11) and
 `review/SKILL.md` (step 4f) both append to `documents`, and both are valid — each produces an architecture document (an
-initial design and a revision, respectively), so each is entitled to record the artifact it just wrote. The same two call
-sites append to `adrs` for the same reason — each produces newly-qualifying or superseding ADRs at the point it saves a
-document, per `references/adr-guide.md`. Neither ever mutates or removes another writer's entry; each only appends its
-own new one (for `adrs`, a superseded decision's *new* entry records the relationship via its own `supersedes` field —
-the old entry itself is never rewritten). That append-only discipline is what makes two appenders safe here — there is
-no lost-update to guard against, since no writer's change can clobber another's. `remediationPlans` and
+initial design and a revision, respectively), so each is entitled to record the artifact it just wrote. The same two
+call sites append to `adrs` for the same reason — each produces newly-qualifying or superseding ADRs at the point it
+saves a document, per `references/adr-guide.md`. Neither ever mutates or removes another writer's entry; each only
+appends its own new one (for `adrs`, a superseded decision's *new* entry records the relationship via its own
+`supersedes` field — the old entry itself is never rewritten). That append-only discipline is what makes two appenders
+safe here — there is no lost-update to guard against, since no writer's change can clobber another's. `remediationPlans`
+and
 `implementationPlans` are also append-only but, unlike `documents`/`adrs`, each currently has only one appender in
 practice (see below) — nothing here forbids a second legitimate appender being added for those keys too, as long as it
 only appends.
 
 `remediationPlans` is appended to only by `review/SKILL.md` (step 4e). `implementationPlans` is appended to only by
-`implementation-planner`. `architecture-implementer` never writes to `session.json`. No key is ever written by more
-writers than listed here — for `documents`, `adrs`, `web3`, `offlineFirst`, `stage6b`, `stage6c`, `progress`, `pending`,
+`implementation-planner`. `reviewHistory` is appended to only by `review/SKILL.md` (Step 3) — unlike `documents`/`adrs`,
+it has exactly one appender, not two; nothing else in this plugin ever writes to it. `architecture-implementer` never
+writes to `session.json`. No key is ever written by more writers than listed here — for `documents`, `adrs`, `web3`,
+`offlineFirst`, `stage6b`, `stage6c`, `progress`, `pending`,
 `architecturalDrivers`, `riskRegister`, `domainModel`, `stage2.qualityAttributeScenarios`, `stage2.domainEdgeCases`,
 `stage5.tradeoffAnalysis`, `stage5.costEstimate`, `lld`, and `testStrategy`, that means no writer beyond the two named
 above for each; for every other key, exactly the one named.
@@ -597,18 +640,18 @@ session reads the same signal regardless of which skill last advanced it. After 
 write that row's label to `session.json`'s `progress.lastCompletedStep` (read-fresh-modify-write-whole, same as any
 other field in this key):
 
-| Label    | `design/SKILL.md`                          | `review/SKILL.md`                                                                                                             |
-|----------|--------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------|
-| `step6a` | Stage 6a — database design reviewed/passed | step 4b's database-design portion, when it runs                                                                               |
-| `step6d` | Stage 6e — `diagrams.json` fully written   | step 4b — revised diagrams fully written                                                                                      |
-| `step7`  | Step 7 — architecture review passed        | step 4c — architecture re-review passed                                                                                       |
-| `step8`  | Step 8 — browser preview opened            | step 4d — preview opened/refreshed                                                                                            |
-| `step9`  | Step 9 — user confirmed the design         | step 4d — user confirmed the revision                                                                                         |
-| `step10` | Step 10 — all five LLD groups confirmed    | "Update Low-Level Design" step (4d.5) — run only when 4a flagged an LLD-affecting change; skip straight to `step10b`/`step11` otherwise |
-| `step10b`| Step 10b — Test Strategy confirmed         | "Update Test Strategy" step (4d.6) — run only when 4a flagged a test-affecting change; skip straight to `step11` otherwise    |
-| `step11` | Step 11 — document saved (incl. ADRs)      | step 4f — revised document saved (incl. ADRs)                                                                                 |
-| `step12` | Step 12 — document reviewed/approved       | step 4g — document reviewed/approved                                                                                          |
-| `step13` | Step 13 — implementation offered           | step 4h — implementation offered                                                                                              |
+| Label     | `design/SKILL.md`                          | `review/SKILL.md`                                                                                                                       |
+|-----------|--------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|
+| `step6a`  | Stage 6a — database design reviewed/passed | step 4b's database-design portion, when it runs                                                                                         |
+| `step6d`  | Stage 6e — `diagrams.json` fully written   | step 4b — revised diagrams fully written                                                                                                |
+| `step7`   | Step 7 — architecture review passed        | step 4c — architecture re-review passed                                                                                                 |
+| `step8`   | Step 8 — browser preview opened            | step 4d — preview opened/refreshed                                                                                                      |
+| `step9`   | Step 9 — user confirmed the design         | step 4d — user confirmed the revision                                                                                                   |
+| `step10`  | Step 10 — all five LLD groups confirmed    | "Update Low-Level Design" step (4d.5) — run only when 4a flagged an LLD-affecting change; skip straight to `step10b`/`step11` otherwise |
+| `step10b` | Step 10b — Test Strategy confirmed         | "Update Test Strategy" step (4d.6) — run only when 4a flagged a test-affecting change; skip straight to `step11` otherwise              |
+| `step11`  | Step 11 — document saved (incl. ADRs)      | step 4f — revised document saved (incl. ADRs)                                                                                           |
+| `step12`  | Step 12 — document reviewed/approved       | step 4g — document reviewed/approved                                                                                                    |
+| `step13`  | Step 13 — implementation offered           | step 4h — implementation offered                                                                                                        |
 
 Each label supersedes the previous one (this is forward progress through one pipeline pass, not a set) — writing `step9`
 after `step7` is normal; writing `step7` after `step9` only happens if the user requested a revision that regresses the
@@ -806,16 +849,16 @@ pre-created tasks") both need the identical file-group-to-task-title mapping —
 row below, and the implementer looks them up by the same titles via `TaskList`. Both agents use this exact table;
 neither restates it independently:
 
-| Task title                 | What it covers                                                                          |
-|----------------------------|-----------------------------------------------------------------------------------------|
-| Run project scaffolding    | The official generator command from the plan's Scaffolding section, if present          |
-| Implement data models      | Model files, migration files, schema/ORM definitions                                    |
-| Implement API routes       | Route handlers, controllers, middleware                                                 |
-| Write configuration files  | package.json, .env.example, tsconfig, docker-compose, Dockerfile                        |
-| Write infrastructure files | Terraform, CDK, Kubernetes manifests, CI/CD pipeline configs                            |
-| Write setup scripts        | npm scripts, cross-platform setup and run commands                                      |
-| Write test files           | Unit test per data model, integration test per API route group                          |
-| Apply remediation changes  | Modifications to existing files per the remediation plan (only when a plan is provided) |
+| Task title                 | What it covers                                                                                                                                                                                      |
+|----------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Run project scaffolding    | The official generator command from the plan's Scaffolding section, if present                                                                                                                      |
+| Implement data models      | Model files, migration files, schema/ORM definitions                                                                                                                                                |
+| Implement API routes       | Route handlers, controllers, middleware                                                                                                                                                             |
+| Write configuration files  | package.json, .env.example, tsconfig, docker-compose, Dockerfile                                                                                                                                    |
+| Write infrastructure files | Terraform, CDK, Kubernetes manifests, CI/CD pipeline configs                                                                                                                                        |
+| Write setup scripts        | npm scripts, cross-platform setup and run commands                                                                                                                                                  |
+| Write test files           | Unit test per data model, integration test per API route group, unit test per non-trivial business rule, mock test per external integration, plus any test helpers/utilities and fixtures/factories |
+| Apply remediation changes  | Modifications to existing files per the remediation plan (only when a plan is provided)                                                                                                             |
 
 `implementation-planner` omits any row with no files in the confirmed tree for the current project;
 `architecture-implementer` only looks up rows that were actually created.
@@ -944,11 +987,16 @@ stage1–5) is defined once rather than restated at all eight sites that apply i
 ## Reviewer–fixer cycle procedure
 
 Six call sites across `design/SKILL.md` and `review/SKILL.md` spawn a reviewer agent (`architecture-reviewer`,
-`database-reviewer`, or `document-reviewer`). **Recording step 0 below is unconditional — run it every time any of the
-six call sites receives a report back from a reviewer, regardless of verdict.** Only steps 1–4 (the fixer cycle itself)
-are conditional on a failing verdict. A call site's own text (e.g. "If it returns `DATABASE REVIEW FAILED`, follow this
-section") describes when steps 1–4 apply, never step 0 — do not read a call site's failure-gated phrasing as gating step
-0 as well; a clean first-try pass still runs step 0 once, then stops.
+`database-reviewer`, or `document-reviewer`), plus one additional call site — the "Implementation reviewer–fixer cycle"
+section below, itself reached from step 5 of "Implementation-planner → architecture-implementer spawn sequence" (which
+runs regardless of whether the plan was split — "Split-plan implementation loop" only covers the split case, spawning
+`architecture-implementer` per part, before control returns to that step 5) and so exercised from all three of
+`design/SKILL.md` Step 13, `review/SKILL.md` step 4h, and `implement/SKILL.md` Step 4 — spawns `implementation-reviewer`
+once per completed implementation run. **Recording step 0 below is unconditional — run it every time any call site
+receives a report back from a reviewer, regardless of verdict.** Only steps 1–4 (the fixer cycle itself) are conditional
+on a failing verdict. A call site's own text (e.g. "If it returns `DATABASE REVIEW FAILED`, follow this section")
+describes when steps 1–4 apply, never step 0 — do not read a call site's failure-gated phrasing as gating step 0 as
+well; a clean first-try pass still runs step 0 once, then stops.
 
 0. **(Unconditional — every time a reviewer returns a report, passing or not)** Overwrite
    `docs/architecture-designer/last-review.md` with: which reviewer produced it (`database-reviewer` /
@@ -960,13 +1008,17 @@ section") describes when steps 1–4 apply, never step 0 — do not read a call 
    overwrites it.
 
    Also write this same information into `session.json`'s `progress.reviewCycles.<type>` (`database`/`architecture`/
-   `document`) — `verdict`, `cycleCount`, and `updatedAt`, always. For `architecture` and `document` specifically, also
-   record a hash of the artifact this cycle just reviewed (`diagramsHash` = sha256 of
+   `document`/`implementation`) — `verdict`, `cycleCount`, and `updatedAt`, always. For `architecture` and `document`
+   specifically, also record a hash of the artifact this cycle just reviewed (`diagramsHash` = sha256 of
    `docs/architecture-designer/diagrams.json` for `architecture`, computed via
    `python3 <scripts_dir>/hash-file.py docs/architecture-designer/diagrams.json`; `documentHash` = same script against
    the document path, for `document`) — used on resume to detect whether that artifact changed since this verdict (see
    "Resuming Steps 6a–13 via `progress`" below). **`database` never records a hash** — see "Persisting the database
-   design output" below for why its entry looks different.
+   design output" below for why its entry looks different. **`implementation` never records a hash either** — the
+   artifact under review is the codebase on disk, not one file; instead its entry records `reviewedPlans` (the ordered
+   list of plan path (s) this cycle checked), which is enough to identify what was reviewed without needing a stored
+   value to detect drift against, since a resumed session re-running this cycle simply re-reviews the current plan state
+   directly.
 
    Do this on every iteration, passing or not, so a mid-cycle death shows the true last-known cycle count rather than a
    stale earlier one. Before the *first* spawn of a brand-new cycle for a given type (as opposed to a re-spawn within an
@@ -974,7 +1026,10 @@ section") describes when steps 1–4 apply, never step 0 — do not read a call 
    superseded pipeline run, and leaving it in place risks a resumed session trusting an old verdict against a new
    artifact.
 1. Spawn the fixer with the review report, the artifact being corrected (`diagrams.json` path, or the document path for
-   `document-fixer`), and the requirements summary.
+   `document-fixer`), and the requirements summary. **For `implementation`, the input list is different** — see
+   "Implementation reviewer–fixer cycle" above: `implementation-fixer` takes the review report, the plan path (s), the
+   architecture document path, technology stack, and `agentTools`, not a requirements summary or a single "artifact"
+   path (the artifact is the whole generated codebase, not one file).
 2. After the fixer applies its correction, apply section "Proposed Additions rejection handling" above if the fixer's
    log contains that section.
 3. Re-spawn the reviewer to verify. Read the verdict line itself — do not re-derive pass/fail from the findings list.
@@ -985,8 +1040,9 @@ section") describes when steps 1–4 apply, never step 0 — do not read a call 
 
 **Exit condition — read the reviewer's literal verdict string; the two verdict vocabularies are not interchangeable:**
 
-- **Binary reviewers** (`database-reviewer`, `document-reviewer`): stop once the verdict reads`DATABASE REVIEW PASSED` /
-  `DOCUMENT REVIEW PASSED`. Any `FAILED` verdict means cycle again.
+- **Binary reviewers** (`database-reviewer`, `document-reviewer`, `implementation-reviewer`): stop once the verdict
+  reads `DATABASE REVIEW PASSED` / `DOCUMENT REVIEW PASSED` / `IMPLEMENTATION REVIEW PASSED`. Any `FAILED` verdict means
+  cycle again.
 - **Three-tier reviewer** (`architecture-reviewer`): stop once the verdict reads `REVIEW PASSED`.
   `REVIEW CONDITIONALLY PASSED` is emitted *specifically because* Major findings remain — by the reviewer's own verdict
   definitions, it can never mean "all Major items resolved." Treat `REVIEW CONDITIONALLY PASSED` as a stop condition
@@ -1004,11 +1060,16 @@ invalidating a database verdict that never changed). So instead of a hash, step 
 approved content directly into `progress.reviewCycles.database.approvedOutput` — the full corrected schema, ERD, index
 plan, engine recommendation, transaction and concurrency strategy, and connection config text (the fixer's corrected
 version if any cycle ran, otherwise the database-designer's original output; same "final approved version" rule the
-calling step already states). This makes the
-design's own content, not a derived hash, the thing that's durable — a crash between Stage 6a passing and Stage 6d's
-ERD-diagram write does not lose the database design, and there is nothing external to go stale against. Stage 6d and
-Step 11 read `progress.reviewCycles.database.approvedOutput` from `session.json` to build the ERD diagram and document
-section 8, rather than relying on conversation memory only.
+calling step already states). This makes the design's own content, not a derived hash, the thing that's durable — a
+crash between Stage 6a passing and Stage 6d's ERD-diagram write does not lose the database design, and there is nothing
+external to go stale against. Stage 6d reads
+`progress.reviewCycles.database.approvedOutput` from `session.json` to build the ERD diagram, rather than relying on
+conversation memory only. **Step 11 does not read `approvedOutput` for the ERD itself** — per `design/SKILL.md` Step
+11's own instruction, the `erDiagram` block in document section 8 is copied verbatim from Stage 6d's already-written
+`diagrams.json` entry, so the diagram is derived from `approvedOutput` exactly once, not independently at both points
+(see `design/SKILL.md` Step 11 and `review/SKILL.md` 4f). Step 11 still reads `approvedOutput` directly for section 8's
+surrounding prose — the schema, index table, connection config, and migration strategy, which have no `diagrams.json`
+equivalent to copy from.
 
 **Resuming an interrupted cycle**: if `docs/architecture-designer/last-review.md` exists and its recorded
 `{reviewer, cycleCount}` has no matching *passed* entry in `session.json`'s `progress.reviewCycles.<type>` (i.e. the
@@ -1021,6 +1082,18 @@ scratch to regenerate a report you already have.
 Three call sites spawn `architecture-designer:implementation-planner` — `design/SKILL.md` (Step 13), `review/SKILL.md`
 (step 4h), and `implement/SKILL.md` (Step 3). Immediately before spawning, all three run this same procedure against the
 confirmed architecture document's path (called `{document}` below) to decide whether to offer resuming a previous plan:
+
+**Required first check — a stuck fixer, not a stuck plan**: before scanning `implementationPlans` below, check whether
+`docs/architecture-designer/last-review.md` shows an unresolved `implementation`-type cycle (its recorded `{reviewer,
+cycleCount}` has no matching *passed* entry in `progress.reviewCycles.implementation` — same test "Reviewer–fixer cycle
+procedure"'s own "Resuming an interrupted cycle" uses) **and** the plan file it names reads `Status: In progress`. If
+both hold, this is not a plan that needs (re-)planning — it's an `implementation-fixer` run that died mid-fix before
+flipping `Status` back to `Complete` (see `agents/implementation-fixer.md`'s "Resuming, checkpointing, and the Status
+re-arm"). Re-spawn `implementation-fixer` directly against that same report to resume it (it detects the resume itself
+from the plan's `Status` and `last-review.md`'s per-item checkpoints) — **do not** proceed to this procedure's own scan
+below or offer a **Previous plan path** to `implementation-planner`; that would misroute a stuck fix into a fresh
+re-plan. Skip this check entirely if `last-review.md` doesn't exist, names a different type, or its cycle already
+passed — proceed to the scan below as normal.
 
 Scan `implementationPlans` for entries whose `document` field equals `{document}`. Keep only entries whose `path` still
 exists on disk and whose plan is actionable — read the plan's metadata table `Status` line: actionable means `Status` is

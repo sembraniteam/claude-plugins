@@ -1,9 +1,9 @@
 # Architecture Decision Record (ADR) Guide
 
 Use this guide at Step 11 (`design/SKILL.md`) immediately after the architecture document is saved, and again at step 4f
-(`review/SKILL.md`) when a revision changes a decision. It produces one small, standalone file per significant decision —
-separate from the main document — so a later "why did we choose this, and when did that change?" question has a direct
-file to open instead of diffing full document versions against each other.
+(`review/SKILL.md`) when a revision changes a decision. It produces one small, standalone file per significant
+decision — separate from the main document — so a later "why did we choose this, and when did that change?" question has
+a direct file to open instead of diffing full document versions against each other.
 
 ## Why a separate file per decision
 
@@ -17,11 +17,11 @@ history.
 
 ## Which decisions get an ADR
 
-Not every Stage 5 field needs one — a criterion for restraint, mirroring the rest of this plugin's "don't pad" discipline
-for `riskRegister`/`tradeoffAnalysis`:
+Not every Stage 5 field needs one — a criterion for restraint, mirroring the rest of this plugin's "don't pad"
+discipline for `riskRegister`/`tradeoffAnalysis`:
 
 1. **Always**, regardless of driver citation — these are structural and expensive to reverse once implementation starts:
-   architecture pattern, backend language/framework, frontend framework (if applicable), database engine(s),
+   architecture pattern, backend language/framework, frontend framework (if applicable), database engine (s),
    infrastructure provider, authentication approach.
 2. **Any other Stage 5 item that cites an `architecturalDrivers` ID** in its justification (per
    `references/quality-driven-design-guide.md`'s Stage 5 citation rule) — a driver-cited decision is, by definition, one
@@ -45,7 +45,8 @@ docs/architecture-designer/adr/{NNNN}-{slug}.md
 
 - `{NNNN}`: 4-digit zero-padded sequence number (`0001`, `0002`, ...) — the next unused number after the highest
   `id` already in `session.json`'s `adrs` array (`ADR-0001` → sequence `1`), or `0001` if the array is absent/empty.
-- `{slug}`: kebab-case short title of the decision (e.g. `database-engine-selection`, `event-driven-architecture-pattern`).
+- `{slug}`: kebab-case short title of the decision (e.g. `database-engine-selection`,
+  `event-driven-architecture-pattern`).
 
 Create the `docs/architecture-designer/adr/` directory if it doesn't exist.
 
@@ -105,9 +106,9 @@ When a revision changes a decision that already has an ADR (a Stage 5 field chan
 entry is superseded by a new one): write a **new** ADR file with the next sequence number, its `Supersedes` row pointing
 at the old ADR's ID, and its own fresh Context/Decision/Consequences reflecting the revised choice. Then make one
 terminal write to the *old* ADR file — change its Status row to `Superseded by ADR-{new NNNN}` — mirroring exactly how
-`references/session-schema.md` section "Superseding a remediation plan" handles a superseded remediation plan. Append the
-new entry to `session.json`'s `adrs` array with its own `supersedes` field set to the old ADR's `id`; never edit the old
-array entry.
+`references/session-schema.md` section "Superseding a remediation plan" handles a superseded remediation plan. Append
+the new entry to `session.json`'s `adrs` array with its own `supersedes` field set to the old ADR's `id`; never edit the
+old array entry.
 
 A revision that changes a decision with **no** prior ADR (an undriven, standard-choice item from Stage 5 that never
 qualified per "Which decisions get an ADR") only gets a new ADR if the revised decision now qualifies under that same

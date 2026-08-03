@@ -131,34 +131,34 @@ global-access-point problem, and the instance can still be swapped for a test do
 | **Visitor**                 | Adds new operations to a class hierarchy without modifying the classes themselves                      | Rare in this workflow; applies to a stable class hierarchy that needs frequent *new operations* added across all its types (e.g. a fixed AST needing new analysis passes) — prefer this only when the hierarchy is genuinely closed but the operation set genuinely grows |
 
 **Misuse false-positive signals** — this guide's opening thesis is that misuse, not ignorance, is the dominant
-real-world failure mode; the cautions below name the concrete false-positive signal for the patterns not already
-covered by a "rare, prefer X instead" qualifier or a dedicated caution paragraph above:
+real-world failure mode; the cautions below name the concrete false-positive signal for the patterns not already covered
+by a "rare, prefer X instead" qualifier or a dedicated caution paragraph above:
 
-- **Adapter**: only one implementation exists and no real interface-shape mismatch is being bridged — that's
-  unnecessary indirection, not adaptation.
-- **Composite**: the structure is a shallow, fixed two-level parent/children shape that will never grow deeper — a
-  plain array field is simpler when tree depth is bounded and known in advance.
-- **Decorator**: only one call site ever needs the wrapped behavior — with no cross-cutting reuse across multiple
-  types, inline the behavior instead of introducing a wrapper hierarchy.
-- **Facade**: the "simplified interface" class accumulates its own business logic rather than purely delegating —
-  that's a Single Responsibility violation wearing a Facade label, not a Facade (see the table entry's SRP check).
+- **Adapter**: only one implementation exists and no real interface-shape mismatch is being bridged — that's unnecessary
+  indirection, not adaptation.
+- **Composite**: the structure is a shallow, fixed two-level parent/children shape that will never grow deeper — a plain
+  array field is simpler when tree depth is bounded and known in advance.
+- **Decorator**: only one call site ever needs the wrapped behavior — with no cross-cutting reuse across multiple types,
+  inline the behavior instead of introducing a wrapper hierarchy.
+- **Facade**: the "simplified interface" class accumulates its own business logic rather than purely delegating — that's
+  a Single Responsibility violation wearing a Facade label, not a Facade (see the table entry's SRP check).
 - **Proxy**: the wrapped object is neither remote, resource-expensive, nor access-sensitive — wrapping a cheap local
   object "just in case" is unnecessary indirection.
 - **Chain of Responsibility**: the chain has only two handlers with a fixed, always-both-checked order — a plain
   `if`/`else` or an explicit method sequence reads more clearly than a handler chain built for a variability that
   doesn't exist yet.
-- **Command**: the action is never queued, logged, retried, or undone — a plain method call misidentified as needing
-  an object wrapper adds indirection with no payoff.
-- **Mediator**: only two or three components with a simple, stable interaction — a full mediator object is premature;
-  it earns its complexity once the coordination logic itself becomes genuinely non-trivial, not before.
+- **Command**: the action is never queued, logged, retried, or undone — a plain method call misidentified as needing an
+  object wrapper adds indirection with no payoff.
+- **Mediator**: only two or three components with a simple, stable interaction — a full mediator object is premature; it
+  earns its complexity once the coordination logic itself becomes genuinely non-trivial, not before.
 - **Memento**: full state-snapshotting is built for an entity whose undo need is already satisfied by an audit
   log/event-sourcing replay mechanism elsewhere in the system — that's duplicated machinery.
-- **Observer**: one publisher and one subscriber with no real decoupling benefit — a direct method call is simpler
-  and more debuggable than an event/pub-sub abstraction that will never have a second subscriber.
-- **State**: the entity has only 1-2 lifecycle states (below this guide's own 3+ threshold for a State Diagram), or
-  the per-state behavior difference is one or two `if` branches that read more clearly inline.
-- **Strategy**: an algorithm that will realistically never have a second implementation — introducing an interface
-  for a single concrete case is YAGNI (`references/design-principles-guide.md`), not extensibility.
+- **Observer**: one publisher and one subscriber with no real decoupling benefit — a direct method call is simpler and
+  more debuggable than an event/pub-sub abstraction that will never have a second subscriber.
+- **State**: the entity has only 1-2 lifecycle states (below this guide's own 3+ threshold for a State Diagram), or the
+  per-state behavior difference is one or two `if` branches that read more clearly inline.
+- **Strategy**: an algorithm that will realistically never have a second implementation — introducing an interface for a
+  single concrete case is YAGNI (`references/design-principles-guide.md`), not extensibility.
 - **Template Method**: forcing genuinely dissimilar processes into one shared base-class skeleton just because they
   share a name — when the actual steps diverge enough, the shared skeleton adds more complexity than it removes.
 

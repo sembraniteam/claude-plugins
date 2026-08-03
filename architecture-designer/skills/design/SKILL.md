@@ -6,9 +6,9 @@ allowed-tools: ["Read", "Write", "Edit", "Bash", "Glob", "Agent", "WebSearch"]
 
 # Architecture Designer — Main Design Workflow
 
-This skill guides the user through a six-stage design process plus a sequence of post-design steps (architecture
-review, optional persona reviews, browser preview, optional visual verification, user confirmation, low-level design,
-test strategy, document save, document review, implementation offer), ending with browser-rendered Mermaid diagrams,
+This skill guides the user through a six-stage design process plus a sequence of post-design steps (architecture review,
+optional persona reviews, browser preview, optional visual verification, user confirmation, low-level design, test
+strategy, document save, document review, implementation offer), ending with browser-rendered Mermaid diagrams,
 low-level design artifacts, a test strategy, a reviewed and approved document, and an optional code skeleton.
 
 Always use this skill for new architecture design, even if the user has already started describing their system in the
@@ -115,18 +115,18 @@ Ask the Stage 2 questions in `references/discovery-questions.md`.
 
 **Domain edge-case elicitation (required, before the Stage 2 summary/confirmation)**: read
 `references/domain-edge-cases-guide.md` and match the functional requirements just gathered against its domain
-categories (authentication, payments, inventory/fulfillment, scheduling/booking, messaging/notifications,
-multi-tenancy, file upload, search) — a category applies only when its stated signal is actually present; do not force
-a category with no signal. This exists because a diagram or document can be syntactically correct and internally
-consistent while still missing a domain nuance the user never thought to mention — every downstream check in this
-plugin can only verify what was stated, not the absence of something nobody raised. Ask the matched categories'
-targeted questions, folded into the same conversational flow as the rest of Stage 2 — not a separate rigid checklist. A
+categories (authentication, payments, inventory/fulfillment, scheduling/booking, messaging/notifications, multi-tenancy,
+file upload, search) — a category applies only when its stated signal is actually present; do not force a category with
+no signal. This exists because a diagram or document can be syntactically correct and internally consistent while still
+missing a domain nuance the user never thought to mention — every downstream check in this plugin can only verify what
+was stated, not the absence of something nobody raised. Ask the matched categories' targeted questions, folded into the
+same conversational flow as the rest of Stage 2 — not a separate rigid checklist. A
 "no" or "out of scope" answer is a valid, complete answer; record it either way rather than treating an unmatched
 category as something to force into scope.
 
-Summarize as two lists (functional and non-functional) plus the matched domain edge-case questions and answers,
-confirm, then proceed. Write the confirmed edge-case list to `session.json`'s `stage2.domainEdgeCases` at the same time
-as `stage2`.
+Summarize as two lists (functional and non-functional) plus the matched domain edge-case questions and answers, confirm,
+then proceed. Write the confirmed edge-case list to `session.json`'s `stage2.domainEdgeCases` at the same time as
+`stage2`.
 
 **Quality Attribute Scenarios**: before moving to Stage 3, read `references/quality-driven-design-guide.md` and
 formalize the 3–8 non-functional requirements that have (or can be given) a concrete, testable target into Quality
@@ -176,6 +176,11 @@ architecture pattern, scale tier, team size, cloud provider, database type, auth
 citation pattern for tracing each choice back to stages 1–4 (section "How to justify recommendations in the architecture
 document") — use it to ground suggestions in real technology names rather than abstract categories.
 
+**Read `references/critical-thinking-guide.md` before proposing any item below** — `tech-stacks.md` is a menu of
+credible options, not an answer key; picking the first plausible-sounding entry without reasoning through the guide's
+six-step loop (real problem, real constraints, a genuine second option, a stress-test, the rejected alternative, a
+revisit trigger) is exactly the pattern-matching failure that guide exists to catch.
+
 Based on everything gathered in stages 1–4, propose and justify, in order: **(1) architecture pattern**
 (monolith/modular monolith/microservices/serverless/event-driven — a modular monolith is almost always right for small,
 early-stage teams). Once item (1) is chosen, read `references/design-patterns-guide.md` Part 1 and name the applicable
@@ -191,24 +196,23 @@ AWS"); **(6) supporting services** (queue, cache, search, object storage) — on
 them; **(7) authentication approach**, justified by user roles, security requirements, and team capacity; **(8)
 observability strategy** — logging aggregator (e.g. ELK, Grafana Loki, Datadog, CloudWatch), metrics/dashboards, and
 distributed tracing (OpenTelemetry + Jaeger/Tempo) if multiple services or async flows are involved, scaled to what the
-system's actual operational maturity requires — a small monolith may need only structured logging and one dashboard;
-**(9) disaster recovery** — RPO/RTO derived from the Stage 2 availability NFR, backup strategy, failover approach; **(10)
-   error handling and resilience strategy** — derived from the Stage 2 error-handling NFR. Read
-   `references/resilience-guide.md` before finalizing this and name, per its pattern table and library table: the
-   backoff strategy and max attempts for retries against external dependencies named in stages 1–4, a circuit breaker or
-   equivalent for any dependency the NFR marked as must-not-fail-silently, timeout budgets for synchronous calls, and
-   the graceful-degradation behavior (if any) for non-critical features when a dependency is down. Name the specific
-   library its "Library per stack" table gives for the confirmed language, rather than describing the concept
-   abstractly — scale to what the system actually needs: a monolith with no external dependencies may only need timeout
-   budgets, not a full circuit breaker; **(11) rate limiting strategy** — derived from the Stage 2
-   rate-limiting/abuse-prevention NFR. Read
-   `references/rate-limiting-guide.md`
-   before finalizing this and name, per its tradeoff table and library table: the algorithm, the specific middleware
-   library for the confirmed backend language, and which layer enforces it (API gateway, application middleware, or
-   both) — plus the shared store (Redis) the limiter counters live in if the infrastructure decision above is
-   horizontally scaled, rather than an in-process store that would silently multiply the real limit by instance count.
-   Skip this only for a system with no public-facing or untrusted-client-reachable API, the same way item 10 is skipped
-   for a monolith with no external dependencies — state that explicitly rather than omitting it silently.
+system's actual operational maturity requires — a small monolith may need only structured logging and one dashboard; **(
+9) disaster recovery** — RPO/RTO derived from the Stage 2 availability NFR, backup strategy, failover approach; **(10)
+error handling and resilience strategy** — derived from the Stage 2 error-handling NFR. Read
+`references/resilience-guide.md` before finalizing this and name, per its pattern table and library table: the backoff
+strategy and max attempts for retries against external dependencies named in stages 1–4, a circuit breaker or equivalent
+for any dependency the NFR marked as must-not-fail-silently, timeout budgets for synchronous calls, and the
+graceful-degradation behavior (if any) for non-critical features when a dependency is down. Name the specific library
+its "Library per stack" table gives for the confirmed language, rather than describing the concept abstractly — scale to
+what the system actually needs: a monolith with no external dependencies may only need timeout budgets, not a full
+circuit breaker; **(11) rate limiting strategy** — derived from the Stage 2 rate-limiting/abuse-prevention NFR. Read
+`references/rate-limiting-guide.md`
+before finalizing this and name, per its tradeoff table and library table: the algorithm, the specific middleware
+library for the confirmed backend language, and which layer enforces it (API gateway, application middleware, or both) —
+plus the shared store (Redis) the limiter counters live in if the infrastructure decision above is horizontally scaled,
+rather than an in-process store that would silently multiply the real limit by instance count. Skip this only for a
+system with no public-facing or untrusted-client-reachable API, the same way item 10 is skipped for a monolith with no
+external dependencies — state that explicitly rather than omitting it silently.
 
 Every recommendation must cite a specific reason from stages 1–4, plus the architectural driver ID (s) it satisfies from
 `architecturalDrivers` above when one applies (e.g. "PostgreSQL with synchronous replication, satisfying AD-2 (99.9%
@@ -322,9 +326,11 @@ procedure" step 0 as soon as the report is received (records the verdict/cycle/a
 pass, not only on failure). If it returns `DATABASE REVIEW FAILED`, continue with that section's steps 1–4 (binary
 verdict — cycle until `DATABASE REVIEW PASSED`): spawn `architecture-designer:database-fixer`, which receives the review
 report, the database-designer output, the requirements summary (same scope), and the path to
-`docs/architecture-designer/diagrams.json`. It writes the corrected ERD and indexPlan directly into `diagrams.json`
-**and returns the corrected schema, ERD, index plan, transaction and concurrency strategy (when present), and connection
-config as text** — replace the database-designer output held in context with this corrected text. Step 0 of the
+`docs/architecture-designer/diagrams.json`. At this point in the pipeline the file doesn't exist yet (`diagrams.json`'s
+skeleton isn't written until Stage 6d, below), so per `agents/database-fixer.md`'s own conditional, it skips the
+`diagrams.json` write here and **only returns the corrected schema, ERD, index plan, transaction and concurrency
+strategy (when present), and connection config as text** — replace the database-designer output held in context with
+this corrected text; Stage 6d embeds it into `diagrams.json` directly when it builds the file. Step 0 of the
 reviewer–fixer cycle procedure (triggered above) writes this same final text into
 `progress.reviewCycles.database.approvedOutput` — that key, not conversation memory, is the durable source Step 11
 (section 8) and Stage 6d's ERD both read from.
@@ -442,6 +448,9 @@ database-designer) immediately after the ERD block — see `references/diagrams-
 ERD from `session.json`'s `progress.reviewCycles.database.approvedOutput` (the final approved schema/ERD/index plan —
 see `references/session-schema.md` section "Persisting the database design output"), not from conversation memory — this
 is what makes Stage 6a's output durable if 6d runs in a resumed session where Stage 6a's conversation turn is gone.
+**Copy the `erDiagram` block verbatim from `approvedOutput`** — do not re-derive or paraphrase it from the prose schema
+description alongside it. Step 11 later reuses this exact `diagrams.json` entry (not `approvedOutput` directly) for the
+document's own ERD, specifically so the two never diverge from independently re-deriving the same source twice.
 
 **Class diagram design-principle pass**: after drafting a Class Diagram, before appending it to `diagrams.json`, read
 `references/design-principles-guide.md` and pass the draft once against its Quick Reference section (SOLID, DRY, YAGNI,
@@ -587,15 +596,9 @@ point-in-time check against whatever `diagrams.json` currently contains, not a p
 
 ## Step 9 — User Confirmation
 
-**Maintenance note**: `review/SKILL.md` steps 4a/4b mirror this step's "if X changed, re-run Y" logic for the revision
-case (same drivers, NFRs, domain edge cases, Web3/offline-first tracks, IaC/CI-CD, domain model, cost estimate) —
-`review/SKILL.md` step
-4d.5 covers the equivalent Low-Level Design re-run separately, and step 4d.6 covers the equivalent Test Strategy
-re-run separately, since LLD (Step 10 below) and Test Strategy (Step 10b below) haven't happened yet at this point in
-the first-time design flow and so have nothing to mirror here. The two are maintained as parallel prose rather than one
-shared procedure — if a rule below changes (a new re-run trigger, a new track), apply the same change to
-`review/SKILL.md`
-steps 4a/4b, and vice versa.
+**Read `references/revision-triggers.md` before handling any revision below** — it is the canonical, shared trigger
+table for "if X changed, re-run Y" logic, also consulted by `review/SKILL.md` steps 4a/4b (rows K/L there don't apply
+here: Low-Level Design and Test Strategy haven't happened yet at this point in a first-time design pass).
 
 After opening the browser, ask:
 
@@ -604,43 +607,10 @@ After opening the browser, ask:
 If the user requests revisions:
 
 - Identify the affected stage, return to it, ask the relevant questions again, update the answers
-- **If Stage 1 is revised**: re-confirm `description` too — it can go stale once goal, stakeholders, or pain points
-  change. Re-draft it (or accept the user's rewrite) the same way as the original confirmation.
-- **If Stage 2 is revised** (an NFR changed, was added, or was removed): re-evaluate `stage2.qualityAttributeScenarios`
-  for the changed set per `references/quality-driven-design-guide.md`, then re-evaluate `architecturalDrivers` against
-  the updated scenarios — a driver citing a `QAS-n` ID that no longer exists must be dropped or re-pointed to its
-  replacement. If `architecturalDrivers` changes as a result, also re-run the Trade-off and Risk Analysis pass (same
-  procedure as the Stage 5 bullet below), since a Stage 5 decision may have been justified against a driver that no
-  longer applies.
-- **If a functional requirement added or changed by this revision matches a new `references/domain-edge-cases-guide.md`
-  category not already covered**: read that guide and ask the newly-matched category's targeted questions, then append
-  the answers to `session.json`'s `stage2.domainEdgeCases` — append, don't overwrite the whole array, since existing
-  categories' answers are still valid and unrelated to this revision's scope.
-- **If Stage 4 is revised** (a capacity number changed): re-run the Cost Estimation pass per
-  `references/cost-estimation-guide.md` against the revised numbers, overwriting `stage5.costEstimate` in full — a
-  changed user-count or data-volume figure changes the sizing basis for every component in the breakdown.
-- **If Stage 5 is revised**: re-run the `agentTools` check too — a changed stack changes which tools match. Overwrite
-  `agentTools` in full with the new result (per `references/session-schema.md`), not merge with the old list. Also
-  re-evaluate the Web3 track: if the revised stack now names a distributed-ledger platform where it didn't before, work
-  through `references/web3-guide.md`'s dimensions and write the new `web3` key; if the revised stack dropped its
-  decentralized component, delete the `web3` key entirely (do not leave a stale one behind); if it's still decentralized
-  but the target network or a dimension's answer changed, re-run the dimensions and overwrite `web3` in full — same
-  "overwrite, don't merge" rule as `agentTools`. Apply the same three-way logic to the offline-first track and its
-  `offlineFirst` key, using `references/offline-first-guide.md` — if the offline-first status changed (newly added,
-  removed, or an existing answer changed), re-spawn `database-designer` so the offline-sync schema columns
-  (`references/offline-first-guide.md` section 4) are added or removed to match. Also re-run the Trade-off and Risk Analysis pass per
-  `references/quality-driven-design-guide.md` against the revised decisions, overwriting `tradeoffAnalysis` and
-  `riskRegister` in full — same "overwrite, don't merge" rule. Also re-run the Cost Estimation pass per
-  `references/cost-estimation-guide.md` against the revised decisions and/or capacity numbers, overwriting
-  `stage5.costEstimate` in full — same "overwrite, don't merge" rule.
-- **If Stage 6a's domain modeling is affected** (new bounded contexts, changed aggregate boundaries): re-run the
-  domain-modeling step per `references/ddd-guide.md` and overwrite `domainModel` in full, then re-spawn
-  `database-designer` so the schema reflects the updated aggregate boundaries.
-- **If the cloud/infrastructure provider, IaC tool, or CI/CD platform changes** (whether directly requested or as a
-  consequence of a Stage 5 stack revision): read `references/iac-guide.md` and/or `references/cicd-guide.md` as
-  applicable and overwrite `session.json`'s `stage6b`/`stage6c` in full to match — the same "overwrite, don't merge"
-  rule as `agentTools`/`web3`/`offlineFirst` above. Regenerate the deployment/infrastructure and CI/CD pipeline diagrams
-  to match.
+- Apply every matching row of `references/revision-triggers.md` (rows A–J) — e.g. a changed goal/stakeholder re-confirms
+  `description` (row A), an NFR change re-evaluates Quality Attribute Scenarios and `architecturalDrivers` (row B), a
+  Stage 5 stack revision re-runs `agentTools`/Web3/offline-first/trade-off/cost checks (rows D–H), and so on. A single
+  revision often matches several rows — apply all that match, not just the first.
 - Regenerate the affected diagrams and re-run the architecture reviewer (step 7) — this may spawn architecture-fixer,
   which writes `diagrams.json` directly
 - Update `diagrams.json` with the revised diagrams (skip if the fixer already wrote it during the reviewer re-run)
@@ -677,6 +647,12 @@ to the next: **(1) API contracts** — one entry per endpoint visible in the seq
 one entry per non-trivial operation, skipping simple CRUD; **(3) DTOs** — only for complex or shared bodies used by
 multiple endpoints; **(4) inter-service contracts** — only for microservices/event-driven architectures, omitted
 entirely for monoliths; **(5) error catalog** — derived from errors already referenced above, never invented fresh.
+
+**Business rules critical-thinking check**: while writing group (2), before finalizing any rule's `Logic`, read
+`references/critical-thinking-guide.md`'s "Applying this to Step 10 group (2)" section — name the invariant the rule
+protects and its business reason (a rule with no traceable reason back to Stage 1/2 is a YAGNI candidate, not a rule to
+keep), state what happens on violation, and name at least one edge case it must hold under. Do this first, since it
+determines whether the rule should exist at all before the checks below refine how it's written.
 
 **Business rules design-principle check**: while writing group (2), read `references/design-principles-guide.md`'s DRY,
 YAGNI, and Tell-Don't-Ask sections — a rule whose `Logic` duplicates steps already written for another rule should
@@ -773,8 +749,12 @@ the same time if the file predates them, per the tolerant-read rule in `referenc
 Overview through Low-Level Design, each pulling from the corresponding stage or sub-agent output (section 2 "Core
 Features" derived from the same Stage 2 functional requirements Stage 6d's "Core feature coverage requirement" already
 treats as core features, cross-referenced against the dedicated sequence diagram each one already has in section 7;
-section 8 from `session.json`'s `progress.reviewCycles.database.approvedOutput`; section 11 from the `lld` key), plus a
-12th conditional "Decentralized Architecture Considerations" section when the Web3 track was active, a 13th conditional
+section 8 from `session.json`'s `progress.reviewCycles.database.approvedOutput` for the prose (schema, index table,
+connection config, migration strategy) — **but the `erDiagram` block itself is copied verbatim from its already-written
+entry in `diagrams.json`, not re-derived from `approvedOutput` independently**, so the document's ERD and the diagram
+set's ERD are the same content, not two separately-transcribed copies of the same source; section 11 from the `lld`
+key), plus a 12th conditional "Decentralized Architecture Considerations" section when the Web3 track was active, a 13th
+conditional
 "Offline-First Considerations" section when the offline-first track was active, a required 14th "Domain Model (DDD)"
 section from the `domainModel` key, a required 15th "Trade-off and Risk Analysis" section from the
 `stage5.tradeoffAnalysis` and `riskRegister` keys, a required 16th "Cost Estimation" section from `stage5.costEstimate`,
@@ -836,14 +816,15 @@ project.
 
 Before spawning, resolve the applicable remediation plan per `references/session-schema.md` section "Finding the
 applicable remediation plan", using the approved document's path (its checkbox-per-finding format is defined in
-`references/remediation-plan-guide.md` — a remediation plan is only ever written by the `review` skill's drift-fix
-flow, never by this skill, so there is nothing to author here, only to locate and pass along). Then run
+`references/remediation-plan-guide.md` — a remediation plan is only ever written by the `review` skill's drift-fix flow,
+never by this skill, so there is nothing to author here, only to locate and pass along). Then run
 `references/session-schema.md` section
 "Resumable-plan detection procedure" using the approved document's path as `{document}` to produce the **Previous plan
 path**, if the user chooses to resume.
 
 Then follow `references/session-schema.md` section "Implementation-planner → architecture-implementer spawn sequence" to
-spawn `architecture-designer:implementation-planner` and, once its plan is confirmed, `architecture-designer:architecture-implementer`, passing these six inputs:
+spawn `architecture-designer:implementation-planner` and, once its plan is confirmed,
+`architecture-designer:architecture-implementer`, passing these six inputs:
 
 - The path to the approved document
 - **Existing project summary** — translated into the agent's expected strategy label: `Fresh start (empty project)` if
@@ -859,6 +840,13 @@ spawn `architecture-designer:implementation-planner` and, once its plan is confi
 
 If the user says no: let them know they can run `/architecture-designer:review` at any time to revisit and revise the
 architecture.
+
+**If the user said yes**: the spawn sequence above includes its own step 5, which runs the
+`implementation-reviewer`/`implementation-fixer` cycle — do not consider implementation finished, and do not tell the
+user so, until that cycle's exit condition is met (`IMPLEMENTATION REVIEW PASSED`, or its 3-cycle cap reached).
+`architecture-implementer` reporting `Status: Complete` is that agent's own self-report, not this cycle's exit
+condition — see `references/session-schema.md` section "Implementation reviewer–fixer cycle" for what "done" actually
+means here.
 
 Either way, record `progress.lastCompletedStep = "step13"` per `references/session-schema.md` section "Recording
 `progress.lastCompletedStep`" — this pipeline pass is complete.

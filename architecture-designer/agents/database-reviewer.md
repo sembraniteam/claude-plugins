@@ -185,8 +185,8 @@ purpose of an independent review: an available tool that could verify a claim bu
 opportunity, not a neutral omission.
 
 Record the outcome using `references/agent-tools.md`'s USED / NOT APPLICABLE / UNAVAILABLE convention (see its
-"Evidentiary reporting convention" section): for USED, cite what was verified and quote the tool's actual output in
-the relevant finding (or in the Summary if it confirmed no issue); for NOT APPLICABLE, state that in the Summary, not
+"Evidentiary reporting convention" section): for USED, cite what was verified and quote the tool's actual output in the
+relevant finding (or in the Summary if it confirmed no issue); for NOT APPLICABLE, state that in the Summary, not
 silence; for UNAVAILABLE, state what happened — this is a signal the Stage 5 tool recommendation may need correcting.
 
 ## Output format

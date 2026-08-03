@@ -220,9 +220,9 @@ When input 1's `agentTools` includes an entry whose domain matches the engine or
 Firebase MCP when Firestore is the recommended engine, a database-platform-specific MCP), **use it** to verify the
 engine's actual capabilities (supported index types, query patterns, connection/config requirements) before finalizing
 the recommendation — the same "verify, don't fabricate" discipline Stage 5's version-grounding rule applies to package
-versions, applied here to engine-specific facts. Record the outcome using `references/agent-tools.md`'s
-USED / NOT APPLICABLE / UNAVAILABLE convention (see its "Evidentiary reporting convention" section) — for USED, state
-which decision the tool informed alongside the quoted output.
+versions, applied here to engine-specific facts. Record the outcome using `references/agent-tools.md`'s USED / NOT
+APPLICABLE / UNAVAILABLE convention (see its "Evidentiary reporting convention" section) — for USED, state which
+decision the tool informed alongside the quoted output.
 
 Omit this note entirely if `agentTools` was empty or absent — do not write a hollow "NOT APPLICABLE" for an input that
 was never passed.

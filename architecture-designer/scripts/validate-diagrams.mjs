@@ -17,6 +17,12 @@
  * keys (name, table, columns, type, reason). This catches the field being filled with
  * entity descriptions or other ERD notes instead of actual index rows.
  *
+ * Also checks that every entry carries non-blank `description`, `details`, and
+ * `rationale` fields — diagrams-guide.md's schema defines these as required content
+ * (not optional the way indexPlan explicitly is), and preview-server.mjs silently
+ * renders an empty section if they're missing rather than erroring, so this is the
+ * only gate that would otherwise catch it before the browser preview is shown.
+ *
  * Requires: run `npm install` in the scripts/ directory once before first use.
  * The script degrades gracefully if dependencies are missing — it will not crash.
  *
@@ -273,8 +279,14 @@ function checkSiblingSubgraphEdges(keyword, lines) {
     let interSubgraphEdges = 0;
     for (const line of lines) {
         const t = line.trim();
-        if (/^subgraph\b/.test(t)) { depth++; continue; }
-        if (/^end$/.test(t)) { depth = Math.max(0, depth - 1); continue; }
+        if (/^subgraph\b/.test(t)) {
+            depth++;
+            continue;
+        }
+        if (/^end$/.test(t)) {
+            depth = Math.max(0, depth - 1);
+            continue;
+        }
         if (depth !== 0 || !arrowRe.test(t)) continue;
         const parts = t.split(arrowRe);
         if (parts.length < 2) continue;
@@ -397,9 +409,9 @@ function checkArchitectureBetaAlignOrder(keyword, lines) {
     lines.forEach((line, i) => {
         const t = line.trim();
         if (/^align\s/.test(t)) alignIdx.push(i);
-        // Architecture-beta's edge operator is "--" or "-->", always whitespace-delimited
-        // on both sides (e.g. "serviceA:R -- L:serviceB"). Requiring that whitespace avoids
-        // false-positiving on a title/label string that merely contains a double hyphen
+            // Architecture-beta's edge operator is "--" or "-->", always whitespace-delimited
+            // on both sides (e.g. "serviceA:R -- L:serviceB"). Requiring that whitespace avoids
+            // false-positiving on a title/label string that merely contains a double hyphen
         // (e.g. "read--write") or hyphenated words, which have no surrounding space.
         else if (/\s--(>)?\s/.test(t) && !t.startsWith('%%')) edgeIdx.push(i);
     });
@@ -490,7 +502,7 @@ async function validateCode(id, code) {
 
 const INDEX_PLAN_KEYS = ['name', 'table', 'columns', 'type', 'reason'];
 
-function isBlankIndexPlanValue(value) {
+function isBlank(value) {
     return value === undefined || value === null || String(value).trim() === '';
 }
 
@@ -498,7 +510,7 @@ function validateIndexPlan(rows) {
     if (!Array.isArray(rows)) return ['indexPlan must be an array of index rows'];
     return rows.flatMap((row, i) => {
         if (!row || typeof row !== 'object') return [`indexPlan row ${i + 1} is not an object`];
-        const missing = INDEX_PLAN_KEYS.filter(k => !(k in row) || isBlankIndexPlanValue(row[k]));
+        const missing = INDEX_PLAN_KEYS.filter(k => !(k in row) || isBlank(row[k]));
         return missing.length > 0
             ? [`indexPlan row ${i + 1} missing or empty key(s): ${missing.join(', ')} — looks like an entity description or note, not an index row`]
             : [];
@@ -541,6 +553,14 @@ for (const d of diagrams) {
     if (!d.id) fieldErrors.push('missing required field: id');
     if (!d.title) fieldErrors.push('missing required field: title');
     if (!d.code) fieldErrors.push('missing required field: code');
+    // description/details/rationale carry no "(optional)" qualifier in diagrams-guide.md's
+    // schema the way indexPlan does — every entry is expected to carry substantive content
+    // here (a one-sentence description, 2-4 paragraphs of details, 1-3 of rationale), not
+    // just the fields that make the diagram itself renderable. Checked as blank-or-absent,
+    // same as indexPlan's own key check below, so a placeholder empty string doesn't slip by.
+    if (isBlank(d.description)) fieldErrors.push('missing required field: description');
+    if (isBlank(d.details)) fieldErrors.push('missing required field: details');
+    if (isBlank(d.rationale)) fieldErrors.push('missing required field: rationale');
 
     if (d.indexPlan !== undefined || d.companionTable !== undefined) {
         if (d.indexPlan === undefined) {

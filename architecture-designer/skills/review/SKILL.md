@@ -11,8 +11,8 @@ user through a structured revision process that creates a new versioned document
 
 **Scripts directory:** see "Path resolution" at the bottom of this file.
 
-**References directory:** this skill has none of its own — every `design/references/...` pointer below resolves into
-the sibling `design` skill's `references/` directory, per "Path resolution" at the bottom of this file.
+**References directory:** this skill has none of its own — every `design/references/...` pointer below resolves into the
+sibling `design` skill's `references/` directory, per "Path resolution" at the bottom of this file.
 
 ---
 
@@ -48,6 +48,12 @@ Check for `docs/architecture-designer/session.json`:
 (not just the latest), may prompt to carry one plan's deferred items into this session's revision scope (step 4a), and
 reports back one of: nothing to carry forward, everything already resolved, or a specific plan's deferred items to fold
 in.
+
+**Check for prior review history**: if `session.json` contains a `"reviewHistory"` array, briefly list its entries
+(date, source, outcome, one-line summary) before Step 1's question — e.g. "A previous review on 2026-07-20 (codebase
+scan) found drift in the payment service and was declined." This is context, not a gate: do not re-present the full old
+report, and do not skip re-checking anything this session's own scan would otherwise cover — the point is continuity (a
+finding surfacing again reads as "still true," not as new), not deduplication of the scan itself.
 
 ---
 
@@ -95,29 +101,17 @@ If the user chose (a) or (c):
 
 If the user chose (b) or (c):
 
-Scan the codebase to reconstruct the actual architecture:
+Spawn the `architecture-designer:codebase-reconstructor` agent with: the working directory, the user's current
+context/goals from Step 1, and the requirements summary from `docs/architecture-designer/session.json` if it exists (per
+`references/session-schema.md` section "Requirements-summary scope for sub-agent spawns"). It exhaustively scans project
+structure, services/modules, dependencies, entry points/API surface, database schema, and infrastructure — read its own
+"What to implement"-equivalent checklist in `agents/codebase-reconstructor.md` for the exact scope; this step does not
+restate it. Wait for its **Reconstructed Architecture Summary**, including its "Ambiguities / low-confidence findings"
+and "Unclassified files" sections — surface both to the user alongside the summary itself in Step 3 below, rather than
+only the clean parts.
 
-1. **Project structure**: list top-level directories and key files (`package.json`, `go.mod`, `pom.xml`,
-   `requirements.txt`, `Cargo.toml`, `docker-compose.yml`, `Dockerfile`, etc.)
-2. **Services / modules**: identify separate services, modules, or components (in a monorepo, list packages; for a
-   monolith, identify major layers or domains)
-3. **Dependencies**: read dependency manifests to identify frameworks, databases, message queues, HTTP clients, and key
-   libraries
-4. **Entry points**: find route/controller files, worker entry points, or serverless function definitions
-5. **Database connections**: find ORM configurations, migration files, or schema definitions to identify the actual
-   database technology and schema
-6. **Infrastructure**: check for `Dockerfile`, `docker-compose.yml`, Kubernetes manifests, Terraform files, CI/CD
-   pipelines
-
-Compose a **Reconstructed Architecture Summary**:
-
-- Architecture pattern (detected from structure)
-- Technology stack (frameworks, databases, caches, queues)
-- Key components and their relationships
-- Deployment configuration
-
-If the user also has a document (option c): compare the reconstructed architecture against the document and produce a
-**Drift Report**:
+If the user also has a document (option c): compare the reconstructed summary against the document and produce a **Drift
+Report**:
 
 **File path requirement**: Every claim in the Drift Report must cite its evidence source. For code-based claims, include
 the specific file path where the evidence was found (e.g., "`src/auth/middleware.ts` uses JWT but document section 6
@@ -129,6 +123,10 @@ without a source reference must not be written.
 - Naming inconsistencies
 - Technology substitutions (e.g., document says Redis, code uses Memcached)
 - Structural differences (e.g., document shows microservices, code is a monolith)
+
+This comparison is only as complete as its two inputs: the document review's 8 dimensions (Step 2a) and
+`codebase-reconstructor`'s exhaustive scan (above) are both designed to be complete on their own side, so a drift
+finding here reflects a genuine mismatch between them, not a gap in either input's own coverage.
 
 ---
 
@@ -148,6 +146,17 @@ in step 4f, and it should factor into the revision scope discussed in step 4a. T
 > **"Based on these findings, would you like to revise the architecture? I can update the affected diagrams, create a
 new versioned document, and optionally regenerate the implementation skeleton."**
 
+**Persist this review to history (required, regardless of the answer)**: save whatever was presented above (the
+architecture review report, the Drift Report, or the Reconstructed Architecture Summary for option (b) alone) to
+`docs/architecture-designer/review/{yyyymmdd}-{topic}-review.md` (create the `review/` directory if it doesn't exist;
+apply the same `-2`/`-3` collision-avoidance check as an architecture document). Then append
+`{ "date": "<current ISO timestamp>", "source": "document" | "codebase" | "drift", "outcome": "declined" | "revised",
+"summary": "<1-2 sentence summary of the key findings>", "path": "<absolute path of the saved file>" }` to
+`session.json`'s top-level `"reviewHistory"` array (create it if absent) — `source` matches whichever of Step 1's
+options (a)/ (b)/ (c) ran, and `outcome` is set once the user answers the question above. This is what lets a future
+`/architecture-designer:review` session know a finding was already surfaced once, rather than re-discovering the same
+drift from zero every time — see `design/references/session-schema.md`'s `reviewHistory` entry.
+
 If the user does not want to revise (or, for option (b) alone, does not want to formalize the summary into a document):
 acknowledge the review is complete. They can run this skill again at any time.
 
@@ -164,6 +173,11 @@ is fully confirmed), upsert `session.json`'s `pending` key per `design/reference
 pending answers", using `"review-4a"` as the stage id. Delete `pending` once this step's scope is confirmed and 4b
 begins.
 
+**Read `design/references/revision-triggers.md` before asking below** — it is the canonical, shared trigger table (also
+consulted by `design/SKILL.md` Step 9) mapping "if X changed, re-run Y" to the guide to read and the `session.json`
+key (s) to update. Rows A–J apply here the same as in first-time design; rows K/L are specific to `review` since they
+depend on Low-Level Design and Test Strategy already existing.
+
 Ask:
 
 - Which findings should be addressed in this revision? (Include any deferred items carried forward from the pre-Step-1
@@ -171,45 +185,16 @@ Ask:
   the Reconstructed Architecture Summary from Step 2b is the starting point for 4b to diagram, not a set of findings to
   address.
 - Are there new requirements that should be incorporated?
-- Does this revision change the project's goal, stakeholders, or pain points? If so, flag it for 4b —
-  `session.json`'s `description` can go stale once those change and needs re-confirming, mirroring `design/SKILL.md`
-  Step 9's handling of a Stage 1 revision.
 - Is this a minor revision (1.1) or a major redesign (2.0)? If no prior document exists (Step 1 option (b) alone, with
   nothing to revise), this question doesn't apply — see step 4f's no-prior-document fallback instead.
-- Does this revision change whether the stack is decentralized/blockchain-based (adding, removing, or changing the
-  target network)? If so, flag it for 4b — the Web3 track needs to be re-run or removed, mirroring `design/SKILL.md`
-  Step 9's handling of a Stage 5 revision.
-- Does this revision change whether the application must work offline (adding, removing, or changing the offline
-  data/sync/conflict-resolution requirements)? If so, flag it for 4b — the offline-first track needs to be re-run or
-  removed, the same way a Web3 status change updates `web3`.
-- Does this revision change the cloud/infrastructure provider, IaC tool, or CI/CD platform? If so, flag it for 4b —
-  `session.json`'s `stage6b`/`stage6c` and the document's IaC/CI-CD sections need to be updated to match, the same way a
-  Web3 status change updates `web3`.
-- Does this revision change, add, or remove a non-functional requirement? If so, flag it for 4b — `stage2.
-  qualityAttributeScenarios` and `architecturalDrivers` need to be re-evaluated, mirroring `design/SKILL.md` Step 9's
-  handling of a Stage 2 revision.
-- Does this revision add or change a functional requirement that matches a new `domain-edge-cases-guide.md` category
-  not already covered? If so, flag it for 4b — the domain edge-case elicitation pass needs to run for the newly-matched
-  category (existing categories' answers are left as-is unless the requirement they answered also changed).
-- Does this revision change a technology decision, or introduce a new tension between requirements (e.g. a new
-  consistency, latency, or cost constraint)? If so, flag it for 4b — the Trade-off and Risk Analysis pass needs to be
-  re-run, mirroring `design/SKILL.md` Step 9's handling of a Stage 5 revision. A revised stack also means
-  `design/references/agent-tools.md`'s matching procedure needs re-running — see 4h's "Agent tools" input below, which
-  overwrites `agentTools` in full to match, the same "overwrite, don't merge" rule Step 9 applies to `agentTools` on the
-  design side. It also means at least one decision's ADR is now stale — flag it for 4f's "Update Architecture Decision
-  Records" step below.
-- Does this revision change a capacity number (Stage 4) or a technology decision affecting infrastructure cost? If so,
-  flag it for 4b — the Cost Estimation pass needs to be re-run, mirroring `design/SKILL.md` Step 9's handling of a Stage
-  4/5 revision.
-- Does this revision introduce a new bounded context, or change an existing aggregate's boundary (entities that were
-  transactionally grouped are being split, or vice versa)? If so, flag it for 4b — the Domain Model needs to be re-run,
-  mirroring `design/SKILL.md` Step 9's handling of a Stage 6a-affecting revision.
-- Does this revision add, change, or remove an API endpoint, business rule, DTO, inter-service contract, or error
+- For each row A–J in `revision-triggers.md`, does this revision match its trigger? Flag every match for 4b.
+- Row G's ADR consequence: if it matches, also flag it for 4f's "Update Architecture Decision Records" step below.
+- Row K: does this revision add, change, or remove an API endpoint, business rule, DTO, inter-service contract, or error
   condition? If so, flag it for the "Update Low-Level Design" step (4d.5) below — a diagram-only revision (e.g.
   relabeling a component) does not require this, but any change visible in a sequence/class/business-process diagram
   usually does.
-- Does this revision change an NFR, a capacity number, a resilience/rate-limiting decision, or a core feature? If so,
-  flag it for the "Update Test Strategy" step (4d.6) below — any of these change a load-test target, a chaos-test
+- Row L: does this revision change an NFR, a capacity number, a resilience/rate-limiting decision, or a core feature? If
+  so, flag it for the "Update Test Strategy" step (4d.6) below — any of these change a load-test target, a chaos-test
   scenario, or a UAT scenario that step derives.
 
 ### 4b. Update diagrams
@@ -233,10 +218,13 @@ as the input in place of stages 1–5. Then continue to 4c as normal.
 
 Otherwise, based on the revision scope:
 
-- For architecture changes: update the affected Mermaid diagrams (C4, sequence, deployment). If a Class Diagram exists
-  and is affected, apply `design/SKILL.md` Stage 6d's design-principle and GoF-pattern passes before writing it back —
-  read `design/references/design-principles-guide.md` and check the revised classes against SOLID, DRY, YAGNI, Tell
-  Don't Ask, the Hollywood Principle, and the Law of Demeter, and read `design/references/design-patterns-guide.md`
+- For architecture changes: update the affected Mermaid diagrams (C4, sequence, deployment) — including that diagram's
+  `description`/`details`/`rationale` fields when the code change makes the existing prose stale, not just the `code`
+  field; `validate-diagrams.mjs` only checks these are non-blank, not that they still match a revised diagram. If a
+  Class Diagram exists and is affected, apply `design/SKILL.md` Stage 6d's design-principle and GoF-pattern passes
+  before writing it back — read `design/references/design-principles-guide.md` and check the revised classes against
+  SOLID, DRY, YAGNI, Tell Don't Ask, the Hollywood Principle, and the Law of Demeter, and read
+  `design/references/design-patterns-guide.md`
   Part 2 to check whether a revised or newly-added class matches a named GoF pattern's signal, same as a first-time
   design session. If the revision changes item (1)'s architecture pattern (Stage 5), also re-check
   `design/references/design-patterns-guide.md` Part 1 for the applicable POSA architectural pattern (s) and update the
@@ -252,10 +240,13 @@ Otherwise, based on the revision scope:
   first-try pass, not only on failure). If the reviewer returns `DATABASE REVIEW FAILED`, continue with that section's
   steps 1–4 (binary verdict — cycle until `DATABASE REVIEW PASSED`): the fixer receives the review report, the
   database-designer output, the requirements summary (same scope), and the path to
-  `docs/architecture-designer/diagrams.json`. It writes the corrected ERD and indexPlan directly into `diagrams.json`
-  **and returns the corrected schema, ERD, index plan, transaction and concurrency strategy (when present), and
-  connection config as text — replace the database-designer output held in context with this corrected text; it is what
-  gets embedded in the revised document (step 4f), not the original.** Once `DATABASE REVIEW PASSED` is reached, record
+  `docs/architecture-designer/diagrams.json`. It writes the corrected ERD and indexPlan directly into `diagrams.json` —
+  except under the "option (b) alone" branch above, where that file doesn't exist yet at this point; per
+  `agents/database-fixer.md`'s own conditional, it skips the write there and 4b's fresh-diagram-set generation embeds
+  the correction when it builds the file — **and always returns the corrected schema, ERD, index plan, transaction and
+  concurrency strategy (when present), and connection config as text — replace the database-designer output held in
+  context with this corrected text; it is what gets embedded in the revised document (step 4f), not the original.**
+  Once `DATABASE REVIEW PASSED` is reached, record
   `progress.lastCompletedStep = "step6a"` per
   `design/references/session-schema.md` section "Recording `progress.lastCompletedStep`" — mirroring `design/SKILL.md`
   Stage 6a's own write for exactly this label.
@@ -268,52 +259,13 @@ Otherwise, based on the revision scope:
   bar `architecture-reviewer`'s dimension 3 checks in 4c below — get it right here rather than relying on that check to
   catch it.
 - For removed components: remove the relevant elements
-- If 4a flagged a change in goal, stakeholders, or pain points: re-draft `session.json`'s `description` (or accept the
-  user's rewrite) the same way as the original confirmation in `design/SKILL.md`.
-- If 4a flagged a change in decentralization status: read `design/references/web3-guide.md`, work through its eight
-  dimensions against the revised stack, and update `session.json`'s `web3` key accordingly — create it if the revision
-  newly added a decentralized component, overwrite it in full if an existing dimension's answer changed, or delete it
-  entirely if the decentralized component was removed. Update the architecture diagram's on-chain/off-chain boundary to
-  match (dimension 3).
-- If 4a flagged a change in offline requirements: read `design/references/offline-first-guide.md`, work through its
-  local-storage, sync-architecture, and conflict-resolution questions against the revised stack, and update
-  `session.json`'s `offlineFirst` key accordingly — create it if the revision newly added an offline requirement,
-  overwrite it in full if an existing answer changed, or delete it entirely if the offline requirement was removed.
-  Re-spawn `architecture-designer:database-designer` (per the database-changes bullet above) so the offline-sync schema
-  columns (`design/references/offline-first-guide.md` section 4) are added or removed to match.
-- If 4a flagged a change in infrastructure provider, IaC tool, or CI/CD platform: read `design/references/iac-guide.md`
-  and/or `design/references/cicd-guide.md` as applicable, work through the affected decision points against the revised
-  stack, and overwrite `session.json`'s `stage6b`/`stage6c` in full to match (this skill is an authorized second writer
-  of these keys for exactly this case — see `design/references/session-schema.md` section "Single writer per key").
-  Update the deployment/infrastructure and CI/CD pipeline diagrams, and note in 4f that the document's IaC (section 9)
-  and CI/CD (section 10) sections need regenerating from the new decisions rather than carried over unchanged.
-- If 4a flagged an NFR change: read `design/references/quality-driven-design-guide.md`, re-formalize the changed/added
-  NFRs into Quality Attribute Scenarios, and overwrite `session.json`'s `stage2.qualityAttributeScenarios` in full (this
-  skill is an authorized second writer of this key for exactly this case, same as `stage6b`/`stage6c` above). Then
-  re-evaluate `architecturalDrivers` against the updated scenario set and overwrite it in full — a driver citing a
-  `QAS-n` ID that no longer exists must be dropped or re-pointed. If the driver set changed, also apply the
-  trade-off/risk bullet below.
-- If 4a flagged a newly-matched domain-edge-case category: read `design/references/domain-edge-cases-guide.md`, ask that
-  category's targeted questions, and append the answers to `session.json`'s `stage2.domainEdgeCases` — appending, not
-  overwriting the whole array, since existing categories' answers from the prior pass are still valid and unrelated to
-  this revision's scope (this skill is an authorized second writer of this key for exactly this case).
-- If 4a flagged a technology-decision or requirement-tension change: read
-  `design/references/quality-driven-design-guide.md`
-  and re-run the Trade-off and Risk Analysis pass against the revised decisions, overwriting `session.json`'s
-  `stage5.tradeoffAnalysis` and top-level `riskRegister` in full (this skill is an authorized second writer of these
-  keys for exactly this case). If the revision introduces or swaps out a specific technology, apply `design/SKILL.md`
-  Stage 5's "Version grounding" rule to it: verify the current stable release with WebSearch before writing it down, or
-  write "latest stable — verify at implementation time" if WebSearch is unavailable — never carry forward a version from
-  memory that may now be stale.
-- If 4a flagged a bounded-context or aggregate-boundary change: read `design/references/ddd-guide.md` and re-run the
-  domain-modeling step, overwriting `session.json`'s top-level `domainModel` in full (this skill is an authorized second
-  writer of this key for exactly this case). Re-spawn `architecture-designer:database-designer` (per the
-  database-changes bullet above) so the schema reflects the updated aggregate boundaries.
-- If 4a flagged a capacity-number or cost-affecting technology change: read `design/references/cost-estimation-guide.md`
-  and re-run the Cost Estimation pass against the revised numbers/decisions, overwriting `session.json`'s
-  `stage5.costEstimate` in full (this skill is an authorized second writer of this key for exactly this case, same as
-  `stage5.tradeoffAnalysis` above). Re-price via WebSearch when available, or label the figure "estimate — verify at
-  implementation time" when not, per that guide.
+- For every row A–J that 4a flagged as matching: apply that row's action from `design/references/revision-triggers.md`
+  exactly (same guide, same `session.json` key, same write mode). This skill is an authorized second writer of every key
+  in that table except `description`'s and `domainModel`'s first pass — see `design/references/session-schema.md`
+  section "Single writer per key". Two rows need a review-specific addition beyond the table's own text: row E (Web3)
+  also updates the architecture diagram's on-chain/off-chain boundary (dimension 3) to match; row F (offline-first) and
+  row I (domain model) both re-spawn `architecture-designer:database-designer` per the database-changes bullet above, so
+  the schema reflects the updated sync columns or aggregate boundaries respectively.
 
 Once every diagram this step touches — including the option (b) alone path above — has been written to `diagrams.json`,
 record `progress.lastCompletedStep = "step6d"` per `design/references/session-schema.md` section "Recording
@@ -360,22 +312,15 @@ progress to 4d, and never written to `progress.reviewCycles`/`last-review.md`.
 1. **Confirm `diagrams.json` is current** — every diagram touched in 4b/4c was already written incrementally (per 4b's
    note and the reviewer–fixer cycle), so this is a final integrity check, not a write: confirm every diagram in the
    revision scope has a corresponding entry and no entry is partial, same as `design/SKILL.md` Stage 6e.
-2. **Validate diagrams**: run `node <scripts_dir>/validate-diagrams.mjs`. If it exits non-zero or prints
-   `VALIDATION FAILED`, fix the flagged issues in `diagrams.json` before opening or refreshing the preview — revised
-   diagrams are at least as likely to contain syntax errors as freshly generated ones. If `DEGRADED MODE` also appears,
-   tell the user validation ran without the real syntax parser (some errors may not have been caught) and that
-   `npm install` in the plugin's `scripts/` directory enables full coverage — proceed anyway, since the script still
-   passed everything it could check.
-3. If a preview server from a previous run is already running, tell the user to refresh their browser. Otherwise run
-   `python3 <scripts_dir>/find-port.py`, then `node <scripts_dir>/preview-server.mjs <port>` in the background. Do NOT
-   create a stop-server script — leave the server running. Record `progress.lastCompletedStep = "step8"` per
-   `design/references/session-schema.md` section "Recording `progress.lastCompletedStep`".
-4. **Visual rendering verification (optional, best-effort)** — mirrors `design/SKILL.md` Step 8.5: spawn
-   `architecture-designer:visual-diagram-verifier` with the preview URL and the diagram list from `diagrams.json`. If
-   `SKIPPED`, note it briefly and continue. If overlaps are found, spawn `architecture-fixer` with the reframed
-   findings, re-verify once, and proceed regardless of outcome — same "informational, never blocking" treatment, not
-   tracked in `progress`.
-5. Ask: **"Does this revised architecture look correct to you?"** Once confirmed, record
+2. **Validate and preview**: follow `design/SKILL.md` Step 8 steps 2–4 exactly (`validate-diagrams.mjs` gate and
+   `DEGRADED MODE` handling, then `find-port.py` and `preview-server.mjs`) — with one difference: if a preview server
+   from a previous run in this session is already running, tell the user to refresh their browser instead of starting a
+   new one. Record `progress.lastCompletedStep = "step8"` per `design/references/session-schema.md` section "Recording
+   `progress.lastCompletedStep`".
+3. **Visual rendering verification (optional, best-effort)**: follow `design/SKILL.md` Step 8.5 exactly (`SKIPPED` /
+   `VISUAL CHECK PASSED` / `VISUAL CHECK FOUND OVERLAPS` handling) against the revised diagrams — same
+   "informational, never blocking" treatment, not tracked in `progress`.
+4. Ask: **"Does this revised architecture look correct to you?"** Once confirmed, record
    `progress.lastCompletedStep = "step9"`.
 
 If further revisions are needed, repeat from step 4b.
@@ -391,9 +336,12 @@ Otherwise, once the revised diagrams are confirmed (end of 4d), read `design/ref
 affected Low-Level Design groups to match: new or changed endpoints visible in the revised sequence diagrams get
 new/updated API contract entries; new or changed business rules, DTOs, inter-service contracts, and error-catalog
 entries follow the same "derive from the diagrams, never invent" discipline as `design/SKILL.md` Step 10. For new or
-changed business rules, also apply `design/SKILL.md` Step 10's design-principle, clean-code, GoF-pattern, and
-transaction-boundary checks — read `design/references/design-principles-guide.md`'s DRY, YAGNI, and Tell-Don't-Ask
-sections, `design/references/clean-code-guide.md`'s "Functional core, imperative shell" section,
+changed business rules, also apply `design/SKILL.md` Step 10's critical-thinking, design-principle, clean-code,
+GoF-pattern, and transaction-boundary checks — read `design/references/critical-thinking-guide.md`'s "Applying this to
+Step 10 group (2)" section first (name the invariant and business reason before refining how the rule is written; a
+changed rule with no traceable reason back to the revised requirement is a YAGNI candidate), then
+`design/references/design-principles-guide.md`'s DRY, YAGNI, and Tell-Don't-Ask sections,
+`design/references/clean-code-guide.md`'s "Functional core, imperative shell" section,
 `design/references/design-patterns-guide.md` Part 2 (naming a pattern only where a real signal is present), and, for a
 rule whose `Post-conditions` list two or more writes, `design/references/transaction-guide.md` (stating the transaction
 boundary or rewriting the rule as a Saga per that guide's section 4) — and check the revised rule against all of them
@@ -412,8 +360,8 @@ Record `progress.lastCompletedStep = "step10"` per `design/references/session-sc
 **Skip this step** if 4a found no change to an NFR, a capacity number, a resilience/rate-limiting decision, or a core
 feature — a revision scoped to diagrams, database, infrastructure, or a decision with no bearing on any of those leaves
 the existing `testStrategy` key valid as-is. **For option (b) alone** where `session.json` has no `testStrategy` key
-yet: build it fresh instead of updating it, by following `design/SKILL.md` Step 10b in full against the
-newly-formalized design, then continue below.
+yet: build it fresh instead of updating it, by following `design/SKILL.md` Step 10b in full against the newly-formalized
+design, then continue below.
 
 Otherwise, read `design/references/test-strategy-guide.md` and update the affected parts to match: a changed
 Performance/Scalability Quality Attribute Scenario or capacity number updates the load-test targets (part 2); a changed
@@ -507,16 +455,19 @@ the same time if the file predates them, per the tolerant-read rule in `design/r
 
 The document body follows the same structure as the design workflow (all sections, all diagrams), including section 2
 (Core Features — re-derive if 4a flagged a functional-requirement change, so a feature added or removed by this revision
-is reflected), section 11 (Low-Level Design) pulled from `session.json`'s `lld` key — the same key the "Update
-Low-Level Design" step above just confirmed is current, section 16 (Cost Estimation) from `stage5.costEstimate`, section
-17 (Test Strategy) from `testStrategy`, and section 18 (Architecture Decision Records) from `adrs` — see
-`design/references/document-template.md`. This is a standalone document, not a diff — someone reading it without the
-previous version should have complete context.
+is reflected), section 8 (Database Design) — same rule as `design/SKILL.md` Step 11: the prose (schema, index table,
+connection config, migration strategy) comes from `progress.reviewCycles.database.approvedOutput`, but the `erDiagram`
+block itself is copied verbatim from its entry in `diagrams.json` (already corrected by 4b, if a database revision ran),
+never re-derived independently from `approvedOutput` — section 11 (Low-Level Design) pulled from `session.json`'s `lld`
+key — the same key the "Update Low-Level Design" step above just confirmed is current, section 16 (Cost Estimation) from
+`stage5.costEstimate`, section 17 (Test Strategy) from `testStrategy`, and section 18 (Architecture Decision Records)
+from `adrs` — see `design/references/document-template.md`. This is a standalone document, not a diff — someone reading
+it without the previous version should have complete context.
 
 **Update Architecture Decision Records** (required immediately after saving, same as `design/SKILL.md` Step 11): read
-`design/references/adr-guide.md`. For each decision this revision changed that already has an ADR (per 4a's scope): write
-a new ADR file superseding the old one and make the terminal `Superseded by ADR-{NNNN}` write to the old file, per that
-guide's "Revising ADRs" procedure. For each newly-qualifying decision with no prior ADR: write a fresh one, per
+`design/references/adr-guide.md`. For each decision this revision changed that already has an ADR (per 4a's scope):
+write a new ADR file superseding the old one and make the terminal `Superseded by ADR-{NNNN}` write to the old file, per
+that guide's "Revising ADRs" procedure. For each newly-qualifying decision with no prior ADR: write a fresh one, per
 "Generating ADRs". Append every new entry to `session.json`'s top-level `adrs` array (this skill is an authorized second
 appender for this key, mirroring the `documents` append pattern).
 
@@ -565,7 +516,8 @@ sequence" to spawn `architecture-designer:implementation-planner` and, once its 
   `User-described layout` if the user chose (c)
 - **Technology stack** — from the architecture document's Technology Decisions section (section 6)
 - **Agent tools** (optional) — if this revision touched the technology stack (per 4a's Stage-5-change question above),
-  re-run `design/references/agent-tools.md`'s matching procedure against the revised stack now and overwrite `session.json`'s
+  re-run `design/references/agent-tools.md`'s matching procedure against the revised stack now and overwrite
+  `session.json`'s
   `"agentTools"` in full with the new result before passing it through — the same re-run `design/SKILL.md` Step 9
   performs on a Stage 5 revision; do not carry forward a stale match set from before the revision. If the stack was
   untouched this revision, pass through the existing `"agentTools"` array as-is (if present and non-empty).
@@ -577,6 +529,13 @@ sequence" to spawn `architecture-designer:implementation-planner` and, once its 
 
 If the user says no: let them know they can run `/architecture-designer:implement` at any time to generate the skeleton
 from this approved document later.
+
+**If the user said yes**: the spawn sequence above includes its own step 5, which runs the
+`implementation-reviewer`/`implementation-fixer` cycle — do not consider implementation finished, and do not tell the
+user so, until that cycle's exit condition is met (`IMPLEMENTATION REVIEW PASSED`, or its 3-cycle cap reached).
+`architecture-implementer` reporting `Status: Complete` is that agent's own self-report, not this cycle's exit
+condition — see `design/references/session-schema.md` section "Implementation reviewer–fixer cycle" for what "done"
+actually means here.
 
 Either way, record `progress.lastCompletedStep = "step13"` per `design/references/session-schema.md` section "Recording
 `progress.lastCompletedStep`" — this revision pipeline pass is complete.

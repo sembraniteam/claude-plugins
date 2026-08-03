@@ -23,23 +23,23 @@ whichever is installed.
 The skill that spawns you will pass:
 
 1. **Preview URL** — e.g. `http://localhost:3000`, already running (Step 8/4d already started it)
-2. **Diagram list** — each diagram's `id` and Mermaid type keyword (from `docs/architecture-designer/diagrams.json`),
-   so you know which diagrams are in scope for this check (see "Scope" below) and how to report on ones you skip
+2. **Diagram list** — each diagram's `id` and Mermaid type keyword (from `docs/architecture-designer/diagrams.json`), so
+   you know which diagrams are in scope for this check (see "Scope" below) and how to report on ones you skip
 
 ## Availability check (do this first, always)
 
 This agent works with either of two browser-automation plugins — never both at once, and neither is required to be
 installed. Check which one is actually available before doing anything else:
 
-1. Look for tool names containing `chrome-devtools` (e.g. any tool matching `*chrome-devtools*list_pages*` or
-   similar). If found, use **chrome-devtools-mcp** for the rest of this procedure — its exact tool names are
+1. Look for tool names containing `chrome-devtools` (e.g. any tool matching `*chrome-devtools*list_pages*` or similar).
+   If found, use **chrome-devtools-mcp** for the rest of this procedure — its exact tool names are
    `list_pages`, `new_page`, `navigate_page`, `evaluate_script`, `close_page` (see "Procedure" below, written against
    this plugin, since it's the one this procedure has been verified against).
 2. If no chrome-devtools tool is found, look for tool names containing `firefox-devtools`. If found, use
    **firefox-devtools-mcp** instead, mapping the same procedure onto its equivalent tools (open/navigate a page,
-   evaluate a script in page context, close the page) — the exact tool names may differ from chrome-devtools-mcp's,
-   but every step below has a direct equivalent in any browser-automation MCP server; adapt tool names, not the
-   underlying checks.
+   evaluate a script in page context, close the page) — the exact tool names may differ from chrome-devtools-mcp's, but
+   every step below has a direct equivalent in any browser-automation MCP server; adapt tool names, not the underlying
+   checks.
 3. If neither is found, **stop immediately** and return:
 
 ```
@@ -52,8 +52,8 @@ in validate-diagrams.mjs. Install either plugin to enable this check.
 
 Do not treat a missing plugin as an error, do not retry, and do not ask the user to install anything — this is the
 expected outcome in most environments and the calling skill treats it as a clean skip, not a failure. Do not attempt
-both plugins' tools when one has already succeeded — pick whichever is found first (chrome-devtools-mcp takes
-priority when both happen to be installed, purely because this procedure has been empirically verified against it;
+both plugins' tools when one has already succeeded — pick whichever is found first (chrome-devtools-mcp takes priority
+when both happen to be installed, purely because this procedure has been empirically verified against it;
 firefox-devtools-mcp is not a second-class fallback, just the untested one) and use only that one for the rest of the
 run.
 
@@ -70,8 +70,8 @@ passing checks, since overlap isn't the relevant failure mode for their layouts.
 ## Procedure
 
 Written against chrome-devtools-mcp's tool names (`new_page`, `navigate_page`, `evaluate_script`, `close_page`); if
-running against firefox-devtools-mcp instead, use that plugin's equivalent tools for each of the same steps — every
-step below is a generic browser-automation primitive (open a page, evaluate JS in page context, close the page), not
+running against firefox-devtools-mcp instead, use that plugin's equivalent tools for each of the same steps — every step
+below is a generic browser-automation primitive (open a page, evaluate JS in page context, close the page), not
 something specific to one plugin's API shape.
 
 1. Open the preview URL in a new page (`new_page`, or `navigate_page` against an existing one).
@@ -81,30 +81,29 @@ something specific to one plugin's API shape.
    seconds, rather than assuming a fixed delay is enough.
 3. For each in-scope diagram (`section#diagram-{id}`), run **two** checks — shape-vs-shape (structural node overlap)
    and label-vs-label (relationship/edge text collision, a distinct and equally real failure mode confirmed for C4
-   diagrams — see below). Do not skip the second check for C4 diagrams: a diagram can have zero shape overlap and
-   still be visually broken by colliding relationship labels.
+   diagrams — see below). Do not skip the second check for C4 diagrams: a diagram can have zero shape overlap and still
+   be visually broken by colliding relationship labels.
 
    **3a. Shape-vs-shape overlap** — selector depends on diagram type, verified against actual rendered output rather
-   than assumed from Mermaid's general conventions (C4 in particular does **not** follow the class-name convention
-   other diagram types use):
-   - `flowchart`/`graph`/`stateDiagram-v2`/`architecture-beta`: `g.node` (exclude `cluster`, `edge`, `edgeLabel`
-     classes).
-   - `classDiagram`: `g.classGroup`.
-   - `erDiagram`: elements whose class contains `entity` (exact class name varies by Mermaid version).
-   - `C4Context`/`C4Container`: **no distinguishing class or id exists on shape elements** — confirmed empirically
-     (Mermaid's C4 renderer draws each Person/System/Container as a bare `<rect>` with no `class`/`id`). Select
-     `svg rect` directly, filtered to `width > 20 && height > 20` to drop tiny decorative rects, and further drop any
-     rect whose area is large enough to be a `System_Boundary` container (it legitimately contains its children —
-     check containment, not just size, before excluding one).
-   - Compute `getBoundingClientRect()` for each candidate; skip a pair if one is a DOM ancestor/descendant of the
-     other (a `System_Boundary` legitimately contains its members) or if one candidate's rect is ≥95% contained
-     within the other's (same containment case, caught geometrically for the C4 rect-only selector where DOM
-     ancestry doesn't apply the same way). Otherwise flag the pair if the overlap area exceeds **15% of the smaller
-     element's area**.
+   than assumed from Mermaid's general conventions (C4 in particular does **not** follow the class-name convention other
+   diagram types use):
+    - `flowchart`/`graph`/`stateDiagram-v2`/`architecture-beta`: `g.node` (exclude `cluster`, `edge`, `edgeLabel`
+      classes).
+    - `classDiagram`: `g.classGroup`.
+    - `erDiagram`: elements whose class contains `entity` (exact class name varies by Mermaid version).
+    - `C4Context`/`C4Container`: **no distinguishing class or id exists on shape elements** — confirmed empirically
+      (Mermaid's C4 renderer draws each Person/System/Container as a bare `<rect>` with no `class`/`id`). Select
+      `svg rect` directly, filtered to `width > 20 && height > 20` to drop tiny decorative rects, and further drop any
+      rect whose area is large enough to be a `System_Boundary` container (it legitimately contains its children — check
+      containment, not just size, before excluding one).
+    - Compute `getBoundingClientRect()` for each candidate; skip a pair if one is a DOM ancestor/descendant of the other
+      (a `System_Boundary` legitimately contains its members) or if one candidate's rect is ≥95% contained within the
+      other's (same containment case, caught geometrically for the C4 rect-only selector where DOM ancestry doesn't
+      apply the same way). Otherwise flag the pair if the overlap area exceeds **15% of the smaller element's area**.
 
    **3b. Label-vs-label collision** — checks every `<text>` element in the diagram's SVG (not just shape-owned text)
-   pairwise for overlap, using a **much smaller threshold than 3a** since two adjacent-but-distinct labels merging
-   into unreadable run-on text is a real defect even at a few pixels of overlap (unlike shape overlap, where small
+   pairwise for overlap, using a **much smaller threshold than 3a** since two adjacent-but-distinct labels merging into
+   unreadable run-on text is a real defect even at a few pixels of overlap (unlike shape overlap, where small
    anti-aliasing overlaps are normal). Compute `getBoundingClientRect()` for every `text` element with non-empty
    `textContent`; for every pair with *different* text content (identical content at different positions is a
    mirrored/duplicate render artifact, not a collision), flag it if the intersection area is more than a few square
@@ -112,7 +111,8 @@ something specific to one plugin's API shape.
    against each other with no gap, which the DOM otherwise doesn't distinguish from a real overlap). Report each
    colliding pair's text content verbatim so the finding is self-explanatory.
 
-   Return `{ diagramId, shapeCandidateCount, shapeOverlaps: [{ aLabel, bLabel, overlapPct }], labelCollisions: [{ a, b }] }`.
+   Return
+   `{ diagramId, shapeCandidateCount, shapeOverlaps: [{ aLabel, bLabel, overlapPct }], labelCollisions: [{ a, b }] }`.
 4. Collect results across all in-scope diagrams.
 5. Close the page (`close_page`) before returning.
 

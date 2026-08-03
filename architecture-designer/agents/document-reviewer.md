@@ -161,8 +161,9 @@ the schema, connection config, or migration strategy detail.
 
 **C17 — Cost Estimation section present, with sourced figures**
 Per `references/document-template.md` section 16, required for every document. The document must include a "Cost
-Estimation" section with a Cost Breakdown table using the exact header row from `references/document-review-checklist.md`,
-a monthly total, an annual total, scale-sensitivity notes, and a budget reconciliation statement, from
+Estimation" section with a Cost Breakdown table using the exact header row from
+`references/document-review-checklist.md`, a monthly total, an annual total, scale-sensitivity notes, and a budget
+reconciliation statement, from
 `stage5.costEstimate` in the requirements summary. Every row's Source column must read either a WebSearch-verified
 citation with a date, or the literal `"estimate — verify at implementation time"` — FAIL if any row has a bare number
 with no source tag, or if the section is missing/a placeholder with no actual component named. A genuinely zero-cost
@@ -180,9 +181,9 @@ Per `references/document-template.md` section 18, required for every document. T
 "Architecture Decision Records" section with a pointer table using the exact header row from
 `references/document-review-checklist.md`, populated from the `adrs` array in the requirements summary — one row per
 entry, including superseded ones with their actual `Superseded by ADR-{NNNN}` status. FAIL if the section is missing, if
-a row's status doesn't match the corresponding `adrs` entry, or if an `adrs` entry has no corresponding row. This section
-is a pointer table only — it must not duplicate an ADR's own Context/Decision/Consequences prose; a document doing so
-is not itself a FAIL condition for this check, but note it as a C6-style accuracy observation if seen.
+a row's status doesn't match the corresponding `adrs` entry, or if an `adrs` entry has no corresponding row. This
+section is a pointer table only — it must not duplicate an ADR's own Context/Decision/Consequences prose; a document
+doing so is not itself a FAIL condition for this check, but note it as a C6-style accuracy observation if seen.
 
 **C15 — Low-Level Design section present**
 Per `references/document-template.md` section 11, required for every document. The document must include a "Low-Level

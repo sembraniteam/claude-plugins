@@ -10,7 +10,9 @@ This skill turns an approved architecture document into a working project skelet
 configuration files, and infrastructure files. It always proposes a folder structure first and waits for the user's
 confirmation before writing any files.
 
-**Scripts directory:** see "Path resolution" at the bottom of this file.
+**Scripts and shared-reference paths:** this file has no `references/` of its own and points into the sibling `design`
+skill's `references/` directory throughout (first used just below, in "Before starting"). See "Path resolution" at the
+bottom of this file for how both `<scripts_dir>` and `design/references/...` paths resolve.
 
 ---
 
@@ -156,19 +158,26 @@ spawn-sequence section's own contingency for a stuck/unresponsive `implementatio
 "Implementation-planner → architecture-implementer spawn sequence" step 2: keep resolving the open question with the
 user and re-spawn once ready).
 
-Proceed to Step 5 once the final part (or the only part, if the plan was not split) reports `Status: Complete` — note
-that this self-report is independently re-verified against disk by the `SubagentStop` hook
-(`hooks/verify-implementer-completion.sh`) before the agent is even allowed to stop, so a run that appears to hang
-after reporting completion may still be resolving a discrepancy that hook found.
+Once the final part (or the only part, if the plan was not split) reports `Status: Complete` — note that this
+self-report is independently re-verified against disk by the `SubagentStop` hook
+(`hooks/verify-implementer-completion.sh`) before the agent is even allowed to stop, so a run that appears to hang after
+reporting completion may still be resolving a discrepancy that hook found — run
+`design/references/session-schema.md` section "Implementation-planner → architecture-implementer spawn sequence" step 5:
+the `implementation-reviewer`/`implementation-fixer` cycle. Proceed to Step 5 below only once that cycle's exit
+condition is met (`IMPLEMENTATION REVIEW PASSED`, or its 3-cycle cap reached) — `Status: Complete` on the plan means
+`architecture-implementer` believes its own work is done, not that an independent check has confirmed it yet.
 
 ---
 
 ## Step 5 — Wrap up
 
-**If the agent's summary included a "Requirements not yet reflected in code" section**: surface those gaps to the user
-explicitly and before the generic wrap-up list below — they represent requirements the plan never covered, not files
-that failed to write. Suggest running `/architecture-designer:review` to fold them into a remediation plan if the user
-wants them addressed.
+**If `implementation-reviewer`/`implementation-fixer` cycled at all** (the review cycle above found at least one FAIL on
+its first pass): most gaps `architecture-implementer`'s own "Requirements not yet reflected in code" section listed
+should already be closed by the fixer — surface only what's left. If the cycle reached `IMPLEMENTATION REVIEW PASSED`,
+there should be nothing left to surface here at all. If it hit the 3-cycle cap without passing, surface the final
+report's remaining FAIL items explicitly and before the generic wrap-up list below, and suggest running
+`/architecture-designer:review` to fold them into a remediation plan if the user wants them addressed — the same
+fallback as before, now scoped to only what an independent review couldn't close automatically.
 
 Once the agent reports completion, remind the user:
 
@@ -184,11 +193,11 @@ Once the agent reports completion, remind the user:
    an independent audit sized to value at risk (`design/references/web3-guide.md` dimension 7) before any deployment
    holding real value, and stage the rollout through testnet and a capped-value mainnet deployment before committing
    full value. This skill never runs a deploy step itself; that decision and its execution are entirely the user's.
-8. **Offline-first projects only** (the document has an "Offline-First Considerations" section): before deployment,
-   run the three tests `design/references/offline-first-guide.md` section 6 names — two clients editing the same
-   record while both offline then reconnecting (conflict path), a
-   deliberately wrong device clock (server-assigned-timestamp fix), and a push retried after a dropped response
-   (mutation-ID idempotency) — the skeleton implements the sync mechanics but does not run these tests itself.
+8. **Offline-first projects only** (the document has an "Offline-First Considerations" section): before deployment, run
+   the three tests `design/references/offline-first-guide.md` section 6 names — two clients editing the same record
+   while both offline then reconnecting (conflict path), a deliberately wrong device clock (server-assigned-timestamp
+   fix), and a push retried after a dropped response (mutation-ID idempotency) — the skeleton implements the sync
+   mechanics but does not run these tests itself.
 
 Let the user know they can run `/architecture-designer:review` at any time to revise the architecture and re-run this
 skill to update the implementation.

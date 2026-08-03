@@ -221,9 +221,9 @@ shapes, `"3"` or `"4"` for simpler shapes.
 labels land on top of each other or on top of a shape's own description text. This is a **different, verified failure
 mode** (confirmed via rendered-DOM inspection): Mermaid's C4 renderer has no automatic collision avoidance for
 relationship labels — it places each one at its edge's midpoint independent of every other edge, so two unrelated
-relationships whose midpoints happen to coincide produce visually merged, unreadable text (e.g. two labels rendering
-as one run-on string with no space between them). This gets more likely as the number of `Rel()` lines converging
-on/from one shape grows — a C4 Context diagram with 8-9 relationships is enough to trigger it.
+relationships whose midpoints happen to coincide produce visually merged, unreadable text (e.g. two labels rendering as
+one run-on string with no space between them). This gets more likely as the number of `Rel()` lines converging on/from
+one shape grows — a C4 Context diagram with 8-9 relationships is enough to trigger it.
 
 Two tools fix this, in order of effort:
 
@@ -251,14 +251,14 @@ Two tools fix this, in order of effort:
 
 ### Rule 7 — Avoid ELK for sibling subgraphs connected by inter-subgraph edges
 
-**Verified failure mode** (empirically reproduced and confirmed via rendered-DOM inspection, not a theoretical
-concern): when a `flowchart` has 2 or more *sibling* subgraphs — same nesting level, not one nested inside another —
-connected to each other by edges that run from a node inside one subgraph to a node inside a different one (the
-CI/CD Pipeline Diagram's stage-to-stage shape is the canonical example: `CI` → `CD_Dev` → `CD_Staging` → `CD_Prod`),
-ELK's edge routing can send that connecting edge on a wildly indirect path — looping back through an entirely
-unrelated, already-passed subgraph and several of its nodes — rather than a short, direct line to the next stage. This
-is worse than the node-overlap problem ELK exists to solve, and it does not go away by adding more spacing or
-switching ELK's node-count threshold; the routing itself is wrong for this cluster topology.
+**Verified failure mode** (empirically reproduced and confirmed via rendered-DOM inspection, not a theoretical concern):
+when a `flowchart` has 2 or more *sibling* subgraphs — same nesting level, not one nested inside another — connected to
+each other by edges that run from a node inside one subgraph to a node inside a different one (the CI/CD Pipeline
+Diagram's stage-to-stage shape is the canonical example: `CI` → `CD_Dev` → `CD_Staging` → `CD_Prod`), ELK's edge routing
+can send that connecting edge on a wildly indirect path — looping back through an entirely unrelated, already-passed
+subgraph and several of its nodes — rather than a short, direct line to the next stage. This is worse than the
+node-overlap problem ELK exists to solve, and it does not go away by adding more spacing or switching ELK's node-count
+threshold; the routing itself is wrong for this cluster topology.
 
 **Rule**: for a flowchart with 2+ sibling subgraphs joined by inter-subgraph edges, default to plain Dagre (omit the
 `layout: 'elk'` init directive entirely), regardless of total node count. Reserve ELK (Rule 1) for diagrams where the
@@ -267,10 +267,10 @@ region → VPC → subnet nesting and no sibling-subgraph cross-edges is a legit
 sequential stage subgraphs is not.
 
 **If node overlap appears *within* a single stage subgraph** once ELK is removed (rare — Dagre handles a handful of
-nodes in a line fine), reach for Rule 2's spacing overrides first; only reintroduce ELK scoped to that specific
-diagram if spacing alone doesn't resolve it, and re-verify the inter-subgraph edges still route cleanly afterward (the
-failure mode above can reappear the moment ELK is back in play, even if the original reason for adding it was
-unrelated to the inter-subgraph edges).
+nodes in a line fine), reach for Rule 2's spacing overrides first; only reintroduce ELK scoped to that specific diagram
+if spacing alone doesn't resolve it, and re-verify the inter-subgraph edges still route cleanly afterward (the failure
+mode above can reappear the moment ELK is back in play, even if the original reason for adding it was unrelated to the
+inter-subgraph edges).
 
 ---
 
@@ -1132,14 +1132,14 @@ staged release process with security scans or manual gates.
 
 **Conventions**:
 
-- **Do not default to `%%{init: {'layout': 'elk'}}%%`** for this diagram shape — see "Preventing Node Overlap" Rule 7.
-  A CI/CD pipeline is exactly the shape that rule warns about: sibling stage subgraphs (CI, dev, staging, prod)
+- **Do not default to `%%{init: {'layout': 'elk'}}%%`** for this diagram shape — see "Preventing Node Overlap" Rule 7. A
+  CI/CD pipeline is exactly the shape that rule warns about: sibling stage subgraphs (CI, dev, staging, prod)
   connected by inter-subgraph edges (`Push --> DeployDev`, `DevOK -->|Yes| DeployStaging`, ...). ELK has a verified
   failure mode here — those inter-subgraph edges can route through many unrelated nodes far outside the direct path
-  (confirmed: an edge meant to go from one stage's health-check gate to the next stage's deploy step instead looped
-  back through the entire CI subgraph). Default Dagre (no `layout` override) renders this shape cleanly. Only add ELK
-  if a specific stage subgraph itself is deeply nested (3+ levels) or so dense internally that Dagre overlaps nodes
-  *within* one subgraph — never as a default for the pipeline shape as a whole.
+  (confirmed: an edge meant to go from one stage's health-check gate to the next stage's deploy step instead looped back
+  through the entire CI subgraph). Default Dagre (no `layout` override) renders this shape cleanly. Only add ELK if a
+  specific stage subgraph itself is deeply nested (3+ levels) or so dense internally that Dagre overlaps nodes *within*
+  one subgraph — never as a default for the pipeline shape as a whole.
 - Group stages into swimlane subgraphs if CI and CD run on different platforms (CI: GitHub Actions, CD: Argo CD)
 - Dashed arrows (`-.->`) for rollback or failure notification paths
 - Color-code environments with Mermaid `style` if useful (green for prod, orange for staging)

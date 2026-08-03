@@ -34,21 +34,21 @@ monolith, they map onto internal module boundaries within the single deployable,
 
 ## Step 2 — Identify aggregates within each context
 
-Within each bounded context, identify aggregates: a cluster of entities and **value objects** (immutable objects
-defined entirely by their attributes, with no identity of their own — e.g. a `Money` amount+currency pair, an
-`Address`) treated as a single unit for data changes, with one entity as the **aggregate root** (the only member
-other code is allowed to reference directly) and a set of **invariants** — business rules that must hold true at the
-end of every transaction touching the aggregate (e.g. "an Order's line-item total must equal its stated total," "a
-StockItem's quantity must never go negative").
+Within each bounded context, identify aggregates: a cluster of entities and **value objects** (immutable objects defined
+entirely by their attributes, with no identity of their own — e.g. a `Money` amount+currency pair, an
+`Address`) treated as a single unit for data changes, with one entity as the **aggregate root** (the only member other
+code is allowed to reference directly) and a set of **invariants** — business rules that must hold true at the end of
+every transaction touching the aggregate (e.g. "an Order's line-item total must equal its stated total," "a StockItem's
+quantity must never go negative").
 
 **Sizing rule**: an aggregate should be the smallest cluster that still lets every invariant be enforced within one
 transaction. A single aggregate containing the entire domain graph makes every write contend on the same lock; an
 aggregate so small that enforcing one invariant requires touching three separate aggregates in one transaction pushes
 consistency logic into application code where it's easy to get wrong. When genuinely unsure, prefer the smaller
-aggregate and handle cross-aggregate consistency via a **domain event** (an immutable record of something that
-already happened in the domain — e.g. `OrderPlaced` — published so other aggregates or bounded contexts can react to
-it asynchronously) or a follow-up command rather than merging them — the same "smallest change that closes the
-requirement" bias this plugin applies elsewhere.
+aggregate and handle cross-aggregate consistency via a **domain event** (an immutable record of something that already
+happened in the domain — e.g. `OrderPlaced` — published so other aggregates or bounded contexts can react to it
+asynchronously) or a follow-up command rather than merging them — the same "smallest change that closes the requirement"
+bias this plugin applies elsewhere.
 
 ## Step 3 — Record the ubiquitous language
 

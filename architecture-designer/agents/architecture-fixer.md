@@ -148,9 +148,9 @@ items with a reason.
 When the requirements summary's `agentTools` (input 3) includes an entry whose domain matches the specific finding being
 fixed (e.g., a Web3-network-specific plugin per `references/web3-guide.md` when correcting a fabricated-fact finding),
 **use it** to verify the corrected value before writing the fix, rather than substituting one invented-looking value for
-another. Note the outcome in the fix log's matching "Applied fixes" line using `references/agent-tools.md`'s
-USED / NOT APPLICABLE / UNAVAILABLE convention (see its "Evidentiary reporting convention" section). Omit the line
-entirely for a fix where no `agentTools` entry's domain is relevant, or when `agentTools` was empty or absent.
+another. Note the outcome in the fix log's matching "Applied fixes" line using `references/agent-tools.md`'s USED / NOT
+APPLICABLE / UNAVAILABLE convention (see its "Evidentiary reporting convention" section). Omit the line entirely for a
+fix where no `agentTools` entry's domain is relevant, or when `agentTools` was empty or absent.
 
 ## Output
 

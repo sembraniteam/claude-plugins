@@ -22,12 +22,12 @@ production under real load — the most expensive place to discover it's wrong.
 State the planned ratio and scope at each level, sized to the project — a small monolith may legitimately skip the
 contract-test row entirely:
 
-| Level | Scope | Ownership |
-|-------|-------|-----------|
-| Unit | One test file per business rule (Step 10 group 2) and per aggregate invariant (`domainModel`) — the majority of the suite | `architecture-implementer`, per `references/session-schema.md`'s implementation task-group table ("Write test files") |
-| Integration | One test per API contract group (Step 10 group 1), exercising the real database (or a test-container instance) rather than a mock | Same |
-| Contract | Microservices/event-driven only — one per inter-service contract (Step 10 group 4), verifying the producer/consumer schema agreement named there | Same; omit entirely for a monolith, the same condition Step 10 group 4 itself omits |
-| End-to-end | One per **core feature** (`references/document-template.md` section 2) — the primary flow only, not every branch; branch coverage belongs at the unit/integration level | Same, or a separate E2E suite if the confirmed stack names one (e.g. Playwright/Cypress) |
+| Level       | Scope                                                                                                                                                                   | Ownership                                                                                                             |
+|-------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------|
+| Unit        | One test file per business rule (Step 10 group 2) and per aggregate invariant (`domainModel`) — the majority of the suite                                               | `architecture-implementer`, per `references/session-schema.md`'s implementation task-group table ("Write test files") |
+| Integration | One test per API contract group (Step 10 group 1), exercising the real database (or a test-container instance) rather than a mock                                       | Same                                                                                                                  |
+| Contract    | Microservices/event-driven only — one per inter-service contract (Step 10 group 4), verifying the producer/consumer schema agreement named there                        | Same; omit entirely for a monolith, the same condition Step 10 group 4 itself omits                                   |
+| End-to-end  | One per **core feature** (`references/document-template.md` section 2) — the primary flow only, not every branch; branch coverage belongs at the unit/integration level | Same, or a separate E2E suite if the confirmed stack names one (e.g. Playwright/Cypress)                              |
 
 ## 2. Load and performance testing
 
@@ -46,13 +46,13 @@ exhaustion the shorter scenarios wouldn't surface).
 **Tool per stack** — name a specific tool, the same specificity discipline Stage 5 applies to every other technology
 choice:
 
-| Stack context | Tool |
-|---------------|------|
-| HTTP APIs, scriptable in JS | k6 |
-| HTTP APIs, Java/JVM ecosystem already in the stack | Gatling |
-| HTTP APIs, Python ecosystem already in the stack | Locust |
-| Enterprise/legacy, existing JMeter expertise on the team (Stage 3) | JMeter |
-| WebSocket/streaming connections | k6 (native WS support) or Artillery |
+| Stack context                                                      | Tool                                |
+|--------------------------------------------------------------------|-------------------------------------|
+| HTTP APIs, scriptable in JS                                        | k6                                  |
+| HTTP APIs, Java/JVM ecosystem already in the stack                 | Gatling                             |
+| HTTP APIs, Python ecosystem already in the stack                   | Locust                              |
+| Enterprise/legacy, existing JMeter expertise on the team (Stage 3) | JMeter                              |
+| WebSocket/streaming connections                                    | k6 (native WS support) or Artillery |
 
 Skip this section's tool selection only when Stage 2 recorded no Performance/Scalability Quality Attribute Scenario at
 all — state that explicitly rather than inventing a target with no NFR behind it.
@@ -62,13 +62,13 @@ all — state that explicitly rather than inventing a target with no NFR behind 
 One test scenario per resilience pattern actually named in Stage 5 item 10 (`references/resilience-guide.md`) — do not
 invent a scenario for a pattern the stack doesn't use:
 
-| Stage 5 pattern named | Chaos scenario |
-|------------------------|-----------------|
-| Retry with backoff | Inject transient failure (e.g. via a fault-injection proxy) on a dependency call; verify the retry policy's max-attempts and backoff timing match what was specified |
-| Circuit breaker | Force a dependency's failure rate past the configured threshold; verify the breaker opens, fails fast (no hanging calls), and the response matches the `DEPENDENCY_UNAVAILABLE` error-catalog entry (`references/lld-guide.md`) |
-| Timeout budget | Inject latency exceeding the configured budget on a dependency call; verify the caller aborts at the budget, not later |
-| Graceful degradation | Simulate the non-critical dependency being down; verify the degraded-but-usable response, not a full request failure |
-| Bulkhead / connection-pool isolation | Saturate one dependency's pool; verify calls to a different, healthy dependency are unaffected |
+| Stage 5 pattern named                | Chaos scenario                                                                                                                                                                                                                  |
+|--------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Retry with backoff                   | Inject transient failure (e.g. via a fault-injection proxy) on a dependency call; verify the retry policy's max-attempts and backoff timing match what was specified                                                            |
+| Circuit breaker                      | Force a dependency's failure rate past the configured threshold; verify the breaker opens, fails fast (no hanging calls), and the response matches the `DEPENDENCY_UNAVAILABLE` error-catalog entry (`references/lld-guide.md`) |
+| Timeout budget                       | Inject latency exceeding the configured budget on a dependency call; verify the caller aborts at the budget, not later                                                                                                          |
+| Graceful degradation                 | Simulate the non-critical dependency being down; verify the degraded-but-usable response, not a full request failure                                                                                                            |
+| Bulkhead / connection-pool isolation | Saturate one dependency's pool; verify calls to a different, healthy dependency are unaffected                                                                                                                                  |
 
 Skip this section entirely for a monolith with no external dependencies — the same condition
 `references/resilience-guide.md` itself uses to skip Stage 5 item 10.
@@ -107,14 +107,14 @@ cases are already covered by the unit/integration levels above.
 
 Write the confirmed plan to `session.json`'s top-level `testStrategy` key (create it) at Step 10b, per
 `references/session-schema.md`. It is embedded in the architecture document's **Test Strategy** section
-(`references/document-template.md`). `review/SKILL.md`'s "Update Test Strategy" step (4d.6) re-runs this guide whenever a
-revision changes an NFR, the capacity plan, the resilience/rate-limiting strategy, or a core feature — the same
+(`references/document-template.md`). `review/SKILL.md`'s "Update Test Strategy" step (4d.6) re-runs this guide whenever
+a revision changes an NFR, the capacity plan, the resilience/rate-limiting strategy, or a core feature — the same
 trigger set that already re-runs the LLD update (4d.5), applied here since the targets above are sourced from exactly
 those same inputs.
 
 ## Skip condition
 
 None. Every project has at minimum a UAT checklist (core features always exist) and a test pyramid (unit tests always
-apply, even to a system with no external dependencies and no public API). Load, resilience, and security sub-sections may
-each be legitimately empty per their own skip conditions above — state that explicitly rather than omitting the section
-heading.
+apply, even to a system with no external dependencies and no public API). Load, resilience, and security sub-sections
+may each be legitimately empty per their own skip conditions above — state that explicitly rather than omitting the
+section heading.

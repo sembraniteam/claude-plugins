@@ -1,31 +1,39 @@
 # sembraniteam-claude-plugins
 
-A collection of [Claude Code](https://claude.ai/code) plugins for automating git workflows, release documentation, debugging, software architecture design, performance investigation, and security auditing.
+A collection of [Claude Code](https://claude.ai/code) plugins for automating git workflows, release documentation,
+debugging, software architecture design, performance investigation, and security auditing.
 
 ## Plugins
 
 ### [architecture-designer](./architecture-designer)
 
-Guided architecture and infrastructure design workflow — from requirements gathering to code implementation — with interactive Mermaid diagrams, browser preview, and structured documentation.
+Guided architecture and infrastructure design workflow — from requirements gathering to code implementation — with
+interactive Mermaid diagrams, browser preview, and structured documentation.
 
-| Component                          | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-|------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `/architecture-designer:design`    | Six-stage interactive session — requirements → analysis (incl. domain edge-case elicitation) → feasibility → capacity → technology → architecture (domain modeling · DB · IaC · CI/CD · diagrams) — followed by review, preview, low-level design, and test strategy steps; generates Mermaid diagrams, browser preview, IaC module plan, CI/CD pipeline design, API contracts, business rules, error catalog, cost estimate, test strategy, versioned architecture document with ADRs, and optional code scaffold                                                                                                                                                                                                                                                                        |
-| `/architecture-designer:review`    | Review existing architecture from document, codebase, or both; detect design-vs-implementation drift, apply revisions, and save a new versioned document                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| `/architecture-designer:implement` | Turn an approved architecture document into a working project skeleton; detects existing project structure, proposes folder layout for confirmation, then generates models, routes, config, and infrastructure files                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| `architecture-reviewer` agent      | Evaluates technical correctness across diagrams, alignment with requirements, and risks (SPOF, bottlenecks, security gaps, observability, DR); returns Critical / Major / Minor findings with a REVIEW PASSED / CONDITIONALLY PASSED / FAILED verdict                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `architecture-fixer` agent         | Applies targeted fixes to Mermaid diagrams based on architecture-reviewer findings; updates `diagrams.json` in place and returns a fix log                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| `visual-diagram-verifier` agent    | Optional, best-effort: opens the running browser preview via chrome-devtools-mcp/firefox-devtools-mcp (whichever is installed) and checks whether diagrams actually render without overlapping elements — real rendered-geometry, not a syntax/heuristic check; reports `SKIPPED` cleanly if neither plugin is installed                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| `database-designer` agent          | Designs the full data layer: engine selection, normalized schema, ERD, index plan, transaction/concurrency-control strategy for high-contention entities, secure connection configuration, and migration strategy; output is incorporated directly into the architecture document                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| `database-reviewer` agent          | Audits database-designer output across nine dimensions: engine fit, schema/3NF, ERD accuracy, index completeness, security config, migration strategy, and (when applicable) Web3 data-modeling, offline-sync data integrity, and agent-tools-based independent verification — also checks soft-delete correctness and, when a domain model exists, aggregate-boundary correctness; returns DATABASE REVIEW PASSED / FAILED                                                                                                                                                                                                                                                                                                                                                             |
-| `database-fixer` agent             | Applies targeted corrections to schema, ERD, index plan, transaction/concurrency strategy, and connection config; writes the corrected ERD and `indexPlan` directly into `diagrams.json` (same pattern as `architecture-fixer`, renaming the legacy `companionTable` key to `indexPlan` if found), and returns the corrected schema, ERD, index plan, transaction/concurrency strategy, and connection config for document embedding                                                                                                                                                                                                                                                                                                                                                    |
-| `document-reviewer` agent          | Audits saved documents for format compliance (F1–F7) and content completeness (C1–C19, including core features, IaC, CI/CD, decentralized-architecture, offline-first, domain-model, trade-off/risk-analysis, cost-estimation, test-strategy, and ADR-pointer sections); returns DOCUMENT REVIEW PASSED / FAILED                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| `document-fixer` agent             | Fixes specific F1–F7 format and C1–C19 content failures in the architecture document based on document-reviewer findings; overwrites the draft in place                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `implementation-planner` agent     | Resolves implementation ambiguities, proposes a folder structure, waits for confirmation, and saves the implementation plan (split into parts for large projects); does not write application code                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| `architecture-implementer` agent   | Reads the confirmed implementation plan and the approved document, then scaffolds project code (models from ERD, handlers from sequence diagrams) and infrastructure files, checkpointing each file's checkbox in the plan immediately as it's written (write-through) so an interrupted run resumes without redoing completed work; refuses to run without a confirmed plan                                                                                                                                                                                                                                                                                                                                                                                                               |
-| Hooks (7)                          | Mechanical enforcement layered on top of the skill/agent prompts: `PreToolUse` on `Task` blocks spawning `architecture-implementer` without an on-disk plan `Status: In progress`; `PreToolUse` on `Bash` blocks a chain deploy/broadcast command while any plan is still `Status: In progress`; `PostToolUse` runs `validate-diagrams.mjs`/`validate-session.py` on every write to `diagrams.json`/`session.json`; `SubagentStop` re-verifies `architecture-implementer`'s self-reported `Status: Complete` against the files actually on disk before letting it stop; `SessionStart` (on resume) and `UserPromptSubmit` surface and keep checkpointing an unfinished mid-pipeline session; `PreCompact` remains as a secondary reminder — see the plugin's own README for the full table |
+| Component                          | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+|------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `/architecture-designer:design`    | Six-stage interactive session — requirements → analysis (incl. domain edge-case elicitation) → feasibility → capacity → technology → architecture (domain modeling · DB · IaC · CI/CD · diagrams) — followed by review, preview, low-level design, and test strategy steps; generates Mermaid diagrams, browser preview, IaC module plan, CI/CD pipeline design, API contracts, business rules, error catalog, cost estimate, test strategy, versioned architecture document with ADRs, and optional code scaffold                                                                                                                                                                                                                                                                                                                           |
+| `/architecture-designer:review`    | Review existing architecture from document, codebase, or both (codebase scans delegate to `codebase-reconstructor`); detect design-vs-implementation drift, apply revisions, and save a new versioned document — every review completed, revised or declined, is logged to `reviewHistory` so a later review doesn't rediscover the same drift from scratch                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `/architecture-designer:implement` | Turn an approved architecture document into a working project skeleton; detects existing project structure, proposes folder layout for confirmation, then generates models, routes, config, and infrastructure files, independently re-verified by `implementation-reviewer` before the skeleton is presented as finished                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `architecture-reviewer` agent      | Evaluates technical correctness across diagrams, alignment with requirements, and risks (SPOF, bottlenecks, security gaps, observability, DR); returns Critical / Major / Minor findings with a REVIEW PASSED / CONDITIONALLY PASSED / FAILED verdict                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `architecture-fixer` agent         | Applies targeted fixes to Mermaid diagrams based on architecture-reviewer findings; updates `diagrams.json` in place and returns a fix log                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `visual-diagram-verifier` agent    | Optional, best-effort: opens the running browser preview via chrome-devtools-mcp/firefox-devtools-mcp (whichever is installed) and checks whether diagrams actually render without overlapping elements — real rendered-geometry, not a syntax/heuristic check; reports `SKIPPED` cleanly if neither plugin is installed                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `codebase-reconstructor` agent     | Exhaustively scans an existing codebase for `/architecture-designer:review`'s codebase-based path — every workspace/package, service/module, direct dependency, route/entry point, database entity, and infrastructure/CI file — returning a structured Reconstructed Architecture Summary with explicit Ambiguities and Unclassified-files sections; read-only                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `database-designer` agent          | Designs the full data layer: engine selection, normalized schema, ERD, index plan, transaction/concurrency-control strategy for high-contention entities, secure connection configuration, and migration strategy; output is incorporated directly into the architecture document                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `database-reviewer` agent          | Audits database-designer output across nine dimensions: engine fit, schema/3NF, ERD accuracy, index completeness, security config, migration strategy, and (when applicable) Web3 data-modeling, offline-sync data integrity, and agent-tools-based independent verification — also checks soft-delete correctness and, when a domain model exists, aggregate-boundary correctness; returns DATABASE REVIEW PASSED / FAILED                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `database-fixer` agent             | Applies targeted corrections to schema, ERD, index plan, transaction/concurrency strategy, and connection config; writes the corrected ERD and `indexPlan` directly into `diagrams.json` (same pattern as `architecture-fixer`, renaming the legacy `companionTable` key to `indexPlan` if found), and returns the corrected schema, ERD, index plan, transaction/concurrency strategy, and connection config for document embedding                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `document-reviewer` agent          | Audits saved documents for format compliance (F1–F7) and content completeness (C1–C19, including core features, IaC, CI/CD, decentralized-architecture, offline-first, domain-model, trade-off/risk-analysis, cost-estimation, test-strategy, and ADR-pointer sections); returns DOCUMENT REVIEW PASSED / FAILED                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `document-fixer` agent             | Fixes specific F1–F7 format and C1–C19 content failures in the architecture document based on document-reviewer findings; overwrites the draft in place                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `implementation-planner` agent     | Resolves implementation ambiguities, proposes a folder structure, waits for confirmation, and saves the implementation plan (split into parts for large projects); test coverage spans one file per model/route/non-trivial business rule, shared test helpers and fixtures where reused, and a mocked test per external integration verifying its resilience wrapping — does not write application code                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `architecture-implementer` agent   | Reads the confirmed implementation plan and the approved document, then scaffolds project code (models from ERD, handlers from sequence diagrams) and infrastructure files, checkpointing each file's checkbox in the plan immediately as it's written (write-through) so an interrupted run resumes without redoing completed work; refuses to run without a confirmed plan                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `implementation-reviewer` agent    | Independently re-verifies the generated code against the plan and document once `architecture-implementer` reports completion — plan-checklist accuracy, ERD/route conformance, requirements coverage, technology substitution, resilience/rate-limiting/transaction/pattern wiring, hardcoded secrets, and Web3 markers; returns IMPLEMENTATION REVIEW PASSED / FAILED; read-only                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `implementation-fixer` agent       | Applies targeted corrections to generated code based on `implementation-reviewer` findings; for a genuinely uncovered requirement, appends a new checklist item to the plan instead of leaving it unrecorded; briefly re-arms the plan's `Status: In progress` for the duration of its own write pass so the deploy-command hook it gates stays active                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Hooks (7)                          | Mechanical enforcement layered on top of the skill/agent prompts: `PreToolUse` on `Task` blocks spawning `architecture-implementer` without an on-disk plan `Status: In progress`; `PreToolUse` on `Bash` blocks a chain deploy/broadcast command while any plan is still `Status: In progress`; `PostToolUse` runs `validate-diagrams.mjs`/`validate-session.py` on every write to `diagrams.json`/`session.json`; `SubagentStop` re-verifies a self-reported `Status: Complete` (from either `architecture-implementer` or `implementation-fixer`) against the files actually on disk before letting the subagent stop; `SessionStart` (on resume) and `UserPromptSubmit` surface and keep checkpointing an unfinished mid-pipeline session; `PreCompact` remains as a secondary reminder — see the plugin's own README for the full table |
 
-**Prerequisites:** Node.js, Python 3, and `jq`. Run `npm install` in `architecture-designer/scripts/` once to enable full Mermaid diagram syntax validation and the browser preview — the session-completeness/port-finding/hashing scripts are stdlib-only Python and need no install step. `jq` is required by the plugin's command hooks (see "Hooks" above); every hook degrades to a silent no-op if it's missing, rather than failing
+**Prerequisites:** Node.js, Python 3, and `jq`. Run `npm install` in `architecture-designer/scripts/` once to enable
+full Mermaid diagram syntax validation and the browser preview — the session-completeness/port-finding/hashing scripts
+are stdlib-only Python and need no install step. `jq` is required by the plugin's command hooks (see "Hooks" above);
+every hook degrades to a silent no-op if it's missing, rather than failing
 
 ---
 
@@ -47,7 +55,9 @@ Generates and maintains `CHANGELOG.md` and platform-specific release notes from 
 
 ### [debugging-workflow](./debugging-workflow)
 
-Parallel hypothesis debugging — generates multiple root-cause hypotheses, investigates them concurrently in isolated git worktrees, arbitrates when fixes conflict, and applies the winning diff to the original branch. Development-phase tool only; never touches production.
+Parallel hypothesis debugging — generates multiple root-cause hypotheses, investigates them concurrently in isolated git
+worktrees, arbitrates when fixes conflict, and applies the winning diff to the original branch. Development-phase tool
+only; never touches production.
 
 | Component                            | Description                                                                                                                                                   |
 |--------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -63,7 +73,8 @@ Parallel hypothesis debugging — generates multiple root-cause hypotheses, inve
 
 ### [perfmind](./perfmind)
 
-Performance investigation assistant for web, mobile, desktop, and API applications. Guides structured investigations from raw evidence (profiler output, GC logs, screenshots, metrics) to prioritized, role-tailored recommendations.
+Performance investigation assistant for web, mobile, desktop, and API applications. Guides structured investigations
+from raw evidence (profiler output, GC logs, screenshots, metrics) to prioritized, role-tailored recommendations.
 
 | Component                          | Description                                                                                                                                           |
 |------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -95,7 +106,10 @@ Generates conventional commit messages and branch names from git context and use
 
 ### [security-auditor](./security-auditor)
 
-Structured security audit for development and production codebases. Maps every finding to a CWE ID and verifies dependency vulnerabilities against live CVE databases (NVD/OSV.dev/CISA KEV) via a bundled MCP server. CVE numbers only appear if returned by a tool call — never from model memory. Production mode enriches every CVE with EPSS exploitation probability and CISA KEV status.
+Structured security audit for development and production codebases. Maps every finding to a CWE ID and verifies
+dependency vulnerabilities against live CVE databases (NVD/OSV.dev/CISA KEV) via a bundled MCP server. CVE numbers only
+appear if returned by a tool call — never from model memory. Production mode enriches every CVE with EPSS exploitation
+probability and CISA KEV status.
 
 | Component                            | Description                                                                                                                                           |
 |--------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -148,19 +162,39 @@ cc plugin install https://github.com/sembraniteam/claude-plugins/security-audito
 /architecture-designer:design
 ```
 
-Claude walks you through six stages — requirements gathering, requirements analysis, feasibility and constraints, capacity planning, technology selection, and architecture and infrastructure design — followed by review, preview, and a low-level design step. Stage 6 covers domain modeling (Domain-Driven Design bounded contexts and aggregates) followed by four sub-phases in sequence — database schema (via `database-designer` agent), IaC tool selection and module structure, CI/CD pipeline design (platform, stages, branching strategy, environment promotion — both skipped for a project with no deployment target, e.g. a library or CLI tool), and Mermaid diagram generation. At each stage it summarizes what it heard and asks for confirmation before continuing. After all diagrams are reviewed, a Low-Level Design step produces API contracts (per sequence-diagram endpoint), business rules with pseudocode, DTOs, inter-service contracts (microservices only), and an error catalog — all confirmed section by section before saving. The browser preview opens at `http://localhost:{port}` with zoom, pan, and per-diagram 2× resolution PNG export. Each diagram includes collapsible Details and Design Rationale blocks; ERD diagrams include an inline index plan table. Once you approve the design, the full document (HLD + IaC plan + CI/CD pipeline + LLD) is saved to `docs/architecture-designer/architecture/{yyyymmdd}-{topic}.md` and verified by a `document-reviewer` agent. You can then choose to scaffold the project with `architecture-implementer`.
+Claude walks you through six stages — requirements gathering, requirements analysis, feasibility and constraints,
+capacity planning, technology selection, and architecture and infrastructure design — followed by review, preview, and a
+low-level design step. Stage 6 covers domain modeling (Domain-Driven Design bounded contexts and aggregates) followed by
+four sub-phases in sequence — database schema (via `database-designer` agent), IaC tool selection and module structure,
+CI/CD pipeline design (platform, stages, branching strategy, environment promotion — both skipped for a project with no
+deployment target, e.g. a library or CLI tool), and Mermaid diagram generation. At each stage it summarizes what it
+heard and asks for confirmation before continuing. After all diagrams are reviewed, a Low-Level Design step produces API
+contracts (per sequence-diagram endpoint), business rules with pseudocode, DTOs, inter-service contracts (microservices
+only), and an error catalog — all confirmed section by section before saving. The browser preview opens at
+`http://localhost:{port}` with zoom, pan, and per-diagram 2× resolution PNG export. Each diagram includes collapsible
+Details and Design Rationale blocks; ERD diagrams include an inline index plan table. Once you approve the design, the
+full document (HLD + IaC plan + CI/CD pipeline + LLD) is saved to
+`docs/architecture-designer/architecture/{yyyymmdd}-{topic}.md` and verified by a `document-reviewer` agent. You can
+then choose to scaffold the project with `architecture-implementer`.
 
 ```
 /architecture-designer:review
 ```
 
-Review an existing architecture from a saved document, the current codebase, or both. Detects drift between documented and implemented architecture, presents findings, and — if you approve revisions — goes through the same preview and document-save flow, saving a new versioned document.
+Review an existing architecture from a saved document, the current codebase, or both. Detects drift between documented
+and implemented architecture, presents findings, and — if you approve revisions — goes through the same preview and
+document-save flow, saving a new versioned document.
 
 ```
 /architecture-designer:implement
 ```
 
-Turn an approved architecture document into a working project skeleton. Detects any existing project structure and asks whether to merge or start fresh, proposes the full folder layout for your confirmation, then generates data models (from the ERD), API route stubs (from sequence diagrams), configuration files, Docker setup, and infrastructure files.
+Turn an approved architecture document into a working project skeleton. Detects any existing project structure and asks
+whether to merge or start fresh, proposes the full folder layout for your confirmation, then generates data models (from
+the ERD), API route stubs (from sequence diagrams), configuration files, Docker setup, and infrastructure files. Once
+`architecture-implementer` reports completion, `implementation-reviewer` independently re-checks the result against the
+plan and document — if it finds gaps, `implementation-fixer` closes them and the check re-runs, up to 3 cycles — before
+the skeleton is presented to you as finished.
 
 ### Commit workflow
 
@@ -168,7 +202,8 @@ Turn an approved architecture document into a working project skeleton. Detects 
 /git-helper:generate-commit
 ```
 
-Asks pre-flight questions (stage files, create branch, auto-commit), analyzes your changes, and generates a conventional commit message. Executes confirmed actions automatically.
+Asks pre-flight questions (stage files, create branch, auto-commit), analyzes your changes, and generates a conventional
+commit message. Executes confirmed actions automatically.
 
 ### Changelog + release notes workflow
 
@@ -176,7 +211,8 @@ Asks pre-flight questions (stage files, create branch, auto-commit), analyzes yo
 /changelog-manager:generate-changelog
 ```
 
-Reads your git history since the last tag, writes a new version block to `CHANGELOG.md`, then offers to generate release notes for App Store, Play Store, or Web in your configured languages.
+Reads your git history since the last tag, writes a new version block to `CHANGELOG.md`, then offers to generate release
+notes for App Store, Play Store, or Web in your configured languages.
 
 ### First-time setup for changelog-manager
 
@@ -192,9 +228,19 @@ Creates `.claude/changelog-manager.local.md` with your preferred languages and p
 /debugging-workflow:parallel-debug <error message or stack trace>
 ```
 
-Runs a preflight check (install + full test suite once, capped at a few minutes) before touching anything — if the environment is broken or too slow to multiply across worktrees, it stops and recommends manual debugging instead. Otherwise it creates a session directory, confirms the working tree is clean, generates 2–4 root-cause hypotheses, spins up isolated git worktrees for each, and spawns `hypothesis-investigator` agents in parallel. When multiple investigators produce passing fixes, `hypothesis-arbitrator` re-verifies evidence and decides whether to merge, pick one winner, or escalate to you. The winning diff is applied to your original branch and re-verified before the session worktrees are cleaned up.
+Runs a preflight check (install + full test suite once, capped at a few minutes) before touching anything — if the
+environment is broken or too slow to multiply across worktrees, it stops and recommends manual debugging instead.
+Otherwise it creates a session directory, confirms the working tree is clean, generates 2–4 root-cause hypotheses, spins
+up isolated git worktrees for each, and spawns `hypothesis-investigator` agents in parallel. When multiple investigators
+produce passing fixes, `hypothesis-arbitrator` re-verifies evidence and decides whether to merge, pick one winner, or
+escalate to you. The winning diff is applied to your original branch and re-verified before the session worktrees are
+cleaned up.
 
-To tune the number of hypotheses, time budget, agent parallelism, or the preflight timeout, create `.claude/debugging-workflow.local.md` — a template is at `debugging-workflow/skills/parallel-debug/examples/debugging-workflow.local.md`. Set `degraded_mode: true` there on low-RAM/low-disk machines to use a single shared worktree investigated sequentially instead of one worktree per hypothesis.
+To tune the number of hypotheses, time budget, agent parallelism, or the preflight timeout, create
+`.claude/debugging-workflow.local.md` — a template is at
+`debugging-workflow/skills/parallel-debug/examples/debugging-workflow.local.md`. Set `degraded_mode: true` there on
+low-RAM/low-disk machines to use a single shared worktree investigated sequentially instead of one worktree per
+hypothesis.
 
 ### Performance investigation workflow
 
@@ -202,13 +248,18 @@ To tune the number of hypotheses, time budget, agent parallelism, or the preflig
 /perfmind:investigate
 ```
 
-Paste in profiler output, GC logs, screenshots, or metrics. Claude gathers evidence across multiple performance domains (response time, CPU, memory, GC, database, networking, battery) and produces a prioritized findings list. For Chrome/Node `.cpuprofile` files, `go tool pprof -top` output, or PostgreSQL `EXPLAIN (ANALYZE, FORMAT JSON)`, the `profiler-analysis` skill runs `scripts/parse-profiler.py` first — a deterministic script computes the ranked top-N hotspots, Claude interprets the result, instead of eyeballing raw output.
+Paste in profiler output, GC logs, screenshots, or metrics. Claude gathers evidence across multiple performance domains
+(response time, CPU, memory, GC, database, networking, battery) and produces a prioritized findings list. For
+Chrome/Node `.cpuprofile` files, `go tool pprof -top` output, or PostgreSQL `EXPLAIN (ANALYZE, FORMAT JSON)`, the
+`profiler-analysis` skill runs `scripts/parse-profiler.py` first — a deterministic script computes the ranked top-N
+hotspots, Claude interprets the result, instead of eyeballing raw output.
 
 ```
 /perfmind:report developer
 ```
 
-Generates a role-tailored report from the current investigation. Available roles: `developer`, `perf-engineer`, `devops`, `leadership`.
+Generates a role-tailored report from the current investigation. Available roles: `developer`, `perf-engineer`,
+`devops`, `leadership`.
 
 ### Security audit workflow
 
@@ -216,31 +267,40 @@ Generates a role-tailored report from the current investigation. Available roles
 /audit
 ```
 
-Claude asks whether you're auditing a development or production codebase, maps your project (languages, frameworks, entry points, dependency manifests), spawns a read-only `security-auditor` agent for structural SAST analysis, then queries OSV.dev and NVD for every dependency version found. In production mode, each CVE is enriched with its EPSS exploitation probability (FIRST.org) and CISA KEV status — KEV-listed CVEs are automatically escalated to Critical. Output is a full report using the OWASP Top 10 (2025) checklist. Findings matching `.security-audit-baseline.json` (accepted risk) are excluded from the active list but still shown as suppressed.
+Claude asks whether you're auditing a development or production codebase, maps your project (languages, frameworks,
+entry points, dependency manifests), spawns a read-only `security-auditor` agent for structural SAST analysis, then
+queries OSV.dev and NVD for every dependency version found. In production mode, each CVE is enriched with its EPSS
+exploitation probability (FIRST.org) and CISA KEV status — KEV-listed CVEs are automatically escalated to Critical.
+Output is a full report using the OWASP Top 10 (2025) checklist. Findings matching `.security-audit-baseline.json`
+(accepted risk) are excluded from the active list but still shown as suppressed.
 
 ```
 /audit-diff main
 ```
 
-Audit only the files changed vs `main` (or vs the repo's default branch, plus any uncommitted/staged changes, if no ref is given) — the recommended way to review a PR or to stay within context on a codebase too large for a full `/audit`.
+Audit only the files changed vs `main` (or vs the repo's default branch, plus any uncommitted/staged changes, if no ref
+is given) — the recommended way to review a PR or to stay within context on a codebase too large for a full `/audit`.
 
 ```
 /audit-file src/api/users.py
 ```
 
-Deep single-file audit with data flow tracing from input sources to dangerous sinks (SQL, shell, file paths, eval, deserialization). Every finding is mapped to a CWE ID with line-level evidence and a concrete remediation.
+Deep single-file audit with data flow tracing from input sources to dangerous sinks (SQL, shell, file paths, eval,
+deserialization). Every finding is mapped to a CWE ID with line-level evidence and a concrete remediation.
 
 ```
 /audit-deps
 ```
 
-Dependency-only scan — no code analysis. Queries all manifest files (npm, PyPI, Go, Maven, Rust, Ruby, PHP, NuGet) and outputs a CVE table with CVSS scores and fix versions.
+Dependency-only scan — no code analysis. Queries all manifest files (npm, PyPI, Go, Maven, Rust, Ruby, PHP, NuGet) and
+outputs a CVE table with CVSS scores and fix versions.
 
 ```
 /audit-report --sarif
 ```
 
-Regenerates and saves `SECURITY-AUDIT.md` from the current session's findings; `--sarif` also writes `SECURITY-AUDIT.sarif.json` for GitHub code scanning or any tool that ingests SARIF 2.1.0.
+Regenerates and saves `SECURITY-AUDIT.md` from the current session's findings; `--sarif` also writes
+`SECURITY-AUDIT.sarif.json` for GitHub code scanning or any tool that ingests SARIF 2.1.0.
 
 ---
 
@@ -257,13 +317,16 @@ Regenerates and saves `SECURITY-AUDIT.md` from the current session's findings; `
 │   │   ├── architecture-reviewer.md    # Technical correctness + requirements alignment; REVIEW PASSED / CONDITIONALLY PASSED / FAILED
 │   │   ├── architecture-fixer.md       # Fixes Mermaid diagrams from reviewer findings; updates diagrams.json
 │   │   ├── visual-diagram-verifier.md  # Optional real-browser overlap check via chrome/firefox-devtools-mcp
+│   │   ├── codebase-reconstructor.md   # Exhaustive codebase scan for review/SKILL.md's codebase-based path; read-only
 │   │   ├── database-designer.md        # Schema, ERD, index plan, engine selection, transaction/concurrency strategy, connection config, migration strategy
 │   │   ├── database-reviewer.md        # Audits database design across 9 dimensions (incl. conditional Web3/offline-sync); DATABASE REVIEW PASSED / FAILED
 │   │   ├── database-fixer.md           # Fixes schema, ERD, index plan, transaction/concurrency strategy; writes ERD + indexPlan to diagrams.json in place
 │   │   ├── document-reviewer.md        # Format + content auditor; DOCUMENT REVIEW PASSED / FAILED
 │   │   ├── document-fixer.md           # Fixes F1–F7 format and C1–C19 content failures in place
 │   │   ├── implementation-planner.md   # Resolves ambiguities, proposes folder structure, saves the plan
-│   │   └── architecture-implementer.md # Reads confirmed plan, scaffolds code with write-through checkpointing
+│   │   ├── architecture-implementer.md # Reads confirmed plan, scaffolds code with write-through checkpointing
+│   │   ├── implementation-reviewer.md  # Independently re-verifies generated code vs. plan/document; IMPLEMENTATION REVIEW PASSED / FAILED; read-only
+│   │   └── implementation-fixer.md     # Fixes flagged code gaps; re-arms plan Status: In progress for the duration of its own write pass
 │   ├── skills/
 │   │   ├── design/
 │   │   │   ├── SKILL.md                # Six-stage design + review/preview/LLD/test-strategy steps: requirements → technology → IaC → CI/CD → LLD → test strategy → document
@@ -278,6 +341,8 @@ Regenerates and saves `SECURITY-AUDIT.md` from the current session's findings; `
 │   │   │       ├── tech-stacks.md                 # Technology options by pattern, scale, cloud, and language
 │   │   │       ├── cost-estimation-guide.md       # Per-component monthly/annual infrastructure cost breakdown methodology
 │   │   │       ├── quality-driven-design-guide.md # Quality Attribute Scenarios, Architectural Drivers, ATAM trade-off/risk analysis
+│   │   │       ├── revision-triggers.md           # Shared "if X changed, re-run Y" table for design Step 9 and review steps 4a/4b
+│   │   │       ├── critical-thinking-guide.md     # Six-step reasoning loop applied at Stage 5 (tech choices) and Step 10 (business rules)
 │   │   │       ├── ddd-guide.md                   # Domain-Driven Design bounded-context/aggregate modeling
 │   │   │       ├── agent-tools.md                 # Selection guide for matching MCP servers/Skills to the confirmed stack
 │   │   │       ├── iac-guide.md                   # IaC tool selection, state backend, module structure, environment strategy

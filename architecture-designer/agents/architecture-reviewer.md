@@ -23,8 +23,8 @@ The skill that spawns you will pass:
    `references/offline-first-guide.md`), the `architecturalDrivers` and `riskRegister` keys when present (per
    `references/quality-driven-design-guide.md` — see dimension 3's driver-traceability check and dimension 4's
    risk-register cross-check), the `domainModel` key when present (per `references/session-schema.md` section
-   "Requirements-summary scope for sub-agent spawns" — needed for dimension 1's Context Map diagram checks and
-   dimension 3's Context Map coverage check below), and the `agentTools` array when present (per
+   "Requirements-summary scope for sub-agent spawns" — needed for dimension 1's Context Map diagram checks and dimension
+   3's Context Map coverage check below), and the `agentTools` array when present (per
    `references/session-schema.md` section "Requirements-summary scope for sub-agent spawns"; most entries' `purpose` in
    `references/agent-tools.md`'s category table is implementation-phase and won't be directly actionable during this
    diagram-level review, but a matched Web3-network entry is a live-lookup exception — see dimension 7's "No fabricated
@@ -39,16 +39,16 @@ The skill that spawns you will pass:
 4. **User's current goals and any new requirements** (optional, same review flow) — what the user says has changed or
    matters now, which may not be reflected in the requirements summary or the document if either predates it
 5. **Review persona** (optional — present only for the persona-review pass in `design/SKILL.md` Step 7b or
-   `review/SKILL.md`'s equivalent step) — a one-line instruction naming **Security** or **Cost** as the persona to weight
-   this pass toward. When present, evaluate every dimension below exactly as usual, but weight findings toward the named
-   persona's focus: for **Security**, dimensions 4 (risk identification's security gaps) and 5 (perimeter controls,
-   secrets management, resilience) get closer scrutiny, and an item that would otherwise be Minor may warrant Major if it
-   represents a real attack-surface or data-exposure gap; for **Cost**, look specifically for over-provisioned tiers,
-   redundant managed services doing the same job, and any technology decision in tension with `stage5.costEstimate` or a
-   Stage 3 budget constraint, reporting these as findings even where the standard pass wouldn't flag them (they aren't
-   correctness issues, just inefficiencies). Do not change the output format, verdict vocabulary, or severity
-   definitions themselves — a persona pass produces the same report shape, just with different emphasis. When this input
-   is absent (the ordinary Step 7 pass), ignore this paragraph entirely.
+   `review/SKILL.md`'s equivalent step) — a one-line instruction naming **Security** or **Cost** as the persona to
+   weight this pass toward. When present, evaluate every dimension below exactly as usual, but weight findings toward
+   the named persona's focus: for **Security**, dimensions 4 (risk identification's security gaps) and 5 (perimeter
+   controls, secrets management, resilience) get closer scrutiny, and an item that would otherwise be Minor may warrant
+   Major if it represents a real attack-surface or data-exposure gap; for **Cost**, look specifically for
+   over-provisioned tiers, redundant managed services doing the same job, and any technology decision in tension with
+   `stage5.costEstimate` or a Stage 3 budget constraint, reporting these as findings even where the standard pass
+   wouldn't flag them (they aren't correctness issues, just inefficiencies). Do not change the output format, verdict
+   vocabulary, or severity definitions themselves — a persona pass produces the same report shape, just with different
+   emphasis. When this input is absent (the ordinary Step 7 pass), ignore this paragraph entirely.
 
 ## Review dimensions
 
