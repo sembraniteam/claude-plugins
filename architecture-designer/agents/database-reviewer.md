@@ -18,7 +18,8 @@ audit and report.
 The skill that spawns you will pass:
 
 1. **Database-designer output** — engine recommendation, schema design (table definitions, data types, normalization),
-   ERD Mermaid code, index plan, secure connection configuration, and migration strategy
+   ERD Mermaid code, index plan, transaction and concurrency strategy, secure connection configuration, and migration
+   strategy
 2. **Requirements summary** — functional requirements, NFRs, access patterns, and capacity targets (from stages 1–5),
    plus `stage6b`/`stage6c`, the `web3` and `offlineFirst` keys when present, the `domainModel` key when present (so you
    can check aggregate boundaries in dimension 2), the `architecturalDrivers`/`riskRegister` keys when present (see

@@ -1,6 +1,6 @@
 ---
 name: review
-description: This skill should be used when the user wants to review or revise an existing architecture, says "review my architecture", "audit my architecture", "check my architecture", "my architecture needs review", "update my architecture document", "revise the architecture", "architecture drift", "compare design vs implementation", "architecture is outdated", "architecture inconsistency", "check if my code matches my design", or wants to compare their architecture document against their current codebase. Also trigger when the user mentions their architecture document needs updating after new features were added or requirements changed — including adding/changing an API contract, endpoint, business rule, DTO, or other Low-Level Design artifact on a system that already has an architecture document. Also trigger to produce a first architecture document for an existing, undocumented codebase — reconstructing architecture from real code (option b below) is this skill's job even when no document exists yet. Not for a brand-new system with no codebase yet — use the design skill for that.
+description: This skill should be used when the user wants to review or revise an existing architecture — says "review my architecture", "audit my architecture", "update my architecture document", "revise the architecture", "architecture drift", "compare design vs implementation", or "check if my code matches my design", or wants to compare their architecture document against their current codebase. Also trigger when a new feature or requirement change means the architecture document needs updating — including adding/changing an API contract, endpoint, business rule, DTO, or other Low-Level Design artifact on a system that already has a document — or to produce a first architecture document for an existing, undocumented codebase (reconstructing from real code is this skill's job even with no document yet). Not for a brand-new system with no codebase yet — use the design skill for that.
 allowed-tools: ["Read", "Write", "Edit", "Bash", "Glob", "Agent", "WebSearch"]
 ---
 
@@ -23,9 +23,8 @@ Check for `docs/architecture-designer/session.json`:
 - **If the file exists**: read it in full, then run `python3 <scripts_dir>/validate-session.py` and show its output —
   this is a hard gate; do not proceed to Step 1 until it reports `SESSION CHECK PASSED`. See
   `design/references/session-schema.md` section "Session completeness gate" for what the script checks and how to
-  resolve a failure (e.g. running `/architecture-designer:design` to fill the gaps). The session contents serve as the
-  original requirements baseline for the architecture-reviewer and any revision agents — reviewing against a
-  known-incomplete baseline risks misjudging drift.
+  resolve a failure (e.g. running `/architecture-designer:design` to fill the gaps). The session contents are the
+  original requirements baseline the architecture-reviewer and any revision agents review against.
 
 - **Also check for an interrupted revision in progress**: if `session.json` contains a `progress` key whose
   `lastCompletedStep` is anything before `step11` (a document save) **and** its `owner` is `"review"`, a previous
@@ -52,8 +51,7 @@ in.
 **Check for prior review history**: if `session.json` contains a `"reviewHistory"` array, briefly list its entries
 (date, source, outcome, one-line summary) before Step 1's question — e.g. "A previous review on 2026-07-20 (codebase
 scan) found drift in the payment service and was declined." This is context, not a gate: do not re-present the full old
-report, and do not skip re-checking anything this session's own scan would otherwise cover — the point is continuity (a
-finding surfacing again reads as "still true," not as new), not deduplication of the scan itself.
+report, and do not skip re-checking anything this session's own scan would otherwise cover.
 
 ---
 
@@ -220,15 +218,15 @@ Otherwise, based on the revision scope:
 
 - For architecture changes: update the affected Mermaid diagrams (C4, sequence, deployment) — including that diagram's
   `description`/`details`/`rationale` fields when the code change makes the existing prose stale, not just the `code`
-  field; `validate-diagrams.mjs` only checks these are non-blank, not that they still match a revised diagram. If a
-  Class Diagram exists and is affected, apply `design/SKILL.md` Stage 6d's design-principle and GoF-pattern passes
-  before writing it back — read `design/references/design-principles-guide.md` and check the revised classes against
-  SOLID, DRY, YAGNI, Tell Don't Ask, the Hollywood Principle, and the Law of Demeter, and read
-  `design/references/design-patterns-guide.md`
-  Part 2 to check whether a revised or newly-added class matches a named GoF pattern's signal, same as a first-time
-  design session. If the revision changes item (1)'s architecture pattern (Stage 5), also re-check
-  `design/references/design-patterns-guide.md` Part 1 for the applicable POSA architectural pattern (s) and update the
-  Stage 5 justification accordingly.
+  field; `validate-diagrams.mjs` only checks these are non-blank, not that they still match a revised diagram.
+  - If a Class Diagram exists and is affected, apply `design/SKILL.md` Stage 6d's design-principle and GoF-pattern
+    passes before writing it back — read `design/references/design-principles-guide.md` and check the revised classes
+    against SOLID, DRY, YAGNI, Tell Don't Ask, the Hollywood Principle, and the Law of Demeter, and read
+    `design/references/design-patterns-guide.md` Part 2 to check whether a revised or newly-added class matches a named
+    GoF pattern's signal, same as a first-time design session.
+  - If the revision changes item (1)'s architecture pattern (Stage 5), also re-check
+    `design/references/design-patterns-guide.md` Part 1 for the applicable POSA architectural pattern (s) and update the
+    Stage 5 justification accordingly.
 - For database changes: re-spawn the `architecture-designer:database-designer` agent with the same three inputs
   `design/SKILL.md` Stage 6a passes on first use — the updated requirements summary (per
   `design/references/session-schema.md` section "Requirements-summary scope for sub-agent spawns" — same scope and
@@ -332,17 +330,21 @@ by following `design/SKILL.md` Step 10 in full against the newly-formalized diag
 Otherwise, once the revised diagrams are confirmed (end of 4d), read `design/references/lld-guide.md` and update the
 affected Low-Level Design groups to match: new or changed endpoints visible in the revised sequence diagrams get
 new/updated API contract entries; new or changed business rules, DTOs, inter-service contracts, and error-catalog
-entries follow the same "derive from the diagrams, never invent" discipline as `design/SKILL.md` Step 10. For new or
-changed business rules, also apply `design/SKILL.md` Step 10's critical-thinking, design-principle, clean-code,
-GoF-pattern, and transaction-boundary checks — read `design/references/critical-thinking-guide.md`'s "Applying this to
-Step 10 group (2)" section first (name the invariant and business reason before refining how the rule is written; a
-changed rule with no traceable reason back to the revised requirement is a YAGNI candidate), then
-`design/references/design-principles-guide.md`'s DRY, YAGNI, and Tell-Don't-Ask sections,
-`design/references/clean-code-guide.md`'s "Functional core, imperative shell" section,
-`design/references/design-patterns-guide.md` Part 2 (naming a pattern only where a real signal is present), and, for a
-rule whose `Post-conditions` list two or more writes, `design/references/transaction-guide.md` (stating the transaction
-boundary or rewriting the rule as a Saga per that guide's section 4) — and check the revised rule against all of them
-before presenting it. If the revision changed which entities are high-contention (a new read-then-write path added, or
+entries follow the same "derive from the diagrams, never invent" discipline as `design/SKILL.md` Step 10.
+
+For new or changed business rules, also apply `design/SKILL.md` Step 10's checks, in order, and check the revised rule
+against all of them before presenting it:
+
+1. `design/references/critical-thinking-guide.md` section "Applying this to Step 10 group (2)" — name the invariant and
+   business reason before refining how the rule is written; a changed rule with no traceable reason back to the revised
+   requirement is a YAGNI candidate.
+2. `design/references/design-principles-guide.md`'s DRY, YAGNI, and Tell-Don't-Ask sections.
+3. `design/references/clean-code-guide.md`'s "Functional core, imperative shell" section.
+4. `design/references/design-patterns-guide.md` Part 2 — naming a pattern only where a real signal is present.
+5. For a rule whose `Post-conditions` list two or more writes, `design/references/transaction-guide.md` — stating the
+   transaction boundary or rewriting the rule as a Saga per that guide's section 4.
+
+If the revision changed which entities are high-contention (a new read-then-write path added, or
 an existing one removed), also re-spawn `architecture-designer:database-designer`'s transaction-and-concurrency-strategy
 check (per the database-changes bullet in 4b above) rather than leaving a stale strategy in place. Present the updated
 groups, confirm, then write them into `session.json`'s `lld` key the same way Step 10 does
@@ -511,11 +513,12 @@ sequence" to spawn `architecture-designer:implementation-planner` and, once its 
   `User-described layout` if the user chose (c)
 - **Technology stack** — from the architecture document's Technology Decisions section (section 6)
 - **Agent tools** (optional) — if this revision touched the technology stack (per 4a's Stage-5-change question above),
-  re-run `design/references/agent-tools.md`'s matching procedure against the revised stack now and overwrite
-  `session.json`'s
-  `"agentTools"` in full with the new result before passing it through — the same re-run `design/SKILL.md` Step 9
-  performs on a Stage 5 revision; do not carry forward a stale match set from before the revision. If the stack was
-  untouched this revision, pass through the existing `"agentTools"` array as-is (if present and non-empty).
+  re-run `design/references/agent-tools.md`'s matching procedure against the revised stack now and pass that
+  freshly-computed result to the agent for this spawn — do not pass through a stale match set from before the revision.
+  `agentTools` in `session.json` is written only by `design/SKILL.md` (per `design/references/session-schema.md`
+  section "Single writer per key"), so this fresh result is used for this spawn only and is not written back to
+  `session.json`. If the stack was untouched this revision, pass through the existing `"agentTools"` array as-is (if
+  present and non-empty).
 - **Remediation plan path** — the full path to the `{yyyymmdd}-{topic}-remediation.md` file saved in step 4e (present
   whenever step 4e ran — i.e. every case except option (b) alone, which skips it entirely; omit this input for that
   case) — see `design/references/session-schema.md` section "Finding the applicable remediation plan" for why its
@@ -531,8 +534,9 @@ user so, until that cycle's exit condition is met (`IMPLEMENTATION REVIEW PASSED
 `architecture-implementer` reporting `Status: Complete` is that agent's own self-report, not this cycle's exit
 condition — see `design/references/session-schema.md` section "Implementation reviewer–fixer cycle" for what "done"
 actually means here. Once that cycle's exit condition is met, give the user the same post-implementation wrap-up
-`../implement/SKILL.md` Step 5 gives (opening the plan file, `.env` setup, running the dev server, testing the primary
-endpoint, committing the skeleton, and the Web3/offline-first pre-deployment reminders when applicable) — this revision
+`../implement/SKILL.md` Step 5 gives (opening the plan file, `.env` setup, running the setup command, starting the dev
+server, testing the primary endpoint, committing the skeleton, and the Web3/offline-first pre-deployment reminders when
+applicable) — this revision
 pipeline reached the same finished state `implement/SKILL.md` reaches, and the user needs the same next steps regardless
 of which skill got them there.
 

@@ -493,7 +493,10 @@ what happens on failure. Essential for implementing authentication and core tran
 - **Core feature flows**: one dedicated sequence diagram per distinct core feature confirmed in Stage 2 — not just the
   single most important transaction (placing an order, submitting a form, processing a payment). See SKILL.md's "Core
   feature coverage requirement": a project with multiple distinct user-facing features needs a diagram per feature, not
-  one "primary transaction" diagram covering only the most obvious one.
+  one "primary transaction" diagram covering only the most obvious one. Group trivial sub-actions of the same feature
+  into that feature's one diagram rather than fragmenting into near-duplicate diagrams — e.g. "create order" and "cancel
+  order" can share one diagram if both are simple branches of the same flow, but "place order" and "process refund"
+  cannot, since they are distinct features.
 - Additional flows for: webhook handling, background job processing, third-party integration
 - **Offline-first sync flow** (only when `session.json` has an `offlineFirst` key — see `offline-first-guide.md`
   section 5): a dedicated sync sequence diagram, or the sequence diagram for a feature the offline-first track covers,

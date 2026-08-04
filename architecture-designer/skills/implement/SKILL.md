@@ -1,6 +1,6 @@
 ---
 name: implement
-description: This skill should be used when the user wants to turn an approved architecture document into working code, or wants to generate/scaffold a project after a design or review session — says "implement the architecture", "scaffold the project", "generate the code from my architecture", "create project files from the design", "turn my architecture into code", "create the folder structure", "start implementation", "let's start coding", or "generate the project skeleton". Requires an already-designed (or being-designed) architecture — for a brand-new project with no architecture yet, use the design skill first; this skill will say so if invoked too early.
+description: This skill should be used when the user wants to turn an approved architecture document into working code, or scaffold a project after a design or review session — says "implement the architecture", "scaffold the project", "generate the code from my architecture", "create the folder structure", "start implementation", or "generate the project skeleton". Requires an already-designed architecture — for a brand-new project with none yet, use the design skill first; this skill says so if invoked too early.
 allowed-tools: ["Read", "Glob", "Bash", "Agent"]
 ---
 
@@ -99,13 +99,12 @@ sequence" to spawn `architecture-designer:implementation-planner` and, once its 
   `Fresh start (empty project)` if the project looked empty; `Merge` if the user chose (a);
   `Fresh start (existing project)` if the user chose (b); `User-described layout` if the user chose (c)
 - **Technology stack** — read from the approved architecture document's Technology Decisions section (section 6); this
-  is the current, authoritative stack regardless of whether a review revision changed it after `session.json`'s `stage5`
-  was last written — only `design/SKILL.md` writes `stage5`, and a stack-changing revision doesn't update it (see
-  `design/references/session-schema.md` section "Single writer per key"), so `stage5` can go stale relative to the
-  document exactly when it matters most. If `docs/architecture-designer/session.json` was read at the gate above and
-  contains a `stage5` object, or a prior design session is still in conversation context, use that only to cross-check
-  or fill in detail the document's own section doesn't spell out (e.g. exact package versions) — never let it override
-  what the document actually states.
+  is the current, authoritative source.
+  - `session.json`'s `stage5` can go stale: only `design/SKILL.md` writes it, and a stack-changing revision doesn't
+    update it (see `design/references/session-schema.md` section "Single writer per key").
+  - If `stage5` was read at the gate above, or a prior design session is still in conversation context, use it only to
+    cross-check or fill in detail the document doesn't spell out (e.g. exact package versions) — never let it override
+    what the document actually states.
 - **Agent tools** (optional) — if `docs/architecture-designer/session.json` exists and contains a non-empty
   `"agentTools"` array, pass it along so the agent can note which MCP/Skill tools are available for later implementation
   steps
@@ -133,17 +132,21 @@ confirm that file's `Status` row reads `In progress` on disk — passing the pla
 it appearing literally in the prompt is not sufficient.
 
 `architecture-implementer` (spawned per the shared sequence above) reads the confirmed plan and the architecture
-document, then: for a brand-new project whose stack has an official generator CLI (`cargo new`, `flutter create`,
-`go mod init`, `npx create-next-app@latest`, and others per `design/references/scaffolding-guide.md`), runs that
-generator first rather than hand-authoring the boilerplate it would produce; then implements every remaining file —
-models from the ERD, route stubs from sequence diagrams, configuration files the generator didn't cover, Docker setup,
-infrastructure as code — checkpointing each file's checkbox to `[x]` (or `[ ] FAIL: {reason}`) immediately as it's
-written and verified, rather than batching updates until the end, so an interrupted run leaves the plan file an accurate
-resume point; once every group is done, a final verification pass re-checks the result against the document — confirming
-generated models/routes actually match the ERD/sequence diagrams and that named technologies weren't substituted,
-flagging any functional requirement with no corresponding file under "Requirements not yet reflected in code" — and sets
-`Status` to `Complete`; it also offers an optional smoke test that installs dependencies and verifies the project
-compiles or starts (requires the user's confirmation since it modifies the project directory).
+document, then:
+
+- For a brand-new project whose stack has an official generator CLI (`cargo new`, `flutter create`, `go mod init`,
+  `npx create-next-app@latest`, and others per `design/references/scaffolding-guide.md`), runs that generator first
+  rather than hand-authoring the boilerplate it would produce.
+- Implements every remaining file — models from the ERD, route stubs from sequence diagrams, configuration files the
+  generator didn't cover, Docker setup, infrastructure as code — checkpointing each file's checkbox to `[x]` (or
+  `[ ] FAIL: {reason}`) immediately as it's written and verified, rather than batching updates until the end, so an
+  interrupted run leaves the plan file an accurate resume point.
+- Once every group is done, runs a final verification pass that re-checks the result against the document — confirming
+  generated models/routes actually match the ERD/sequence diagrams and that named technologies weren't substituted,
+  flagging any functional requirement with no corresponding file under "Requirements not yet reflected in code" — and
+  sets `Status` to `Complete`.
+- Offers an optional smoke test that installs dependencies and verifies the project compiles or starts (requires the
+  user's confirmation since it modifies the project directory).
 
 **Decentralized/Web3 projects** (the document has a "Decentralized Architecture Considerations" section):
 `architecture-implementer` has its own Web3 rules for this case — see that agent's "Rules for implementation" section

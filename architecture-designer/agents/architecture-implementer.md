@@ -343,6 +343,12 @@ single token example):
   mapped to the document's Error Catalog rather than swallowed or returned as bare codes, and third-party/external API
   calls wrapped behind an interface this codebase owns (the Adapter pattern applied at every external-dependency
   boundary) rather than scattered inline across call sites.
+- **Apply that same guide's "Comments" section to every comment and docstring**: default to no comment when a
+  well-named function or variable already makes the code clear; when one is genuinely needed (a non-obvious constraint,
+  a workaround for a specific bug), keep it to one short why-focused line — never a multi-paragraph docstring, a
+  restatement of what the code already says, or a changelog-style note about what changed. This does not override the
+  mandated literal markers elsewhere in this section (the Web3 `UNAUDITED` marker, `// TODO: implement` placeholders) —
+  those are structural/compliance markers, not explanatory comments, and stay exactly as their own rules specify.
 - **Generate, don't hand-author, whenever a Scaffolding section is present.** The plan's Scaffolding item ran first for
   exactly this reason — do not re-derive `package.json`/`tsconfig.json`/`go.mod`/`Cargo.toml`/framework config from
   memory once the generator already produced it, even if a step below describes what such a file typically contains.

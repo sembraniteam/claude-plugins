@@ -1,6 +1,6 @@
 ---
 name: design
-description: This skill should be used when the user wants to design a new application's architecture or infrastructure — says "design my architecture", "help me plan the architecture", "create architecture diagrams", "I need to plan a new system", or is starting a new project and needs a structured design process. Also trigger when the user mentions HLD, LLD, API contracts, or system design for a system with no existing codebase and no existing architecture document yet. Not for adding/changing an API contract, endpoint, or LLD artifact on an already-documented system, or for generating code from an approved document — see the review and implement skills for those. Not for producing a first architecture document from a codebase that already exists — even if undocumented, that's the review skill's codebase-reconstruction path.
+description: This skill should be used when the user wants to design a new application's architecture or infrastructure — says "design my architecture", "help me plan the architecture", "create architecture diagrams", "I need to plan a new system", or is starting a new project needing a structured design process. Also trigger when the user mentions HLD, LLD, API contracts, or system design for a system with no existing codebase and no architecture document yet. Not for changing an API contract, endpoint, or LLD artifact on an already-documented system, or for generating code from an approved document — see the review and implement skills. Not for producing a first architecture document from an existing (even undocumented) codebase — that's the review skill's codebase-reconstruction path.
 allowed-tools: [ "Read", "Write", "Edit", "Bash", "Glob", "Agent", "WebSearch" ]
 ---
 
@@ -110,12 +110,10 @@ Ask the Stage 2 questions in `references/discovery-questions.md`.
 
 > **Offline-first detection**: this track is not mandatory — most apps are correctly online-first even when mobile or
 > occasionally offline. Note it now only if the application must let users **create or edit** data during a meaningfully
-> long offline period (not just view previously-cached data, and not just a brief network blip a retry would cover) — a
-> mobile app for poor-connectivity environments, a PWA with an explicit offline-write requirement, or collaborative
-> editing where clients may diverge before reconciling. If so, Stage 5 will read `references/offline-first-guide.md`'s
-> decision test and work through its additional questions before the stack is finalized. The same applies if this isn't
-> apparent until Stage 5, but naming a client-side embedded database alone is not sufficient — see that guide's "This
-> track is not mandatory" section for the full test.
+> long offline period — see `references/offline-first-guide.md` section "This track is not mandatory" for the full
+> decision test. If it's met, Stage 5 will read that guide and work through its additional questions before the stack is
+> finalized. The same applies if this isn't apparent until Stage 5, but naming a client-side embedded database alone is
+> not sufficient — the guide's test still governs.
 
 **Domain edge-case elicitation (required, before the Stage 2 summary/confirmation)**: read
 `references/domain-edge-cases-guide.md` and match the functional requirements just gathered against its domain
@@ -198,11 +196,12 @@ column and to any scheduled/recurring feature (digests, reminders, cron jobs) su
 infrastructure provider and key managed services**, named specifically (e.g. "AWS ECS Fargate", not "containers on
 AWS"); **(6) supporting services** (queue, cache, search, object storage) — only if the functional requirements need
 them; **(7) authentication approach**, justified by user roles, security requirements, and team capacity; **(8)
-observability strategy** — logging aggregator (e.g. ELK, Grafana Loki, Datadog, CloudWatch), metrics/dashboards, and
-distributed tracing (OpenTelemetry + Jaeger/Tempo) if multiple services or async flows are involved, scaled to what the
-system's actual operational maturity requires — a small monolith may need only structured logging and one dashboard; **(
-
-9) disaster recovery** — RPO/RTO derived from the Stage 2 availability NFR, backup strategy, failover approach; **(10)
+observability strategy** — logging aggregator, metrics/dashboards, and distributed tracing if multiple services or
+async flows are involved, scaled to what the system's actual operational maturity requires (see
+`references/tech-stacks.md` section "Observability (Required for Microservices)" for a concrete tool menu when running
+microservices — the same tools apply at lighter scale for a smaller system) — a small monolith may need only structured
+logging and one dashboard; **(9) disaster recovery** — RPO/RTO derived from the Stage 2 availability NFR, backup
+strategy, failover approach; **(10)
    error handling and resilience strategy** — derived from the Stage 2 error-handling NFR. Read
    `references/resilience-guide.md` before finalizing this and name, per its pattern table and library table: the
    backoff strategy and max attempts for retries against external dependencies named in stages 1–4, a circuit breaker or
@@ -450,11 +449,9 @@ the authoritative wording; this table is a pointer to it, not a second copy):
 user-facing feature — not a minor CRUD sub-step of a feature already covered — must have its own dedicated sequence
 diagram showing that feature's primary flow, including its failure path (`alt` block). A single "primary transaction"
 diagram is not sufficient coverage once Stage 2 lists more than one distinct feature: cover them all, not just the most
-obvious one. Group trivial sub-actions of the same feature into that feature's one diagram rather than fragmenting into
-near-duplicate diagrams (e.g., "create order" and "cancel order" can share one diagram if both are simple branches of
-the same flow; "place order" and "process refund" cannot, since they are distinct features). `architecture-reviewer`'s
-requirements-traceability dimension raises a Major finding for any core feature with no dedicated diagram — see that
-agent's dimension 3.
+obvious one. See `references/diagrams-guide.md` section "Sequence Diagram" for how to group trivial sub-actions of the
+same feature without fragmenting into near-duplicate diagrams. `architecture-reviewer`'s requirements-traceability
+dimension raises a Major finding for any core feature with no dedicated diagram — see that agent's dimension 3.
 
 **Production-ready requirement**: for any system targeting production workloads, the deployment/infrastructure diagram
 must show at least one observability sink (from Stage 5) and one DR component (replica, backup target, or cross-region
@@ -835,8 +832,9 @@ user so, until that cycle's exit condition is met (`IMPLEMENTATION REVIEW PASSED
 `architecture-implementer` reporting `Status: Complete` is that agent's own self-report, not this cycle's exit
 condition — see `references/session-schema.md` section "Implementation reviewer–fixer cycle" for what "done" actually
 means here. Once that cycle's exit condition is met, give the user the same post-implementation wrap-up
-`../implement/SKILL.md` Step 5 gives (opening the plan file, `.env` setup, running the dev server, testing the primary
-endpoint, committing the skeleton, and the Web3/offline-first pre-deployment reminders when applicable) — this pipeline
+`../implement/SKILL.md` Step 5 gives (opening the plan file, `.env` setup, running the setup command, starting the dev
+server, testing the primary endpoint, committing the skeleton, and the Web3/offline-first pre-deployment reminders when
+applicable) — this pipeline
 reached the same finished state `implement/SKILL.md` reaches, and the user needs the same next steps regardless of which
 skill got them there.
 
