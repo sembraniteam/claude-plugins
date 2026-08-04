@@ -94,12 +94,34 @@ The top-level keys are fixed; the field names inside each stage object are the u
     "tradeoffAnalysis": [
       {
         "id": "TO-1",
-        "driversInTension": ["AD-1", "AD-2"],
+        "driversInTension": [
+          "AD-1",
+          "AD-2"
+        ],
         "tradeoffPoint": "...",
         "sensitivityPoint": "...",
         "decision": "...",
         "rationale": "...",
-        "relatedRisks": ["RISK-1"]
+        "relatedRisks": [
+          "RISK-1"
+        ]
+      }
+    ],
+    "alternativesConsidered": [
+      {
+        "decision": "database",
+        "options": [
+          {
+            "name": "PostgreSQL",
+            "verdict": "Chosen",
+            "reason": "..."
+          },
+          {
+            "name": "MySQL",
+            "verdict": "Rejected",
+            "reason": "..."
+          }
+        ]
       }
     ],
     "costEstimate": {
@@ -139,8 +161,12 @@ The top-level keys are fixed; the field names inside each stage object are the u
           {
             "name": "...",
             "rootEntity": "...",
-            "entities": ["..."],
-            "invariants": ["..."]
+            "entities": [
+              "..."
+            ],
+            "invariants": [
+              "..."
+            ]
           }
         ],
         "ubiquitousLanguage": {
@@ -542,7 +568,8 @@ rather than a restated copy here. Two implementation-specific details that secti
 "Single writer" means single *mutator*: each key has exactly one writer that may set or overwrite its value, except
 `documents`/`adrs` (append-only, two legitimate appenders each — see the exception below) and `web3`/`offlineFirst`/
 `stage6b`/`stage6c`/`progress`/`pending`/`architecturalDrivers`/`riskRegister`/`domainModel`/
-`stage2.qualityAttributeScenarios`/`stage5.tradeoffAnalysis`/`stage5.costEstimate`/`lld`/`testStrategy`/
+`stage2.qualityAttributeScenarios`/`stage5.tradeoffAnalysis`/`stage5.alternativesConsidered`/`stage5.costEstimate`/
+`lld`/`testStrategy`/
 `stage2.domainEdgeCases` (each with two legitimate whole-value overwriters, or in `lld`'s/`testStrategy`'s/
 `stage2.domainEdgeCases`'s case two legitimate incremental-writers — see below). These exceptions exist for different
 reasons: `documents`'s and `adrs`'s two appenders are safe because append-only removes the lost-update risk the
@@ -564,9 +591,14 @@ pattern for its nested
 same authorized second writer when a revision changes a technology decision or introduces a new requirement tension.
 `stage5.costEstimate` follows the same two-writer pattern: written by `design/SKILL.md` at Stage 5 confirmation, with
 `review/SKILL.md` step 4b as the same authorized second writer when a revision changes a capacity number or a
-cost-affecting technology decision, per `references/cost-estimation-guide.md` — every other `stage5` field is written
-only by `design/SKILL.md`. `architecturalDrivers` and `riskRegister` are written by `design/SKILL.md` at Stage 5
-confirmation (overwritten in full on any Stage 2 or Stage 5 revision per Step 9, per
+cost-affecting technology decision, per `references/cost-estimation-guide.md`. `stage5.alternativesConsidered` follows
+the same two-writer pattern: written by `design/SKILL.md` at Stage 5 confirmation (one array entry per qualifying item,
+per `references/adr-guide.md`'s "Which decisions get an ADR" criteria and `references/critical-thinking-guide.md`'s
+"Alternatives Considered format"), with `review/SKILL.md` step 4b as the same authorized second writer per revision row
+G in `references/revision-triggers.md` — overwrite the entry for a changed decision in full, never merge partial option
+lists — every other `stage5` field is written only by `design/SKILL.md`. `architecturalDrivers` and
+`riskRegister` are written by `design/SKILL.md` at Stage 5 confirmation (overwritten in full on any Stage 2 or Stage 5
+revision per Step 9, per
 `references/quality-driven-design-guide.md`), with the same authorized second writer: `review/SKILL.md` step 4b
 overwrites either in full when step 4a flags an NFR change or a technology-decision/requirement-tension change,
 mirroring exactly how it handles `web3` below. `domainModel` is written by `design/SKILL.md` at Stage 6a (overwritten in
@@ -599,13 +631,14 @@ two-writer keys, its writes are incremental field-level updates within the same 
 rather than one wholesale overwrite per skill run, since either skill may touch it many times across a single pipeline
 pass. `pending` is written by both `design/SKILL.md` (Stages 1–6c) and `review/SKILL.md` (step 4a) — always overwritten
 wholesale with the stage currently in progress, and deleted (not left stale) once that stage's real key is confirmed.
-All fifteen two-writer keys/fields (`web3`, `offlineFirst`, `stage6b`, `stage6c`, `progress`, `pending`,
+All sixteen two-writer keys/fields (`web3`, `offlineFirst`, `stage6b`, `stage6c`, `progress`, `pending`,
 `architecturalDrivers`, `riskRegister`, `domainModel`, `stage2.qualityAttributeScenarios`, `stage5.tradeoffAnalysis`,
-`stage5.costEstimate`, `lld`, `testStrategy`, `stage2.domainEdgeCases`) are safe for the same reason stated in "No CAS —
-always read-fresh-modify-write-whole" below: these skills never run concurrently within one conversation, so whichever
-write happens later is always the intentionally-authoritative one, not a lost update — unlike `documents`'s/`adrs`'s two
-appenders, most of these keys' writers overwrite the whole value (or, for `progress`/`lld`/`testStrategy`, individual
-fields/groups within it) rather than append; `stage2.domainEdgeCases` is the one exception that appends new entries (per
+`stage5.alternativesConsidered`, `stage5.costEstimate`, `lld`, `testStrategy`, `stage2.domainEdgeCases`) are safe for
+the same reason stated in "No CAS — always read-fresh-modify-write-whole" below: these skills never run concurrently
+within one conversation, so whichever write happens later is always the intentionally-authoritative one, not a lost
+update — unlike `documents`'s/`adrs`'s two appenders, most of these keys' writers overwrite the whole value (or, for
+`progress`/`lld`/`testStrategy`, individual fields/groups within it) rather than append; `stage2.domainEdgeCases` is the
+one exception that appends new entries (per
 `references/domain-edge-cases-guide.md`) rather than overwriting the array, but is still safe for the identical
 sequential-execution reason, not an append-only one (unlike `documents`/`adrs`, a second `stage2.domainEdgeCases`
 writer appending concurrently within the same conversation is not a scenario this plugin's skills ever create). No other
@@ -630,8 +663,8 @@ it has exactly one appender, not two; nothing else in this plugin ever writes to
 writes to `session.json`. No key is ever written by more writers than listed here — for `documents`, `adrs`, `web3`,
 `offlineFirst`, `stage6b`, `stage6c`, `progress`, `pending`,
 `architecturalDrivers`, `riskRegister`, `domainModel`, `stage2.qualityAttributeScenarios`, `stage2.domainEdgeCases`,
-`stage5.tradeoffAnalysis`, `stage5.costEstimate`, `lld`, and `testStrategy`, that means no writer beyond the two named
-above for each; for every other key, exactly the one named.
+`stage5.tradeoffAnalysis`, `stage5.alternativesConsidered`, `stage5.costEstimate`, `lld`, and `testStrategy`, that means
+no writer beyond the two named above for each; for every other key, exactly the one named.
 
 ## Recording `progress.lastCompletedStep`
 
@@ -709,7 +742,7 @@ already in progress, rather than restarting the whole pipeline from Stage 6a:
    proceed past it. For `database`, there is no hash to check — `approvedOutput` holds the actual approved content
    directly (see "Persisting the database design output" below), so a present `database` entry with a `PASSED` verdict
    is always still valid; use `approvedOutput` directly wherever the database-designer/fixer's output would otherwise be
-   needed (Stage 6d's ERD diagram, Step 11 section 7) instead of re-deriving it from conversation memory that may no
+   needed (Stage 6d's ERD diagram, Step 11 section 8) instead of re-deriving it from conversation memory that may no
    longer exist.
 4. If `docs/architecture-designer/last-review.md` exists and represents an unresolved cycle per that section's "Resuming
    an interrupted cycle", resume the fixer loop directly rather than re-spawning the reviewer.
@@ -756,7 +789,8 @@ or `SESSION CHECK FAILED` at the end:
    `adrs[].status` — and the required fields on `architecturalDrivers`/`riskRegister`/`domainModel`/`adrs` entries, e.g.
    every `architecturalDrivers` entry must carry `id` and `description`, and every `adrs` entry must carry `id`, `path`,
    `title`, and `status`). `stage1`–`stage5` (including `stage2.qualityAttributeScenarios`, `stage2.domainEdgeCases`,
-   `stage5.tradeoffAnalysis`, and `stage5.costEstimate`), `web3`, `offlineFirst`, `stage6b`, `stage6c`, `testStrategy`
+   `stage5.tradeoffAnalysis`, `stage5.alternativesConsidered`, and `stage5.costEstimate`), `web3`, `offlineFirst`,
+   `stage6b`, `stage6c`, `testStrategy`
    stay untyped in that schema, since their inner field names are the user's own confirmed answers or agent-drafted
    prose and legitimately vary by project.
 3. **Referential integrity** (advisory, printed but never fails the gate) — two independent checks:
@@ -849,16 +883,16 @@ pre-created tasks") both need the identical file-group-to-task-title mapping —
 row below, and the implementer looks them up by the same titles via `TaskList`. Both agents use this exact table;
 neither restates it independently:
 
-| Task title                 | What it covers                                                                                                                                                                                      |
-|----------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Run project scaffolding    | The official generator command from the plan's Scaffolding section, if present                                                                                                                      |
-| Implement data models      | Model files, migration files, schema/ORM definitions                                                                                                                                                |
-| Implement API routes       | Route handlers, controllers, middleware                                                                                                                                                             |
-| Write configuration files  | package.json, .env.example, tsconfig, docker-compose, Dockerfile                                                                                                                                    |
-| Write infrastructure files | Terraform, CDK, Kubernetes manifests, CI/CD pipeline configs                                                                                                                                        |
-| Write setup scripts        | npm scripts, cross-platform setup and run commands                                                                                                                                                  |
-| Write test files           | Unit test per data model, integration test per API route group, unit test per non-trivial business rule, mock test per external integration, plus any test helpers/utilities and fixtures/factories |
-| Apply remediation changes  | Modifications to existing files per the remediation plan (only when a plan is provided)                                                                                                             |
+| Task title                 | What it covers                                                                                                                                                                                                                                                                                               |
+|----------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Run project scaffolding    | The official generator command from the plan's Scaffolding section, if present                                                                                                                                                                                                                               |
+| Implement data models      | Model files, migration files, schema/ORM definitions                                                                                                                                                                                                                                                         |
+| Implement API routes       | Route handlers, controllers, middleware                                                                                                                                                                                                                                                                      |
+| Write configuration files  | package.json, .env.example, tsconfig, docker-compose, Dockerfile                                                                                                                                                                                                                                             |
+| Write infrastructure files | One file per IaC module (per the document's module breakdown table) and one file per CI/CD pipeline config, plus Dockerfiles — see `implementation-planner`'s "Exhaustive derivation from the IaC and CI/CD sections"                                                                                        |
+| Write setup scripts        | npm scripts, cross-platform setup and run commands                                                                                                                                                                                                                                                           |
+| Write test files           | Unit test per data model, integration test per API route group, unit test per non-trivial business rule, mock test per external integration, a load-test script (when Test Strategy names a tool), an E2E test per core feature (from the UAT table), plus any test helpers/utilities and fixtures/factories |
+| Apply remediation changes  | Modifications to existing files per the remediation plan (only when a plan is provided)                                                                                                                                                                                                                      |
 
 `implementation-planner` omits any row with no files in the confirmed tree for the current project;
 `architecture-implementer` only looks up rows that were actually created.
@@ -962,8 +996,9 @@ Ten call sites assemble a "requirements summary" to pass into a spawned sub-agen
 rather than a uniquely-numbered step, reusing the requirements summary already assembled for their paired reviewer's
 spawn immediately above, but still subject to the same scope rule via their own agent file's documented inputs. All ten
 use the same scope rule: read every relevant top-level `session.json` key, not stage1–5 alone — stage1–5 (including
-`stage2.domainEdgeCases`, `stage5.tradeoffAnalysis`, and `stage5.costEstimate`) and the top-level `description` always,
-plus `agentTools`, `stage6b`, `stage6c`, `web3`, `offlineFirst`, `architecturalDrivers`, `riskRegister`, `domainModel`,
+`stage2.domainEdgeCases`, `stage5.tradeoffAnalysis`, `stage5.alternativesConsidered`, and `stage5.costEstimate`) and the
+top-level `description` always, plus `agentTools`, `stage6b`, `stage6c`, `web3`, `offlineFirst`, `architecturalDrivers`,
+`riskRegister`, `domainModel`,
 `testStrategy`, and `adrs` whenever present.
 
 This matters most for `web3` and `offlineFirst`: a receiving agent's Web3-specific or offline-sync-specific dimension or
@@ -982,7 +1017,7 @@ are "whenever present" rather than "always."
 Each call site's own text still states any call-specific detail beyond this shared rule — e.g. "so the reviewer's Web3
 dimension can actually fire on this first pass," or the fallback to the previous document's Requirements Summary section
 when `session.json` is absent — this section exists so the scope rule itself (the fixed key list, and why it's not just
-stage1–5) is defined once rather than restated at all eight sites that apply it.
+stage1–5) is defined once rather than restated at all ten sites that apply it.
 
 ## Reviewer–fixer cycle procedure
 

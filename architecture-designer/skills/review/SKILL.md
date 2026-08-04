@@ -234,12 +234,11 @@ Otherwise, based on the revision scope:
   `design/references/session-schema.md` section "Requirements-summary scope for sub-agent spawns" — same scope and
   fallback as 4c below), the domain entities extracted from the (now updated) functional requirements, and the access
   patterns from the business processes — then validate with `architecture-designer:database-reviewer` (same
-  requirements-summary scope). **Regardless of verdict**, apply `design/references/session-schema.md` section
-  "Reviewer–fixer cycle procedure" step 0 as soon as the report is received (records the verdict/cycle/approved output
-  into `progress.reviewCycles.database` and `docs/architecture-designer/last-review.md`; this runs even on a clean
-  first-try pass, not only on failure). If the reviewer returns `DATABASE REVIEW FAILED`, continue with that section's
-  steps 1–4 (binary verdict — cycle until `DATABASE REVIEW PASSED`): the fixer receives the review report, the
-  database-designer output, the requirements summary (same scope), and the path to
+  requirements-summary scope). Apply `design/references/session-schema.md` section "Reviewer–fixer cycle procedure"
+  step 0 (its own header already makes it unconditional) as soon as the report is received — type `database`. If the
+  reviewer returns `DATABASE REVIEW FAILED`, continue with that section's steps 1–4 (binary verdict — cycle until
+  `DATABASE REVIEW PASSED`): the fixer receives the review report, the database-designer output, the requirements
+  summary (same scope), and the path to
   `docs/architecture-designer/diagrams.json`. It writes the corrected ERD and indexPlan directly into `diagrams.json` —
   except under the "option (b) alone" branch above, where that file doesn't exist yet at this point; per
   `agents/database-fixer.md`'s own conditional, it skips the write there and 4b's fresh-diagram-set generation embeds
@@ -290,10 +289,8 @@ Spawn the `architecture-designer:architecture-reviewer` agent with:
   6 input) rather than folding it into the original baseline.
 - All updated diagrams
 
-**Regardless of verdict**, apply `design/references/session-schema.md` section "Reviewer–fixer cycle procedure" step 0
-as soon as the report is received (records the verdict/cycle/`diagramsHash` into `progress.reviewCycles.architecture`
-and `docs/architecture-designer/last-review.md`; this runs even on a clean first-try pass, not only on Critical/Major
-findings).
+Apply `design/references/session-schema.md` section "Reviewer–fixer cycle procedure" step 0 (its own header already
+makes it unconditional) as soon as the report is received — type `architecture`.
 
 If Critical or Major findings are returned: continue with that section's steps 1–4 (three-tier verdict): spawn
 `architecture-designer:architecture-fixer` with the review report, `docs/architecture-designer/diagrams.json`, and the
@@ -478,10 +475,8 @@ Record `progress.lastCompletedStep = "step11"` per `design/references/session-sc
 
 Spawn the `architecture-designer:document-reviewer` agent with the path to the new document, the requirements summary
 (same scope as 4c — every relevant `session.json` top-level key, including `web3` when present), and the expected
-filename. **Regardless of verdict**, apply `design/references/session-schema.md` section "Reviewer–fixer cycle
-procedure" step 0 as soon as the verdict is received (records the verdict/cycle/`documentHash` into
-`progress.reviewCycles.document` and `docs/architecture-designer/last-review.md`; this runs even on a clean first-try
-pass, not only on failure).
+filename. Apply `design/references/session-schema.md` section "Reviewer–fixer cycle procedure" step 0 (its own header
+already makes it unconditional) as soon as the verdict is received — type `document`.
 
 If DOCUMENT REVIEW FAILED: continue with that section's steps 1–4: spawn `architecture-designer:document-fixer` with the
 document path, the review report, the requirements summary, and the path to `docs/architecture-designer/diagrams.json`.
@@ -535,7 +530,11 @@ from this approved document later.
 user so, until that cycle's exit condition is met (`IMPLEMENTATION REVIEW PASSED`, or its 3-cycle cap reached).
 `architecture-implementer` reporting `Status: Complete` is that agent's own self-report, not this cycle's exit
 condition — see `design/references/session-schema.md` section "Implementation reviewer–fixer cycle" for what "done"
-actually means here.
+actually means here. Once that cycle's exit condition is met, give the user the same post-implementation wrap-up
+`../implement/SKILL.md` Step 5 gives (opening the plan file, `.env` setup, running the dev server, testing the primary
+endpoint, committing the skeleton, and the Web3/offline-first pre-deployment reminders when applicable) — this revision
+pipeline reached the same finished state `implement/SKILL.md` reaches, and the user needs the same next steps regardless
+of which skill got them there.
 
 Either way, record `progress.lastCompletedStep = "step13"` per `design/references/session-schema.md` section "Recording
 `progress.lastCompletedStep`" — this revision pipeline pass is complete.

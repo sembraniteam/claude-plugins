@@ -30,7 +30,12 @@ The section order and content for the architecture document saved by `design/SKI
    authentication approach, observability strategy, disaster recovery, error handling/resilience strategy (retry policy,
    circuit breaker, timeout budgets, graceful degradation), and rate-limiting strategy (algorithm, enforcement layer,
    per-tier limits, distributed store if horizontally scaled) — with justifications from stages 1–4, plus the
-   architectural driver ID (s) each item satisfies when one applies
+   architectural driver ID (s) each item satisfies when one applies. Immediately after an item's justification, if
+   `session.json`'s `stage5.alternativesConsidered` has an entry for that item (per `adr-guide.md`'s "Which decisions
+   get an ADR" criteria — not every item qualifies), embed that entry's Alternatives Considered table verbatim (see
+   `critical-thinking-guide.md`'s "Alternatives Considered format") — never re-derive or paraphrase it from the
+   justification prose beside it, the same verbatim-copy discipline section 8's ERD block already follows. An item with
+   no matching entry has no table here; that is expected, not a gap, for an undriven standard-choice pick.
 7. **Architecture Diagrams** — every created diagram with: a heading, a paragraph description, then the mermaid code
    block. For the ERD, include the index list table immediately after the mermaid block.
 8. **Database Design** — the full output from the database-designer agent per its "Output format" (engine
@@ -50,10 +55,10 @@ The section order and content for the architecture document saved by `design/SKI
     network-specific fact must appear as either a confirmed, sourced value or a `<VERIFY>` placeholder — never asserted
     from memory. Omit this section entirely when `session.json` has no `web3` key.
 13. **Offline-First Considerations** (only when the offline-first track was active — see `offline-first-guide.md`) — the
-    confirmed local-storage choice, sync architecture (outbox pattern, sync API shape), and conflict-resolution strategy
-    (including how divergent `updated_at` values are handled — see that guide's section 3) from `session.json`'s
-    `offlineFirst` key, plus the pre-deployment verification checklist from that guide's section 6. Omit this section
-    entirely when `session.json` has no `offlineFirst` key.
+    confirmed local-storage choice, sync architecture (outbox pattern, sync API shape), conflict-resolution strategy
+    (including how divergent `updated_at` values are handled), and delete/tombstone handling (see that guide's section
+    3, including section 3f) from `session.json`'s `offlineFirst` key, plus the pre-deployment verification checklist
+    from that guide's section 6. Omit this section entirely when `session.json` has no `offlineFirst` key.
 14. **Domain Model (DDD)** (required — every project runs this step, see `ddd-guide.md`) — the bounded contexts, their
     aggregates (root entity, member entities, invariants), and ubiquitous language from `session.json`'s `domainModel`
     key, plus a table of the confirmed relationships between contexts (integration pattern, direction) from

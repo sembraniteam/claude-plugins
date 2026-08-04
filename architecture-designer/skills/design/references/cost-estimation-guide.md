@@ -39,14 +39,20 @@ per Stage 4 → a 100GB provisioned-storage tier covers ~10 months before the ne
 **3. Price each sized component.** This is the same discipline Stage 5's "Version grounding" rule already applies to
 technology versions, applied here to prices instead:
 
-- **If WebSearch is available**: search for the confirmed cloud provider's current list price for the specific
-  service/tier/region named in Stage 5 (e.g. "AWS RDS db.t3.medium us-east-1 pricing 2026", "DigitalOcean App Platform
-  pricing"). Cite the figure with the source and the date it was checked — list prices change and a stale citation with
-  no date is indistinguishable from a guess.
-- **If WebSearch is unavailable**, or a search returns nothing usable: write the figure as a reasoned estimate and label
-  it **"estimate — verify at implementation time"** — the identical phrase Stage 5 uses for an unverifiable version
-  number, for the identical reason: a confident-sounding but stale number is more expensive to correct later than an
-  honest placeholder.
+- **Always attempt a WebSearch first**, for every component — search for the confirmed cloud provider's current list
+  price for the specific service/tier/region named in Stage 5 (e.g. "AWS RDS db.t3.medium us-east-1 pricing 2026",
+  "DigitalOcean App Platform pricing"). Cite the figure with the source and the date it was checked — list prices change
+  and a stale citation with no date is indistinguishable from a guess. Do not skip the search because a plausible figure
+  could be recalled from memory, or because most of the table is already priced — a search is cheap and a stale recalled
+  number is exactly what this method exists to prevent; recalling a number instead of searching for it is not a
+  shortcut, it is the failure mode this guide exists to catch.
+- **Only** write the figure as a reasoned estimate, labeled **"estimate — verify at implementation time"**, when the
+  search was actually attempted and returned nothing usable, or `WebSearch` is genuinely absent from the environment —
+  the identical phrase and identical fallback condition Stage 5's "Version grounding" rule uses for an unverifiable
+  version number, for the identical reason: a confident-sounding but stale number is more expensive to correct later
+  than an honest placeholder. A cost table where every row uses this label in an environment where `WebSearch` is listed
+  in `design/SKILL.md`'s `allowed-tools` is a signal the search step was skipped, not that pricing was genuinely
+  unobtainable — `document-reviewer`'s C17 check flags this pattern.
 
 Never blend the two silently in one table — the **Source** column (format below) states which discipline produced each
 row, so the reader knows which figures to re-check before committing budget.

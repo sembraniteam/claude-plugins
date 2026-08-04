@@ -18,9 +18,9 @@ requirements defined by the architecture-designer plugin. You do not redesign an
 The skill that spawns you will pass:
 
 1. **Path to the saved document** — read it with the Read tool
-2. **User requirements summary** — from the design session (stages 1–5, including `stage5.tradeoffAnalysis` and
-   `stage5.costEstimate`, plus IaC decisions from stage6b and CI/CD decisions from stage6c if present, the
-   `web3`/`offlineFirst` keys if present, the `agentTools` array if present, and the
+2. **User requirements summary** — from the design session (stages 1–5, including `stage5.tradeoffAnalysis`,
+   `stage5.alternativesConsidered`, and `stage5.costEstimate`, plus IaC decisions from stage6b and CI/CD decisions from
+   stage6c if present, the `web3`/`offlineFirst` keys if present, the `agentTools` array if present, and the
    `architecturalDrivers`/`riskRegister`/`domainModel`/`testStrategy`/`adrs` keys if present — per
    `references/session-schema.md` section "Requirements-summary scope for sub-agent spawns"), so you can check content
    accuracy
@@ -85,7 +85,12 @@ must be present — not vague statements like "high traffic". FAIL if missing or
 
 **C4 — Technology decisions with justifications**
 A section listing the technology stack, architecture pattern, database engines, and infrastructure provider, with
-justification for each choice traceable to requirements/constraints (stage 5). FAIL if justifications are absent.
+justification for each choice traceable to requirements/constraints (stage 5). FAIL if justifications are absent. Also
+check version grounding (`design/SKILL.md` Stage 5's "Version grounding" rule): flag as **Minor** in the fixes-required
+list (not a FAIL on its own) if every named technology version reads a bare, unsourced number with no WebSearch citation
+and no "latest stable — verify at implementation time" label anywhere in the section — a document with zero verified or
+explicitly-labeled versions in an environment where `WebSearch` is listed in `design/SKILL.md`'s `allowed-tools`
+suggests the search step was skipped rather than genuinely unavailable.
 
 **C5 — All diagrams included**
 Every diagram that was created during the design session must appear in the document. Cross-check against
@@ -167,7 +172,11 @@ reconciliation statement, from
 `stage5.costEstimate` in the requirements summary. Every row's Source column must read either a WebSearch-verified
 citation with a date, or the literal `"estimate — verify at implementation time"` — FAIL if any row has a bare number
 with no source tag, or if the section is missing/a placeholder with no actual component named. A genuinely zero-cost
-project stating that explicitly as the table's only row is a valid PASS, not a gap.
+project stating that explicitly as the table's only row is a valid PASS, not a gap. Additionally, per
+`cost-estimation-guide.md` step 3's search-first discipline: if the table has 2 or more rows and **every** row reads
+`"estimate — verify at implementation time"` with none WebSearch-verified, note this as a **Minor** item in the
+fixes-required list (not a FAIL) — "confirm WebSearch was actually attempted for these components; an entirely
+unverified table is expected only when `WebSearch` is genuinely unavailable."
 
 **C18 — Test Strategy section present**
 Per `references/document-template.md` section 17, required for every document. The document must include a "Test
@@ -184,6 +193,17 @@ entry, including superseded ones with their actual `Superseded by ADR-{NNNN}` st
 a row's status doesn't match the corresponding `adrs` entry, or if an `adrs` entry has no corresponding row. This
 section is a pointer table only — it must not duplicate an ADR's own Context/Decision/Consequences prose; a document
 doing so is not itself a FAIL condition for this check, but note it as a C6-style accuracy observation if seen.
+
+**C20 — Alternatives Considered tables present for qualifying items**
+Per `references/document-template.md` section 6: every entry in `stage5.alternativesConsidered` (from the requirements
+summary) must have a corresponding Alternatives Considered table in the Technology Decisions section, using the exact
+header row from `references/document-review-checklist.md`, placed immediately after that item's justification. FAIL if
+an `alternativesConsidered` entry has no corresponding table in the document, or a table's rows don't match its
+`stage5.alternativesConsidered` entry's options. Do not FAIL an item that has **no** entry in
+`stage5.alternativesConsidered` at all — per `critical-thinking-guide.md`'s "Alternatives Considered format", only items
+qualifying under `adr-guide.md`'s "Which decisions get an ADR" criteria get one; an undriven standard-choice item
+legitimately has no table. N/A applies only when `stage5.alternativesConsidered` is absent or empty in the requirements
+summary entirely (e.g. a legacy session predating this field).
 
 **C15 — Low-Level Design section present**
 Per `references/document-template.md` section 11, required for every document. The document must include a "Low-Level
@@ -238,6 +258,7 @@ verifies the Core Features list accurately indexes into that diagram set, not th
 - C17 Cost Estimation section: PASS / FAIL — [evidence]
 - C18 Test Strategy section: PASS / FAIL — [evidence]
 - C19 Architecture Decision Records section: PASS / FAIL — [evidence]
+- C20 Alternatives Considered tables: PASS / FAIL / N/A (no `stage5.alternativesConsidered` entries) — [evidence]
 
 ### Fixes required
 [List each FAIL item as a concrete action: "Add date in dd-mmm-yyyy format", "Add capacity planning section with numeric estimates", etc. If no failures: "None."]

@@ -30,9 +30,10 @@ Read every plan file and the architecture document in full before checking anyth
 Read `agents/architecture-implementer.md`'s "Requirements and document conformance re-check" section — it already
 defines, in full, what "matches the design" means for every category below (ERD field/type/relationship conformance,
 sequence-diagram endpoint conformance, technology substitution, resilience/rate-limiting wiring, transaction/
-concurrency-boundary wiring, named GoF/POSA pattern shape, offline-first sync conformance). Apply every check it lists
-there, independently, against the actual files on disk now — do not trust `architecture-implementer`'s own summary or
-its checkbox state as evidence; re-derive each verdict from the file contents.
+concurrency-boundary wiring, named GoF/POSA pattern shape, offline-first sync conformance, IaC/CI-CD module and stage
+coverage, load-test/E2E-test conformance, Domain Model boundary alignment). Apply every check it lists there,
+independently, against the actual files on disk now — do not trust `architecture-implementer`'s own summary or its
+checkbox state as evidence; re-derive each verdict from the file contents.
 
 - **I1 — Plan-checklist accuracy**: for every `- [x]` item across every plan part, confirm its file actually exists on
   disk. A checked-off item with no file behind it (or a checked-off "Setup and run commands" item whose script isn't
@@ -68,6 +69,26 @@ its checkbox state as evidence; re-derive each verdict from the file contents.
   output specific to this run (a diagnostic line naming an actual file, a real symbol, an actual provisioning response)
   rather than a generic placeholder ("ran successfully", "no issues found") that could have been written without
   invoking anything. A vacuous excerpt on a **USED** entry is a FAIL — it doesn't prove the tool ran.
+- **I14 — IaC/CI-CD conformance** (N/A if the document has no Infrastructure as Code or CI/CD Pipeline section — the
+  no-deployment-target case `design/SKILL.md` Stage 6b/6c themselves skip): for every module in the document's
+  Infrastructure as Code module breakdown table, confirm a generated file declares that module's actual resources, not a
+  placeholder or a single file silently covering several modules at once. For every stage in the document's CI/CD
+  pipeline stages table, confirm the generated pipeline config file has a matching job/stage with the documented trigger
+  and gate — a pipeline file that exists but only implements a subset of the documented stages is a FAIL, not a
+  PASS-with-a-note. This is the one document section with no prior implementation-side check at all before this item
+  existed — treat it with the same rigor as I2/I3, not as an afterthought.
+- **I15 — Load-test script and E2E-test conformance** (N/A if the plan lists neither, per
+  `implementation-planner`'s skip conditions): if a load-test script is listed, confirm it contains real
+  request-generation logic against the confirmed API surface and a threshold assertion tied to the source Quality
+  Attribute Scenario's `responseMeasure` — a script with no requests or no threshold is a FAIL. If an E2E test is listed
+  per core feature, confirm its request/response setup matches that feature's UAT Given/When/Then scenario, even where
+  its business-logic assertions are still `// TODO: implement` stubs — a missing E2E file for a core feature the plan
+  committed to is a FAIL; a present-but-fully-stubbed one (request setup done, assertions pending) is a PASS, per the
+  same stub discipline I2–I4 already apply to business-rule tests.
+- **I16 — Domain Model (DDD) boundary alignment** (N/A if `domainModel.boundedContexts` has fewer than 2 entries, or the
+  confirmed architecture pattern is neither modular monolith nor microservices): confirm the generated module/service
+  directory names match `domainModel.boundedContexts`' names, not an independently invented grouping — a directory
+  structure that merged two bounded contexts into one module, or split one context across two, is a FAIL.
 
 ## Output format
 
@@ -87,6 +108,9 @@ its checkbox state as evidence; re-derive each verdict from the file contents.
 - I11 No hardcoded secrets: PASS / FAIL — [evidence]
 - I12 Web3 safety markers: PASS / FAIL / N/A — [evidence]
 - I13 Agent-tools usage log honesty: PASS / FAIL / N/A — [evidence]
+- I14 IaC/CI-CD conformance: PASS / FAIL / N/A — [evidence]
+- I15 Load-test script and E2E-test conformance: PASS / FAIL / N/A — [evidence]
+- I16 Domain Model (DDD) boundary alignment: PASS / FAIL / N/A — [evidence]
 
 ### Fixes required
 [List each FAIL as a concrete action: "Add `shippedAt` field to `src/models/Order.ts` per ERD", "Wire `opossum` circuit

@@ -158,6 +158,16 @@ Design a folder structure that matches the architecture pattern described in the
 | Serverless           | `functions/{function-name}/`, `shared/`                                                               |
 | Event-driven         | `producers/`, `consumers/`, `shared/schemas/`                                                         |
 
+**Deriving `{module-name}`/`{service-name}` from the Domain Model**: for Modular monolith and Microservices, the name in
+the table above is not a free choice — read the document's Domain Model (DDD) section and derive one module/service per
+entry in `domainModel.boundedContexts`, named after that bounded context (per `references/ddd-guide.md`), rather than
+guessing at typical module names from the feature list. A bounded context with two or more aggregates is still one
+module/service — a bounded context is the ownership/deployment boundary, an aggregate is not — do not split one context
+into multiple modules just because it groups several aggregates. When 2+ bounded contexts have a confirmed integration
+pattern in `domainModel.relationships` (Partnership, Shared Kernel, Customer/Supplier, etc.), note the pattern next to
+the two modules/services it connects in the tree presentation, since it constrains how those two are allowed to depend
+on each other (e.g. a Conformist relationship means the downstream module must not define its own translation layer).
+
 **Exhaustive derivation from the document (required)**: the tree's data-model and API-route items are not filled in from
 judgment about what a "typical" project needs — they are derived exhaustively from the document's own content, the same
 discipline `architecture-implementer` applies when it later builds each file. Read the document's ERD in full and add
@@ -198,6 +208,29 @@ server-assigned `updated_at` convention (never client-supplied) should already b
 via the schema database-designer produced — no separate plan item needed for those, since they're just column-level
 schema properties, not their own files.
 
+**Exhaustive derivation from the IaC and CI/CD sections (required, when present)**: the Infrastructure items are not
+filled in from judgment about what a "typical" deployment needs — derive them exhaustively from the document's
+Infrastructure as Code and CI/CD Pipeline sections (`references/document-template.md` sections 9–10), the same
+discipline the ERD/API-routes rule above applies, so a module or pipeline stage named in the document but never turned
+into a file isn't silently dropped the way an unlisted entity or endpoint would be.
+
+- **IaC**: add **one checklist item per module** in the document's module breakdown table (e.g. `infra/network/main.tf`,
+  `infra/database/main.tf`, `infra/compute/main.tf`) — never one monolithic file covering every module — named per the
+  confirmed tool's own file convention from `design/references/iac-guide.md` (a `.tf`/`.tofu` file per
+  Terraform/OpenTofu module directory, a stack class per CDK module, a resource group per Bicep module, a manifest per
+  Kubernetes component). Also add one item for the state backend configuration if it isn't already part of a module file
+  (e.g. a Terraform `backend.tf`).
+- **CI/CD**: add **one checklist item per pipeline config file** the confirmed platform needs (e.g.
+  `.github/workflows/ci.yml` and `.github/workflows/deploy.yml` for GitHub Actions when the document's pipeline stages
+  table separates a CI leg from a CD leg; a single `.gitlab-ci.yml` for GitLab; a `Jenkinsfile` for Jenkins) —
+  reflecting every stage from the document's pipeline stages table (trigger, gate) as a job/stage inside that file, not
+  a generic single-stage placeholder.
+- **Skip condition**: skip both bullets entirely — no Infrastructure items for either — only under the same
+  no-deployment-target condition `design/SKILL.md` Stage 6b/6c themselves skip (a library, CLI tool, or local-only
+  application with no `stage6b`/`stage6c` in the document); `document-reviewer`'s C7/C8 checks being `N/A` on the
+  document already confirms which case applies. For every other project, an absent `stage6b`/`stage6c` section on an
+  otherwise-deployed project is a document defect to flag to the user, not a silent skip here.
+
 Show the full tree (use ASCII tree notation). Include:
 
 - Application source directories
@@ -208,7 +241,8 @@ Show the full tree (use ASCII tree notation). Include:
   the ones *not* already covered by `[generated]` entries above; plus `CHANGELOG.md` only when input 4 (**Agent tools**)
   has a matching changelog/release-notes entry (see "What you receive" above)
 - Test directory structure, following the test-coverage rules below
-- Infrastructure files (Dockerfile, IaC, CI config)
+- Infrastructure files — the per-module IaC files and per-file CI/CD pipeline configs derived exhaustively above, not a
+  single generic "IaC" placeholder item
 
 **One test file per component (models and routes)**: test coverage is proposed with the same rigor as the source it
 tests, not as a single token example. For every data model in the proposed tree, include one unit test file (e.g.
@@ -269,6 +303,24 @@ own database or cache is a Stub/Fake concern per
 actual Mock for a boundary this codebase doesn't own. Skip this entirely if the document names no external integration
 with a resilience strategy, or Stage 5 item 10 was skipped outright (no external dependencies) — do not fabricate a mock
 for nothing to mock.
+
+**Load-test script** (one, from the Test Strategy section's load/performance target): if the document's Test Strategy
+section names a load/performance-testing tool (`references/test-strategy-guide.md` section 2 — k6, Gatling, Locust,
+JMeter, or Artillery), add one checklist item for that tool's load-test script (e.g. `tests/load/api-load-test.js` for
+k6), under Test files. Its description must name the scenario types the document records (steady-state, spike, soak)
+and the pass/fail threshold from the matching Quality Attribute Scenario's `responseMeasure` (e.g. "95th percentile
+under 500ms, per QAS-1") — not a placeholder with no target. Skip this item entirely if the Test Strategy section states
+no Performance/Scalability Quality Attribute Scenario was recorded, the same skip condition the guide's tool-selection
+step itself uses.
+
+**End-to-end test per core feature** (from the UAT table): add one E2E test file per core feature
+(`references/document-template.md` section 2 — the same set that already gets a dedicated sequence diagram and an
+integration test above), covering that feature's Given/When/Then scenario from the Test Strategy section's UAT table
+(e.g. `tests/e2e/place-order.spec.ts` for the "Place order" feature). Use the E2E framework the test pyramid's
+End-to-end row names, if the document confirms one (e.g. Playwright, Cypress); if the document names no separate E2E
+framework, do not invent one — fold the UAT scenario's assertions into that feature's existing integration test file
+instead (from "One test file per component" above) and note this choice in the plan rather than creating a second file
+with no confirmed tool behind it.
 
 If a project proposes zero models and zero routes (rare), the entire Test files section — including helpers, fixtures,
 and mock tests — is correspondingly empty; do not fabricate a test file, helper, fixture, or mock with nothing to test,
@@ -476,6 +528,10 @@ was passed in.
 ## Infrastructure
 
 - [ ] `Dockerfile` — production image
+- [ ] `infra/network/main.tf` — VPC, subnets, security groups (IaC module: Network)
+- [ ] `infra/database/main.tf` — RDS instance, per IaC module breakdown (IaC module: Database)
+- [ ] `.github/workflows/ci.yml` — lint, test, build stages, triggered on PR (per CI/CD pipeline stages table)
+- [ ] `.github/workflows/deploy.yml` — deploy stage with manual prod-approval gate, triggered on merge to main
 
 ## Setup and run commands
 
@@ -497,6 +553,9 @@ was passed in.
   edge cases
 - [ ] `tests/integrations/emailService.test.ts` — mocked test for the transactional-email integration: correct call
   params, and the configured retry policy engaging on a simulated failure
+- [ ] `tests/load/api-load-test.js` — k6 load-test script: steady-state/spike/soak scenarios, 95th percentile under
+  500ms per QAS-1
+- [ ] `tests/e2e/place-order.spec.ts` — Playwright E2E test for the "Place order" core feature's UAT scenario
 ```
 
 **ORM-specific example — Prisma**: for a full worked example applying the single-schema-file exception above (one Data

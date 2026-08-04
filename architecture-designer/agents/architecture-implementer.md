@@ -221,11 +221,25 @@ into what the generator wrote, don't replace the file.
 - `tsconfig.json` / `pyproject.toml` / `go.mod` / etc. as appropriate
 - `docker-compose.yml` including all database services, correct port mappings, environment variables from `.env`
 - `Dockerfile` per service (multi-stage build where appropriate)
-- Infrastructure as Code if specified in the document (Terraform `.tf` files, CDK stacks, Kubernetes manifests)
 - `CHANGELOG.md` with an initial "Unreleased" entry, when `implementation-planner` listed it under Configuration (it
   does so only when input 5 (**Agent tools**) includes a matching changelog/release-notes tool — see that agent's "What
   you receive" input 4) — see "Using agent tools" below for how to populate it. If the plan doesn't list it, don't
   create it — the matching-tool condition is implementation-planner's to evaluate, not yours to re-derive.
+
+**Infrastructure as Code and CI/CD** — one file per plan item, not one monolithic file covering every module or stage
+(`implementation-planner`'s Step 3 already split these exhaustively; build exactly what it lists):
+
+- One IaC file per module the document's Infrastructure as Code section names, in the confirmed tool's native format — a
+  Terraform/OpenTofu `.tf` file per module directory (with the confirmed state backend wired in `backend.tf`), a CDK
+  stack class per module, a Bicep/CloudFormation template per module, or a Kubernetes manifest per component — declaring
+  the actual resources that module's row in the document's module breakdown table names (not a placeholder resource
+  block). Follow `references/iac-guide.md` for the exact per-tool structure.
+- One CI/CD pipeline config file per plan item, encoding every stage from the document's pipeline stages table as an
+  actual job/stage in that file — the trigger condition, the gate (e.g. tests must pass before deploy), and the
+  environment-promotion order (dev → staging → prod with a manual approval gate on prod, per the document) — not a
+  single generic build-and-test stage with the rest described only in a comment. Follow `references/cicd-guide.md` for
+  the platform's exact stage syntax. Secret injection uses the document's confirmed mechanism (OIDC preferred over
+  long-lived keys) — never hardcode a credential into the pipeline file itself.
 
 **Setup and run scripts** (cross-platform — Node.js or npm scripts only, no bash/shell-only commands):
 
@@ -261,6 +275,19 @@ single token example):
   (sample data matching the ERD's fields, types, and relationships exactly) has no dependency on business logic that
   doesn't exist yet; write its actual working implementation, not a TODO placeholder. A stubbed helper is a FAIL the
   same as a missing one, since every test file that imports it would fail to even run.
+- **Load-test script is implemented for real, not stubbed** (when the plan lists one, per `implementation-planner`'s
+  "Load-test script" rule): it exercises the confirmed HTTP surface, not unwritten business logic, so there is nothing
+  to defer. Write the actual steady-state/spike/soak scenarios per `references/test-strategy-guide.md` section 2 using
+  the named tool's real scripting API (a k6 `export default function`, a Gatling simulation class, a Locust `HttpUser`
+  class) — not a placeholder that only prints a message — and assert the response-measure threshold the plan's
+  description names (e.g. a k6 `thresholds` block checking `p(95)<500`). A load-test file with no actual request
+  generation or no threshold assertion is a FAIL, the same bar as an unexercised mock-test failure path.
+- **E2E test follows the same stub discipline as a business-rule test**: it exercises the full request flow across one
+  or more route handlers whose business logic may still be a `// TODO: implement` stub at this point in the build, so
+  stub its assertions the same way a business-rule test does wherever they depend on logic not yet written — the file
+  and its request/response setup (matching the UAT scenario's Given/When/Then from the plan) still belong in place now,
+  not deferred, per the same "a stubbed test that runs and fails clearly is still a real file for verification purposes"
+  rule the business-rule tests above already follow.
 - Use the test framework and location convention already confirmed in Stage 5 or the architecture document (e.g. Jest,
   pytest, Go's `testing` package) — do not introduce a different framework than the rest of the skeleton uses.
 - **Apply `references/clean-code-guide.md` Part 2** to every generated test: structure each test case in
@@ -470,6 +497,21 @@ designed; re-check content against the architecture document before writing the 
   Pipes and Filters, etc.) rather than a flat procedural substitute that happens to produce the same behavior. A named
   pattern with no matching class shape in the generated code is the same class of gap as an unused resilience library —
   list it under "Requirements not yet reflected in code".
+- Where the document's Infrastructure as Code section names a module breakdown, confirm every module has a corresponding
+  generated file declaring that module's actual resources (per `references/iac-guide.md`), and every stage in the CI/CD
+  Pipeline section's stages table appears as a real job/stage in the generated pipeline config — not just that *some*
+  IaC/CI-CD file exists. A module or stage named in the document with no matching content in the generated files is the
+  same class of gap as an unused resilience library — list it under "Requirements not yet reflected in code".
+- Where the plan lists a load-test script, confirm it contains actual request-generation logic against the confirmed API
+  surface and a threshold assertion matching the source Quality Attribute Scenario's `responseMeasure` — not an empty
+  scaffold. Where the plan lists an E2E test per core feature, confirm its request/response setup matches the UAT
+  scenario's Given/When/Then, even if its business-logic assertions are still `// TODO: implement` stubs per the stub
+  discipline above.
+- Where the document's Domain Model (DDD) section names 2 or more bounded contexts and the confirmed architecture
+  pattern is modular monolith or microservices, confirm the generated module/service directory names actually match
+  `domainModel.boundedContexts`' names (per `implementation-planner`'s "Deriving `{module-name}`/`{service-name}`"
+  rule) — a directory structure that regrouped entities under different, invented module names is a drift from the
+  confirmed domain boundaries, the same class of gap as a technology substitution.
 
 **Modifications** (when a remediation plan was provided) — for each item in "Modifications to existing files", most of
 which should already be `[x]`/`*(code aligned)*` from Step 2's immediate marking; this pass re-confirms rather than

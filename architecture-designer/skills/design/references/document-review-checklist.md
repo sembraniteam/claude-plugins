@@ -1,4 +1,4 @@
-# Document Review Checklist (F1-F7, C1-C19)
+# Document Review Checklist (F1-F7, C1-C20)
 
 The canonical catalog of format (F) and content (C) checks for architecture documents. `document-reviewer` audits every
 item below as PASS/FAIL; `document-fixer` corrects every FAIL item. Both agents implement the full catalog — this file
@@ -8,35 +8,36 @@ itself, only its own role's criteria or fix procedure.
 
 ## Item catalog
 
-| ID  | Name                                                      |
-|-----|-----------------------------------------------------------|
-| F1  | Metadata table is the first content                       |
-| F2  | Date format in metadata table                             |
-| F3  | Version number                                            |
-| F4  | Status value                                              |
-| F5  | Reason and Previous Document                              |
-| F6  | File naming                                               |
-| F7  | Mermaid code blocks                                       |
-| C1  | Requirements summary present                              |
-| C2  | Constraints and feasibility present                       |
-| C3  | Capacity planning present                                 |
-| C4  | Technology decisions with justifications                  |
-| C5  | All diagrams included                                     |
-| C5a | ERD index plan table present                              |
-| C6  | Content accuracy                                          |
-| C7  | Infrastructure as Code section present                    |
-| C8  | CI/CD Pipeline section present                            |
-| C9  | Decentralized Architecture Considerations section present |
-| C10 | Offline-First Considerations section present              |
-| C11 | Domain Model (DDD) section present                        |
-| C12 | Trade-off and Risk Analysis section present               |
-| C13 | Project Overview section present                          |
-| C14 | Database Design section present                           |
-| C15 | Low-Level Design section present                          |
-| C16 | Core Features section present and diagram-linked          |
-| C17 | Cost Estimation section present, with sourced figures     |
-| C18 | Test Strategy section present                             |
-| C19 | Architecture Decision Records section present and current |
+| ID  | Name                                                        |
+|-----|-------------------------------------------------------------|
+| F1  | Metadata table is the first content                         |
+| F2  | Date format in metadata table                               |
+| F3  | Version number                                              |
+| F4  | Status value                                                |
+| F5  | Reason and Previous Document                                |
+| F6  | File naming                                                 |
+| F7  | Mermaid code blocks                                         |
+| C1  | Requirements summary present                                |
+| C2  | Constraints and feasibility present                         |
+| C3  | Capacity planning present                                   |
+| C4  | Technology decisions with justifications                    |
+| C5  | All diagrams included                                       |
+| C5a | ERD index plan table present                                |
+| C6  | Content accuracy                                            |
+| C7  | Infrastructure as Code section present                      |
+| C8  | CI/CD Pipeline section present                              |
+| C9  | Decentralized Architecture Considerations section present   |
+| C10 | Offline-First Considerations section present                |
+| C11 | Domain Model (DDD) section present                          |
+| C12 | Trade-off and Risk Analysis section present                 |
+| C13 | Project Overview section present                            |
+| C14 | Database Design section present                             |
+| C15 | Low-Level Design section present                            |
+| C16 | Core Features section present and diagram-linked            |
+| C17 | Cost Estimation section present, with sourced figures       |
+| C18 | Test Strategy section present                               |
+| C19 | Architecture Decision Records section present and current   |
+| C20 | Alternatives Considered tables present for qualifying items |
 
 ## Literal formats (must match exactly in both agents)
 
@@ -82,4 +83,11 @@ clearing the diagram.
 ```
 | ID | Title | Status | File |
 |----|-------|--------|------|
+```
+
+**Alternatives Considered table header** (C20):
+
+```
+| Option | Verdict | Reason |
+|--------|---------|--------|
 ```

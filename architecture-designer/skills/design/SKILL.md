@@ -1,7 +1,7 @@
 ---
 name: design
 description: This skill should be used when the user wants to design a new application's architecture or infrastructure — says "design my architecture", "help me plan the architecture", "create architecture diagrams", "I need to plan a new system", or is starting a new project and needs a structured design process. Also trigger when the user mentions HLD, LLD, API contracts, or system design for a system with no existing codebase and no existing architecture document yet. Not for adding/changing an API contract, endpoint, or LLD artifact on an already-documented system, or for generating code from an approved document — see the review and implement skills for those. Not for producing a first architecture document from a codebase that already exists — even if undocumented, that's the review skill's codebase-reconstruction path.
-allowed-tools: ["Read", "Write", "Edit", "Bash", "Glob", "Agent", "WebSearch"]
+allowed-tools: [ "Read", "Write", "Edit", "Bash", "Glob", "Agent", "WebSearch" ]
 ---
 
 # Architecture Designer — Main Design Workflow
@@ -29,13 +29,17 @@ read it and ask the user:
 **[project name from the file, or 'a previous project' if unnamed]** — [description from the file, or omit this clause if unset].
 > Would you like to continue where we left off, or start a new design from scratch?"
 
-If continuing: **first check `progress.owner`, if the key is present.** If it reads `"review"`, a
-`/architecture-designer:review` revision died mid-pipeline, not this skill's own design pipeline — this skill's resume
-logic below only covers the original design pass. Tell the user: "It looks like a previous
+If continuing: **first check `progress.owner`, if the key is present.** If it reads `"review"` **and**
+`progress.lastCompletedStep` is before `step11` (per `references/session-schema.md` section "Resuming Steps 6a–13 via
+`progress`" step 2 — `step11` means that `/architecture-designer:review` pass already reached a document save and left a
+clean handoff), a `/architecture-designer:review` revision died mid-pipeline, not this skill's own design pipeline —
+this skill's resume logic below only covers the original design pass. Tell the user: "It looks like a previous
 `/architecture-designer:review` revision didn't finish. Run `/architecture-designer:review` to resume it instead." and
-stop here rather than proceeding into Stage resume. Otherwise (`progress.owner` is `"design"`, or the key is absent —
-legacy sessions predating this key, or one that never reached Stage 6a): brief the user on where the previous session
-left off and resume from the first incomplete stage. Once stage1–5 are confirmed (the "Session completeness gate"
+stop here rather than proceeding into Stage resume. Otherwise (`progress.owner` is `"design"`, the key is absent —
+legacy sessions predating this key, or one that never reached Stage 6a — or it reads `"review"` with
+`lastCompletedStep` at `step11` or later, meaning that pass already completed cleanly): brief the user on where the
+previous session left off and resume from the first incomplete stage. Once stage1–5 are confirmed (the "Session
+completeness gate"
 precondition — stage6b/6c are not required, since Stage 6a can already have progressed before either is confirmed), also
 apply `references/session-schema.md` section "Resuming Steps 6a–13 via `progress`" — a session that died anywhere from
 Stage 6a through Step 13 should resume there, not restart the whole pipeline, and any `pending` key found means the
@@ -197,22 +201,26 @@ them; **(7) authentication approach**, justified by user roles, security require
 observability strategy** — logging aggregator (e.g. ELK, Grafana Loki, Datadog, CloudWatch), metrics/dashboards, and
 distributed tracing (OpenTelemetry + Jaeger/Tempo) if multiple services or async flows are involved, scaled to what the
 system's actual operational maturity requires — a small monolith may need only structured logging and one dashboard; **(
+
 9) disaster recovery** — RPO/RTO derived from the Stage 2 availability NFR, backup strategy, failover approach; **(10)
-error handling and resilience strategy** — derived from the Stage 2 error-handling NFR. Read
-`references/resilience-guide.md` before finalizing this and name, per its pattern table and library table: the backoff
-strategy and max attempts for retries against external dependencies named in stages 1–4, a circuit breaker or equivalent
-for any dependency the NFR marked as must-not-fail-silently, timeout budgets for synchronous calls, and the
-graceful-degradation behavior (if any) for non-critical features when a dependency is down. Name the specific library
-its "Library per stack" table gives for the confirmed language, rather than describing the concept abstractly — scale to
-what the system actually needs: a monolith with no external dependencies may only need timeout budgets, not a full
-circuit breaker; **(11) rate limiting strategy** — derived from the Stage 2 rate-limiting/abuse-prevention NFR. Read
-`references/rate-limiting-guide.md`
-before finalizing this and name, per its tradeoff table and library table: the algorithm, the specific middleware
-library for the confirmed backend language, and which layer enforces it (API gateway, application middleware, or both) —
-plus the shared store (Redis) the limiter counters live in if the infrastructure decision above is horizontally scaled,
-rather than an in-process store that would silently multiply the real limit by instance count. Skip this only for a
-system with no public-facing or untrusted-client-reachable API, the same way item 10 is skipped for a monolith with no
-external dependencies — state that explicitly rather than omitting it silently.
+   error handling and resilience strategy** — derived from the Stage 2 error-handling NFR. Read
+   `references/resilience-guide.md` before finalizing this and name, per its pattern table and library table: the
+   backoff strategy and max attempts for retries against external dependencies named in stages 1–4, a circuit breaker or
+   equivalent for any dependency the NFR marked as must-not-fail-silently, timeout budgets for synchronous calls, and
+   the graceful-degradation behavior (if any) for non-critical features when a dependency is down. Name the specific
+   library its "Library per stack" table gives for the confirmed language, rather than describing the concept
+   abstractly — scale to what the system actually needs: a monolith with no external dependencies (only its own
+   database, whose retry semantics are already handled at the driver level) can skip this item's write-up entirely, per
+   `references/resilience-guide.md`'s
+   "When this applies" section — state that explicitly rather than omitting it silently; **(11) rate limiting
+   strategy** — derived from the Stage 2 rate-limiting/abuse-prevention NFR. Read
+   `references/rate-limiting-guide.md`
+   before finalizing this and name, per its tradeoff table and library table: the algorithm, the specific middleware
+   library for the confirmed backend language, and which layer enforces it (API gateway, application middleware, or
+   both) — plus the shared store (Redis) the limiter counters live in if the infrastructure decision above is
+   horizontally scaled, rather than an in-process store that would silently multiply the real limit by instance count.
+   Skip this only for a system with no public-facing or untrusted-client-reachable API, the same way item 10 is skipped
+   for a monolith with no external dependencies — state that explicitly rather than omitting it silently.
 
 Every recommendation must cite a specific reason from stages 1–4, plus the architectural driver ID (s) it satisfies from
 `architecturalDrivers` above when one applies (e.g. "PostgreSQL with synchronous replication, satisfying AD-2 (99.9%
@@ -230,32 +238,41 @@ for that decision, and the ID (s) of any risk register entries it creates (`rela
 trade-off or independently), record its category, likelihood, impact, mitigation, related driver if any, and status. A
 simple system with few competing drivers may honestly have only one or two entries in each — do not pad the lists.
 
-This trade-off/risk pass is not a separate confirmation round-trip: fold it into the same presentation as the eleven
-technology decisions — present all eleven items plus the trade-off/risk analysis together, discuss and adjust as one
-unit, confirm once — then write everything to `session.json` together: `stage5` (including `tradeoffAnalysis`) and
-top-level `riskRegister`, all at the same time.
+**Alternatives Considered (required, immediately after the trade-off/risk pass, before final confirmation)**: for every
+item that qualifies per `references/adr-guide.md`'s "Which decisions get an ADR" criteria — the six structural items
+always (architecture pattern, backend, frontend, database, infrastructure provider, authentication), any other item
+citing an `architecturalDrivers` ID, and any item sourced from a `tradeoffAnalysis` entry above — apply
+`references/critical-thinking-guide.md`'s six-step loop if it wasn't already run in full for that item, then record its
+"Alternatives Considered format" table (chosen option, rejected option (s), and why each lost) per that guide. This is
+what makes the rejected option a persisted, reviewable artifact rather than something only recoverable by re-reading the
+conversation — an item with no qualifying criteria (an undriven, standard-choice pick) does not get a table, the same
+restraint `riskRegister`/`tradeoffAnalysis` already apply against padding.
 
-**Cost Estimation (required, after the eleven items and the trade-off/risk analysis, before final confirmation)**: read
-`references/cost-estimation-guide.md` and produce a concrete monthly/annual infrastructure cost breakdown — a dollar
-figure per component (compute, database, cache, object storage, CDN/egress, queue, observability, metered third-party
-APIs), each sized from the confirmed Stage 4 capacity numbers, never from a recalled benchmark. Price each component via
-WebSearch against the confirmed cloud provider's current list pricing when WebSearch is available, citing the source and
-check date; when it is not available, label the figure **"estimate — verify at implementation time"** — the identical
-discipline this stage's "Version grounding" rule already applies to technology versions. Reconcile the rolled-up total
-against Stage 3's budget constraint, if one was recorded, and flag a mismatch explicitly rather than silently presenting
-a number the stated budget can't support. Fold this into the same single confirmation round-trip as the eleven items and
-the trade-off/risk analysis above — present all three together, confirm once — then write the confirmed breakdown to
+This trade-off/risk/alternatives pass is not a separate confirmation round-trip: fold it into the same presentation as
+the eleven technology decisions — present all eleven items plus the trade-off/risk analysis and the alternatives tables
+together, discuss and adjust as one unit, confirm once — then write everything to `session.json` together: `stage5`
+(including `tradeoffAnalysis` and `alternativesConsidered`) and top-level `riskRegister`, all at the same time.
+
+**Cost Estimation (required, after the eleven items and the trade-off/risk/alternatives passes, before final
+confirmation)**: apply `references/cost-estimation-guide.md`'s Method in full — enumerate cost components from the
+confirmed stack, size each from Stage 4's numbers, price each via WebSearch-first with the same fallback discipline
+Stage 5's "Version grounding" rule below uses, and reconcile the rolled-up total against Stage 3's budget constraint.
+Fold this into the same single confirmation round-trip as the eleven items, the trade-off/risk analysis, and the
+alternatives tables above — present all four together, confirm once — then write the confirmed breakdown to
 `session.json`'s `stage5.costEstimate` at the same time as `stage5`.
 
-**Version grounding**: every technology needs a specific version number. If WebSearch is available, verify the current
-stable release before writing it down; if not, write **"latest stable — verify at implementation time"** rather than a
-version from memory that may be stale. The same discipline applies to cloud managed-service names and
+**Version grounding**: every technology needs a specific version number. **Always attempt a WebSearch first** to verify
+the current stable release before writing it down — the same search-first discipline Cost Estimation above applies to
+pricing; do not write a version from memory as a shortcut when the search is available. Only write **"latest stable —
+verify at implementation time"** when the search was actually attempted and returned nothing usable, or `WebSearch` is
+genuinely absent — never as a default. The same discipline applies to cloud managed-service names and
 compliance-specific *vendor/service* claims (e.g., whether a specific service holds a certification like SOC 2 or ISO
 
-27001) — verify with WebSearch or label **"⚠ verify before relying"**. This is a distinct claim from the Stage 2
-       compliance-grounding rule above (which *regulatory controls* a framework requires, tagged **"⚠ Needs
-       legal/compliance validation"**): a vendor certification is a checkable fact, a regulatory control is a legal
-       interpretation — keep the two tags visually distinct rather than merging them.
+27001) — attempt WebSearch first, and label **"⚠ verify before relying"** only once that attempt genuinely fails or the
+       tool is absent. This is a distinct claim from the Stage 2 compliance-grounding rule above (which *regulatory
+       controls* a framework requires, tagged **"⚠ Needs legal/compliance validation"**): a vendor certification is a
+       checkable fact, a regulatory control is a legal interpretation — keep the two tags visually distinct rather than
+       merging them.
 
 **Optional — Web3 / decentralized track**: if Stage 1–2 flagged the application as decentralized/blockchain/on-chain, or
 a distributed-ledger platform is named as part of the stack above, read `references/web3-guide.md` in full before
@@ -269,9 +286,10 @@ requirement, or a client-side embedded database/sync engine named as part of the
 purpose. Before treating either signal as a trigger, check it against `references/offline-first-guide.md`'s "This track
 is not mandatory" decision test — an app that only reads cached data offline, or one already covered by the Stage 5
 error-handling/resilience strategy's retry policy, does not qualify. If the test is met, read the guide in full before
-finalizing the stack — work through its local-storage choice, sync architecture, and conflict-resolution strategy
-(including how divergent `updated_at` values are handled — see that guide's section 3) as additional questions. Present
-the decisions, discuss, confirm, then write the confirmed answers to `session.json`'s `"offlineFirst"` key (create it)
+finalizing the stack — work through its local-storage choice, sync architecture, conflict-resolution strategy (including
+how divergent `updated_at` values are handled), and delete/tombstone handling (see that guide's section 3, including
+section 3f) as additional questions. Present the decisions, discuss, confirm, then write the confirmed answers to
+`session.json`'s `"offlineFirst"` key (create it)
 at the same time as `"stage5"`. Skip this step entirely — do not create the key — for applications with no genuine
 offline-write requirement.
 
@@ -284,7 +302,7 @@ summary and let them drop any entry — this step never blocks Stage 5 confirmat
 key entirely if empty) to `session.json`'s `"agentTools"` at the same time as `"stage5"`.
 `references/scaffolding-guide.md`
 names the exact scaffolding command for the now-confirmed stack (e.g. `create-next-app`, `go mod init`) — implementer
-uses it directly during Step 9's implementation planning, not here; nothing to do in Stage 5 beyond having the stack
+uses it directly during Step 13's implementation planning, not here; nothing to do in Stage 5 beyond having the stack
 confirmed.
 
 ---
@@ -320,12 +338,11 @@ transaction/concurrency strategy, secure connection configuration, migration str
 non-empty) an agent-tools usage note — and persist all of it, not just a subset.
 
 Then spawn `architecture-designer:database-reviewer` with the full database-designer output and the requirements summary
-(same scope as above). **Regardless of verdict**, apply `references/session-schema.md` section "Reviewer–fixer cycle
-procedure" step 0 as soon as the report is received (records the verdict/cycle/approved output into
-`progress.reviewCycles.database` and `docs/architecture-designer/last-review.md`; this runs even on a clean first-try
-pass, not only on failure). If it returns `DATABASE REVIEW FAILED`, continue with that section's steps 1–4 (binary
-verdict — cycle until `DATABASE REVIEW PASSED`): spawn `architecture-designer:database-fixer`, which receives the review
-report, the database-designer output, the requirements summary (same scope), and the path to
+(same scope as above). Apply `references/session-schema.md` section "Reviewer–fixer cycle procedure" step 0 (its own
+header already makes it unconditional) as soon as the report is received — type `database`. If it returns `DATABASE
+REVIEW FAILED`, continue with that section's steps 1–4 (binary verdict — cycle until `DATABASE REVIEW PASSED`): spawn
+`architecture-designer:database-fixer`, which receives the review report, the database-designer output, the requirements
+summary (same scope), and the path to
 `docs/architecture-designer/diagrams.json`. At this point in the pipeline the file doesn't exist yet (`diagrams.json`'s
 skeleton isn't written until Stage 6d, below), so per `agents/database-fixer.md`'s own conditional, it skips the
 `diagrams.json` write here and **only returns the corrected schema, ERD, index plan, transaction and concurrency
@@ -452,19 +469,15 @@ is what makes Stage 6a's output durable if 6d runs in a resumed session where St
 description alongside it. Step 11 later reuses this exact `diagrams.json` entry (not `approvedOutput` directly) for the
 document's own ERD, specifically so the two never diverge from independently re-deriving the same source twice.
 
-**Class diagram design-principle pass**: after drafting a Class Diagram, before appending it to `diagrams.json`, read
-`references/design-principles-guide.md` and pass the draft once against its Quick Reference section (SOLID, DRY, YAGNI,
-Tell Don't Ask, Hollywood Principle, Law of Demeter) — does each service have one responsibility, are variant-heavy
-services modeled with an interface rather than a growing branch, are dependencies interface-typed rather than concrete,
-and does any association chain reach more than one hop deep. Adjust the diagram in place; this is a lightweight pass on
-the diagram already being built, not a separate confirmation round-trip.
+**Class diagram design-principle pass**: after drafting a Class Diagram, before appending it to `diagrams.json`, apply
+`references/design-principles-guide.md` section "Applying these principles across the workflow"'s Stage 6d bullet.
+Adjust the diagram in place; this is a lightweight pass on the diagram already being built, not a separate confirmation
+round-trip.
 
-**Class diagram GoF pattern pass**: in the same pass, read `references/design-patterns-guide.md` Part 2 and check the
-draft against its signal column — a growing conditional chain (Strategy or Chain of Responsibility), a multi-step
-optional-heavy construction (Builder), a third-party integration with no owned interface around it (Adapter), or
-cross-cutting wrapped behavior (Decorator) are the most common matches. Name any pattern applied in the diagram's
-`rationale`/`details` field (`references/diagrams-guide.md`) rather than leaving an unlabeled structure — do not force a
-pattern onto a class where no signal is present.
+**Class diagram GoF pattern pass**: in the same pass, apply `references/design-patterns-guide.md` section "Applying this
+guide across the workflow"'s Stage 6d bullet, checking the draft against Part 2's signal column and naming any pattern
+applied in the diagram's `rationale`/`details` field (`references/diagrams-guide.md`) — do not force a pattern onto a
+class where no signal is present.
 
 ### 6e. Mermaid compatibility and diagrams.json integrity check
 
@@ -489,10 +502,8 @@ Spawn the `architecture-designer:architecture-reviewer` agent. Pass it:
   solely on conversation memory.
 - All generated Mermaid diagram code, labeled by type
 
-Wait for the review report. **Regardless of verdict**, apply `references/session-schema.md` section "Reviewer–fixer
-cycle procedure" step 0 as soon as the report is received (records the verdict/cycle/`diagramsHash` into
-`progress.reviewCycles.architecture` and `docs/architecture-designer/last-review.md`; this runs even on a clean
-first-try pass, not only on Critical/Major findings).
+Wait for the review report. Apply `references/session-schema.md` section "Reviewer–fixer cycle procedure" step 0 (its
+own header already makes it unconditional) as soon as the report is received — type `architecture`.
 
 **If the report contains CRITICAL or MAJOR items**: continue with that section's steps 1–4 (three-tier verdict): spawn
 `architecture-designer:architecture-fixer` with the review report, the path to
@@ -648,38 +659,26 @@ one entry per non-trivial operation, skipping simple CRUD; **(3) DTOs** — only
 multiple endpoints; **(4) inter-service contracts** — only for microservices/event-driven architectures, omitted
 entirely for monoliths; **(5) error catalog** — derived from errors already referenced above, never invented fresh.
 
-**Business rules critical-thinking check**: while writing group (2), before finalizing any rule's `Logic`, read
-`references/critical-thinking-guide.md`'s "Applying this to Step 10 group (2)" section — name the invariant the rule
-protects and its business reason (a rule with no traceable reason back to Stage 1/2 is a YAGNI candidate, not a rule to
-keep), state what happens on violation, and name at least one edge case it must hold under. Do this first, since it
-determines whether the rule should exist at all before the checks below refine how it's written.
+**Business rules critical-thinking check**: while writing group (2), before finalizing any rule's `Logic`, apply
+`references/critical-thinking-guide.md` section "Applying this to Step 10 group (2)". Do this first, since it determines
+whether the rule should exist at all before the checks below refine how it's written.
 
-**Business rules design-principle check**: while writing group (2), read `references/design-principles-guide.md`'s DRY,
-YAGNI, and Tell-Don't-Ask sections — a rule whose `Logic` duplicates steps already written for another rule should
-extract a shared, named sub-rule instead of restating them (DRY); a rule that reads another object's state to make a
-decision externally should delegate that decision to the owning object instead (Tell, Don't Ask); a rule that introduces
-a configuration axis with no second confirmed variant behind it should model the concrete case directly (YAGNI).
+**Business rules design-principle check**: while writing group (2), apply `references/design-principles-guide.md`
+section "Applying these principles across the workflow"'s Step 10 bullet (DRY, Tell-Don't-Ask, YAGNI).
 
-**Business rules clean-code check**: in the same pass, read `references/clean-code-guide.md`'s "Functional core,
-imperative shell" section — phrase each rule's `Logic` as pure, ordered steps with no persistence or I/O concern folded
-in (persistence belongs in `Post-conditions`, already a separate section per `references/lld-guide.md`); a rule whose
-steps read at inconsistent levels of abstraction, or that names more than a handful of steps, is a candidate to extract
-a named sub-rule, mirroring group (2)'s DRY check above.
+**Business rules clean-code check**: in the same pass, apply `references/clean-code-guide.md` section "Applying this
+guide across the workflow"'s Step 10 bullet (functional-core `Logic`, persistence confined to `Post-conditions` per
+`references/lld-guide.md`), mirroring group (2)'s DRY check above.
 
-**Business rules GoF-pattern check**: also in the same pass, read `references/design-patterns-guide.md` Part 2 — a rule
-whose `Logic` describes several related operations sharing the same overall sequence but differing in one step (Template
-Method), or an action that must be queued, logged, or undone as a discrete unit (Command), or an ordered sequence of
-independent handlers each deciding whether to act (Chain of Responsibility), should name the pattern explicitly in the
-rule's description so `architecture-implementer` generates the matching class shape rather than a flat procedural
-function. Most rules match no pattern at all — name one only when the signal is actually present, per that guide's
-Why-this-matters section on misuse.
+**Business rules GoF-pattern check**: also in the same pass, apply `references/design-patterns-guide.md` section
+"Applying this guide across the workflow"'s Step 10 bullet. Most rules match no pattern at all — name one only when the
+signal is actually present, per that guide's Why-this-matters section on misuse.
 
 **Business rules transaction-boundary check**: also in the same pass, apply `references/lld-guide.md` section 2's
-"Transaction boundary" rule — for a rule whose `Post-conditions` list two or more writes, read
-`references/transaction-guide.md` and state whether they commit as one database transaction (naming the
-concurrency-control strategy if `database-designer` flagged the entity high-contention) or, if the writes legitimately
-span two aggregates/services, rewrite the rule as an explicit Saga (ordered steps, each with its own local transaction
-and compensating transaction) per that guide's section 4.
+"Transaction boundary" rule together with `references/transaction-guide.md` section "Applying this guide across the
+workflow"'s Step 10 bullet (naming the concurrency-control strategy if `database-designer` flagged the entity
+high-contention, or rewriting the rule as an explicit Saga per that guide's section 4 if its writes legitimately span
+two aggregates/services).
 
 **Persist each group as soon as it's confirmed** — do not wait until all five are done. After each group is confirmed,
 write it into `session.json`'s `lld` key (create it if absent) and add that group's name to `lld.confirmedGroups` —
@@ -745,21 +744,11 @@ the same time if the file predates them, per the tolerant-read rule in `referenc
   `Mar`,
   `Apr`, `May`, `Jun`, `Jul`, `Aug`, `Sep`, `Oct`, `Nov`, `Dec`), year is 4 digits. Example: `05-Jul-2026`.
 
-**Document body sections (in order)**: follow `references/document-template.md` — eleven fixed sections from Project
-Overview through Low-Level Design, each pulling from the corresponding stage or sub-agent output (section 2 "Core
-Features" derived from the same Stage 2 functional requirements Stage 6d's "Core feature coverage requirement" already
-treats as core features, cross-referenced against the dedicated sequence diagram each one already has in section 7;
-section 8 from `session.json`'s `progress.reviewCycles.database.approvedOutput` for the prose (schema, index table,
-connection config, migration strategy) — **but the `erDiagram` block itself is copied verbatim from its already-written
-entry in `diagrams.json`, not re-derived from `approvedOutput` independently**, so the document's ERD and the diagram
-set's ERD are the same content, not two separately-transcribed copies of the same source; section 11 from the `lld`
-key), plus a 12th conditional "Decentralized Architecture Considerations" section when the Web3 track was active, a 13th
-conditional
-"Offline-First Considerations" section when the offline-first track was active, a required 14th "Domain Model (DDD)"
-section from the `domainModel` key, a required 15th "Trade-off and Risk Analysis" section from the
-`stage5.tradeoffAnalysis` and `riskRegister` keys, a required 16th "Cost Estimation" section from `stage5.costEstimate`,
-a required 17th "Test Strategy" section from the `testStrategy` key, and a required 18th "Architecture Decision Records"
-section (a pointer table only — see below) from the `adrs` key.
+**Document body sections (in order)**: follow `references/document-template.md`'s 18-section list and per-section
+sourcing in full — it is the canonical section order, content, and `session.json` key mapping; do not re-derive it here.
+Section 8's ERD-verbatim-copy discipline (the document's ERD must be the same `diagrams.json` entry Stage 6d already
+wrote, not re-derived from `approvedOutput` independently) was already established above under Stage 6d's "ERD special
+requirement" — nothing further to add for it here.
 
 **Generate Architecture Decision Records** (required, immediately after the document above is saved): read
 `references/adr-guide.md` and, for each Stage 5 decision that guide's "Which decisions get an ADR" criteria selects,
@@ -777,10 +766,9 @@ Record `progress.lastCompletedStep = "step11"` per `references/session-schema.md
 Spawn the `architecture-designer:document-reviewer` agent with the path to the saved document, the requirements summary
 (per `references/session-schema.md` section "Requirements-summary scope for sub-agent spawns"), and the expected
 filename. Wait for the verdict. (`document-reviewer`/`document-fixer` read `references/document-review-checklist.md`
-directly for the exact F1–F7/C1–C19 criteria — no need to read it here.) **Regardless of verdict**, apply
-`references/session-schema.md` section "Reviewer–fixer cycle procedure" step 0 as soon as the verdict is received
-(records the verdict/cycle/`documentHash` into `progress.reviewCycles.document` and
-`docs/architecture-designer/last-review.md`; this runs even on a clean first-try pass, not only on failure).
+directly for the exact F1–F7/C1–C20 criteria — no need to read it here.) Apply `references/session-schema.md` section
+"Reviewer–fixer cycle procedure" step 0 (its own header already makes it unconditional) as soon as the verdict is
+received — type `document`.
 
 **If DOCUMENT REVIEW FAILED**: continue with that section's steps 1–4: spawn `architecture-designer:document-fixer` with
 the document path, the review report, the requirements summary, and the path to
@@ -846,7 +834,11 @@ architecture.
 user so, until that cycle's exit condition is met (`IMPLEMENTATION REVIEW PASSED`, or its 3-cycle cap reached).
 `architecture-implementer` reporting `Status: Complete` is that agent's own self-report, not this cycle's exit
 condition — see `references/session-schema.md` section "Implementation reviewer–fixer cycle" for what "done" actually
-means here.
+means here. Once that cycle's exit condition is met, give the user the same post-implementation wrap-up
+`../implement/SKILL.md` Step 5 gives (opening the plan file, `.env` setup, running the dev server, testing the primary
+endpoint, committing the skeleton, and the Web3/offline-first pre-deployment reminders when applicable) — this pipeline
+reached the same finished state `implement/SKILL.md` reaches, and the user needs the same next steps regardless of which
+skill got them there.
 
 Either way, record `progress.lastCompletedStep = "step13"` per `references/session-schema.md` section "Recording
 `progress.lastCompletedStep`" — this pipeline pass is complete.

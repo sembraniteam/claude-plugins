@@ -52,6 +52,24 @@ choices can state it briefly ("Postgres vs. MySQL considered; Postgres chosen fo
 meaningful risk identified") — but skipping straight to a conclusion with no visible alternative is exactly what this
 loop exists to catch.
 
+**Alternatives Considered format**: for the items `references/adr-guide.md`'s "Which decisions get an ADR" section
+selects (structural items always; any other item citing an `architecturalDrivers` ID; any item sourced from a
+`tradeoffAnalysis` entry), record step 3/step 5's output as a table, not only as inline prose — this is what makes the
+rejected option visible as a standalone artifact rather than something only findable by re-reading the conversation:
+
+| Option     | Verdict  | Reason                                                                      |
+|------------|----------|-----------------------------------------------------------------------------|
+| PostgreSQL | Chosen   | JSONB support needed by AD-3; team already operates it                      |
+| MySQL      | Rejected | No native JSONB; would need a bolt-on JSON column with weaker query support |
+| DynamoDB   | Rejected | No relational query pattern fits the reporting requirement in Stage 1       |
+
+One row per option actually discussed — never invent a plausible-sounding option that step 3 didn't genuinely consider;
+two rows (the chosen option plus one real rejected alternative) is a complete, non-padded table for a straightforward
+choice. `design/SKILL.md` Stage 5 persists one of these tables per qualifying item to `session.json`'s
+`stage5.alternativesConsidered`, and `references/adr-guide.md`'s ADR template copies the matching table verbatim into
+its own "Alternatives Considered" section rather than re-deriving it, the same verbatim-copy discipline this plugin
+already applies to the ERD block.
+
 ## Applying this to Step 10 group (2) — business rules
 
 For each business rule, before finalizing its `Logic`: name the invariant it protects and the business reason it exists

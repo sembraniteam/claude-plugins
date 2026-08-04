@@ -82,9 +82,16 @@ from `stage5.tradeoffAnalysis`, this is that entry's trade-off point and sensiti
 
 ## Alternatives Considered
 
-The other option(s) discussed and why they were not chosen. Never invent an alternative that was not actually discussed
-during Stage 5 — omit this section (state "not discussed as alternatives were not raised") rather than fabricate a
-plausible-sounding rejected option.
+The other option(s) discussed and why they were not chosen, as a table — `Option | Verdict | Reason`, using the exact
+format `references/critical-thinking-guide.md`'s "Alternatives Considered format" section defines. **Copy this table
+verbatim from `session.json`'s `stage5.alternativesConsidered` entry for this decision** (matched by the entry's
+`decision` field) rather than re-deriving or paraphrasing it — every decision that qualifies for an ADR under "Which
+decisions get an ADR" above also qualifies for an `alternativesConsidered` entry per that same guide's criteria, so the
+table already exists by the time this ADR is written; this keeps the ADR's copy and the document's Technology Decisions
+section copy (`references/document-template.md` section 6) identical rather than two independently-transcribed versions
+of the same source. Never invent an alternative that was not actually in that entry — omit this section (state "not
+discussed as alternatives were not raised") only in the legacy case where no matching `alternativesConsidered` entry
+exists at all (a session predating this field).
 ```
 
 **Status values**: `Accepted` — write every ADR directly as `Accepted`, never `Proposed`, since by the time Step 11 runs

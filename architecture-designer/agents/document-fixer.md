@@ -18,13 +18,13 @@ passed.
 The skill that spawns you will pass:
 
 1. **Document path** — read the full document with the Read tool before making any changes
-2. **Document review report** — the structured FAIL items (F1–F7, C1–C19) with evidence from document-reviewer
+2. **Document review report** — the structured FAIL items (F1–F7, C1–C20) with evidence from document-reviewer
 3. **Requirements summary** — user requirements, constraints, capacity targets, and technology decisions from stages
-   1–5, including `stage5.tradeoffAnalysis` and `stage5.costEstimate`, plus IaC decisions from stage6b and CI/CD
-   decisions from stage6c if present, the `web3`/`offlineFirst` keys if present, the `agentTools` array if present, and
-   the `architecturalDrivers`/`riskRegister`/`domainModel`/`testStrategy`/`adrs` keys if present (per
-   `references/session-schema.md` section "Requirements-summary scope for sub-agent spawns"); needed to write accurate
-   content for content-check failures
+   1–5, including `stage5.tradeoffAnalysis`, `stage5.alternativesConsidered`, and `stage5.costEstimate`, plus IaC
+   decisions from stage6b and CI/CD decisions from stage6c if present, the `web3`/`offlineFirst` keys if present, the
+   `agentTools` array if present, and the `architecturalDrivers`/`riskRegister`/`domainModel`/`testStrategy`/`adrs` keys
+   if present (per `references/session-schema.md` section "Requirements-summary scope for sub-agent spawns"); needed to
+   write accurate content for content-check failures
 4. **`diagrams.json` path** (optional) — if C5 or C5a diagrams are missing, read from here to get the Mermaid code
 
 ## Rules before you start
@@ -70,7 +70,7 @@ starting; this section states only the fix procedure for each item.
   the code from diagrams.json + ` ``` `. If the block exists but starts with an unrecognized keyword, correct the
   keyword to one of the valid Mermaid types listed in `references/document-review-checklist.md`.
 
-## Content failures (C1–C19)
+## Content failures (C1–C20)
 
 These require accurate content from the requirements summary:
 
@@ -89,7 +89,11 @@ These require accurate content from the requirements summary:
 
 - **C4 — Technology decisions lack justifications**: For each technology choice that has no justification, add a
   sentence linking it to a specific requirement or constraint from the requirements summary. Pattern: "[Technology X]
-  was chosen because [requirement/constraint from stages 1–4]."
+  was chosen because [requirement/constraint from stages 1–4]." If the report's Minor note flags missing version
+  grounding (every version is a bare, unsourced number), attempt a WebSearch for each named technology's current stable
+  release before falling back — write the verified version with its source, or `"latest stable — verify at
+  implementation time"` only if the search genuinely returns nothing usable, per `design/SKILL.md` Stage 5's "Version
+  grounding" rule. Note in the fix log which versions were WebSearch-verified vs. left as the fallback label.
 
 - **C5 — Missing diagrams**: For each diagram that should be present but is missing from the document, add a section: a
   heading, a one-paragraph description of what the diagram shows, and the Mermaid code block from diagrams.json.
@@ -171,7 +175,11 @@ These require accurate content from the requirements summary:
   Source column must read either the WebSearch-verified citation already recorded in `costEstimate`, or the literal
   `"estimate — verify at implementation time"` — never fabricate a source tag that isn't actually in the requirements
   summary. If `session.json` has no `stage5.costEstimate` key at all, note this in the fix log as an item requiring
-  skill-level action instead of inventing cost figures.
+  skill-level action instead of inventing cost figures. If the report's Minor note flags an all-"estimate" table
+  (`cost-estimation-guide.md` step 3's search-first discipline), attempt a WebSearch for each component's current list
+  price before leaving the fallback label in place — replace a row's Source with a verified citation (source + check
+  date) wherever the search returns a usable figure, updating the Monthly/Annual totals and budget reconciliation to
+  match. Note in the fix log which rows were WebSearch-verified vs. left as the fallback label.
 
 - **C18 — Test Strategy section missing**: Add a "Test Strategy" section per `references/document-template.md` section
   17, using the `testStrategy` key from the requirements summary (test pyramid, load/performance targets and tool,
@@ -185,6 +193,14 @@ These require accurate content from the requirements summary:
   including its actual current `status` (e.g. `Superseded by ADR-0003`). Never invent an ADR entry, and never duplicate
   an ADR's own Context/Decision/Consequences prose into this table. If `session.json` has no `adrs` key at all, note
   this in the fix log as an item requiring skill-level action instead of inventing ADR content.
+
+- **C20 — Alternatives Considered table missing or mismatched**: For each `stage5.alternativesConsidered` entry the
+  report flags as missing or mismatched, insert (or correct) its table immediately after that item's justification in
+  the Technology Decisions section, using the exact header row from `references/document-review-checklist.md` and the
+  entry's own options/verdicts/reasons verbatim — never invent an option that isn't actually in the
+  `alternativesConsidered` entry. Do not add a table for a Stage 5 item with no matching `alternativesConsidered` entry;
+  that is correct as-is, not a gap. If `session.json` has no `stage5.alternativesConsidered` key at all, note this in
+  the fix log as an item requiring skill-level action instead of inventing alternatives content.
 
 ## Output
 
